@@ -84,8 +84,8 @@ export default function AcceptInvitePage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push("/")
-      }, 1500)
+        router.push(data.redirectPath || `/${data.organizationId}/director`)
+      }, 1000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

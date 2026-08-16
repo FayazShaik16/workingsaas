@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
+import { ensureUserRecord } from "./ensure-user"
+import { cache } from "react"
 
 export interface SessionUser {
   id: string
@@ -12,9 +14,9 @@ export interface SessionUser {
 
 /**
  * Get current session with organization & role context
- * Safe to call from Server Components
+ * Memoized per request via React cache()
  */
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createClient()
 
   try {
@@ -43,19 +45,23 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       `
       )
       .eq("id", authData.user.id)
-      .single()
+      .maybeSingle()
 
-    if (userError || !user) return null
+    const userData = user as any
+    if (userError || !userData || !userData.organization_id) {
+      // If user exists in Auth but is missing or incomplete in public.users, auto-heal
+      return await ensureUserRecord(authData.user)
+    }
 
-    const roles = (user.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
-    const scopeLevels = (user.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
+    const roles = (userData.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
+    const scopeLevels = (userData.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
 
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      organizationId: user.organization_id,
-      orgUnitId: user.org_unit_id,
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      organizationId: userData.organization_id,
+      orgUnitId: userData.org_unit_id,
       roles,
       scopeLevels,
     }
@@ -63,7 +69,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     console.error("[session] getSessionUser failed:", error)
     return null
   }
-}
+})
 
 /**
  * Check if user has a specific scope level
@@ -99,7 +105,8 @@ export async function getScopeVisibleOrgUnits(
 
     if (userError || !user) return []
 
-    const scopeLevels = (user.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
+    const userData = user as any
+    const scopeLevels = (userData.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
 
     // SYSTEM_ADMIN / DIRECTOR can see all
     if (scopeLevels.includes("SYSTEM_ADMIN") || scopeLevels.includes("DIRECTOR")) {
@@ -112,22 +119,22 @@ export async function getScopeVisibleOrgUnits(
     }
 
     // ORG_UNIT_LEAD can see own unit + children
-    if (scopeLevels.includes("ORG_UNIT_LEAD") && user.org_unit_id) {
+    if (scopeLevels.includes("ORG_UNIT_LEAD") && userData.org_unit_id) {
       const { data: units } = await supabase
         .from("org_units")
         .select("*")
         .eq("organization_id", organizationId)
-        .or(`id.eq.${user.org_unit_id},parent_id.eq.${user.org_unit_id}`)
+        .or(`id.eq.${userData.org_unit_id},parent_id.eq.${userData.org_unit_id}`)
 
       return units || []
     }
 
     // MEMBER can see own unit only
-    if (user.org_unit_id) {
+    if (userData.org_unit_id) {
       const { data: units } = await supabase
         .from("org_units")
         .select("*")
-        .eq("id", user.org_unit_id)
+        .eq("id", userData.org_unit_id)
 
       return units || []
     }

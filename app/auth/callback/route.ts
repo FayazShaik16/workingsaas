@@ -20,6 +20,55 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/login?error=${error.message}`, request.url))
   }
 
+  const token = searchParams.get("token") || searchParams.get("invite")
+  if (token) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin")
+      const admin = createAdminClient()
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user) {
+        const { data: inv } = await (admin as any)
+          .from("invitations")
+          .select("*")
+          .eq("token", token)
+          .eq("status", "PENDING")
+          .maybeSingle()
+
+        if (inv) {
+          await (admin as any).from("users").upsert({
+            id: authData.user.id,
+            organization_id: inv.organization_id,
+            org_unit_id: inv.org_unit_id || null,
+            email: authData.user.email,
+            name: authData.user.user_metadata?.name || authData.user.email?.split("@")[0] || "User",
+            status: "ACTIVE",
+          })
+
+          if (inv.intended_role_id) {
+            await (admin as any).from("user_roles").upsert(
+              { user_id: authData.user.id, role_id: inv.intended_role_id },
+              { onConflict: "user_id,role_id" }
+            )
+          }
+
+          await (admin as any).from("wallets").upsert(
+            {
+              organization_id: inv.organization_id,
+              owner_user_id: authData.user.id,
+              purpose: "PERSONAL",
+              balance: 0,
+            },
+            { onConflict: "owner_user_id,purpose" }
+          )
+
+          await (admin as any).from("invitations").update({ status: "ACCEPTED" }).eq("id", inv.id)
+        }
+      }
+    } catch (err) {
+      console.error("[auth/callback] Token accept error:", err)
+    }
+  }
+
   // Get session to determine redirect destination
   const user = await getSessionUser()
 
@@ -30,14 +79,9 @@ export async function GET(request: NextRequest) {
   // Compute destination based on intent
   let destination: string
 
-  if (intent === "signup") {
-    // After signup, go to onboarding OR dashboard if already provisioned
-    destination = user.organizationId ? getRedirectPath(user) : "/onboarding/setup"
-  } else if (intent === "invite") {
-    // After accepting invite, go straight to dashboard
-    destination = getRedirectPath(user)
+  if (intent === "signup" && !user.organizationId) {
+    destination = "/onboarding/setup"
   } else {
-    // Regular login
     destination = getRedirectPath(user)
   }
 

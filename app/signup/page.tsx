@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useState, FormEvent, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,10 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
+import { getRedirectPath } from "@/lib/auth/get-redirect"
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  const inviteToken = searchParams.get("token") || searchParams.get("invite") || ""
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -43,13 +47,33 @@ export default function SignupPage() {
       if (signUpError) throw signUpError
 
       if (data?.user) {
-        // Redirect to org setup
-        router.push("/onboarding/setup")
+        // If an invitation token was provided, accept it immediately
+        if (inviteToken) {
+          const res = await fetch("/api/onboarding/accept-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: inviteToken }),
+          })
+          const acceptData = await res.json()
+          if (acceptData.redirectPath) {
+            router.push(acceptData.redirectPath)
+            return
+          }
+        }
+
+        // Get session to check destination
+        const response = await fetch("/api/auth/get-session")
+        const sessionData = await response.json()
+        if (sessionData?.user?.organizationId) {
+          router.push(getRedirectPath(sessionData.user))
+        } else {
+          router.push("/onboarding/setup")
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Signup failed"
       setError(message)
-      console.error("[signup] email signup failed:", JSON.stringify(err, Object.getOwnPropertyNames(err)))
+      console.error("[signup] email signup failed:", err)
     } finally {
       setLoading(false)
     }
@@ -60,10 +84,11 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
+      const tokenParam = inviteToken ? `&token=${encodeURIComponent(inviteToken)}` : ""
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?intent=signup`,
+          redirectTo: `${window.location.origin}/auth/callback?intent=signup${tokenParam}`,
         },
       })
 

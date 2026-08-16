@@ -205,6 +205,7 @@ function DesktopSidebar({ user, organization, currentRole, availableRoles, navig
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors relative",
                 isActive
@@ -341,6 +342,7 @@ function MobileSidebar({ user, organization, currentRole, availableRoles, naviga
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all",

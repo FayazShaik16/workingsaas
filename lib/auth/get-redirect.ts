@@ -20,15 +20,16 @@ export function getRedirectPath(user: SessionUser | null): string {
 
   // Determine primary scope (highest priority)
   const scopePriority: { [key: string]: number } = {
-    SYSTEM_ADMIN: 0,
-    DIRECTOR: 1,
+    DIRECTOR: 0,
+    SYSTEM_ADMIN: 1,
     FINANCE_ADMIN: 2,
     ORG_UNIT_LEAD: 3,
-    MEMBER: 4,
+    DEPT_ADMIN: 4,
+    MEMBER: 5,
   }
 
   const primaryScope = scopeLevels.sort(
-    (a, b) => (scopePriority[a] || 999) - (scopePriority[b] || 999)
+    (a, b) => (scopePriority[a] ?? 999) - (scopePriority[b] ?? 999)
   )[0]
 
   // Map scope to role base path

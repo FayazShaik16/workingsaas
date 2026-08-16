@@ -27,7 +27,8 @@ export async function requireScope(...scopes: string[]) {
 
   const hasRequiredScope = scopes.some((scope) => hasScope(user.scopeLevels, scope))
   if (!hasRequiredScope) {
-    redirect("/workspace")
+    const { getRedirectPath } = await import("./get-redirect")
+    redirect(getRedirectPath(user))
   }
 
   return user

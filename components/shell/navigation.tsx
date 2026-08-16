@@ -29,7 +29,7 @@ export function Navigation({ items }: NavigationProps) {
           : pathname.startsWith(cleanHref)
 
         return (
-          <Link key={item.href} href={item.href}>
+          <Link key={item.href} href={item.href} prefetch={true}>
             <Button
               variant={isActive ? "default" : "ghost"}
               className={cn("w-full justify-start gap-2 relative flex items-center")}

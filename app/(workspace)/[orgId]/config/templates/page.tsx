@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 
 export default async function AdminTemplatesPage() {
   await requireAuth()
-  await requireScope("SYSTEM_ADMIN")
+  await requireScope("SYSTEM_ADMIN", "DIRECTOR")
 
   const supabase = await createClient()
 

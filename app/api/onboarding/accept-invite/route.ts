@@ -115,7 +115,17 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, organizationId: invitation.organization_id })
+    // 10. Fetch updated session to calculate exact role destination
+    const { getSessionUser } = await import("@/lib/auth/session")
+    const { getRedirectPath } = await import("@/lib/auth/get-redirect")
+    const updatedUser = await getSessionUser()
+    const redirectPath = updatedUser ? getRedirectPath(updatedUser) : `/${invitation.organization_id}/director`
+
+    return NextResponse.json({
+      success: true,
+      organizationId: invitation.organization_id,
+      redirectPath,
+    })
   } catch (err) {
     console.error("Accept invite API failed:", err)
     return NextResponse.json(

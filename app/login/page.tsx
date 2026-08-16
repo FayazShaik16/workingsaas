@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   const errorParam = searchParams.get("error")
+  const inviteToken = searchParams.get("token") || searchParams.get("invite") || ""
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault()
@@ -38,8 +39,16 @@ export default function LoginPage() {
       if (signInError) throw signInError
 
       if (data?.user) {
+        // If an invitation token was provided, accept it now
+        if (inviteToken) {
+          await fetch("/api/onboarding/accept-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: inviteToken }),
+          })
+        }
+
         // Get fresh session to determine redirect destination
-        // Session includes organizationId and scopeLevels
         const response = await fetch("/api/auth/get-session")
         const sessionData = await response.json()
         const redirectPath = getRedirectPath(sessionData.user)
@@ -59,10 +68,11 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      const tokenParam = inviteToken ? `&token=${encodeURIComponent(inviteToken)}` : ""
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?intent=${intent}`,
+          redirectTo: `${window.location.origin}/auth/callback?intent=${intent}${tokenParam}`,
         },
       })
 
