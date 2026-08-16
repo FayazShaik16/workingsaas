@@ -902,28 +902,8 @@ BEGIN
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
--- 23. ONBOARDING TRIGGER
+-- 23. ONBOARDING TRIGGER (Configured in Section 20 at end of schema)
 -- ============================================================================
-CREATE OR REPLACE FUNCTION handle_new_auth_user() RETURNS TRIGGER AS $$
-DECLARE v_invite invitations%ROWTYPE;
-BEGIN
-    SELECT * INTO v_invite FROM invitations
-    WHERE email = NEW.email AND status = 'PENDING' AND expires_at > clock_timestamp()
-    ORDER BY created_at DESC LIMIT 1;
-
-    IF v_invite.id IS NOT NULL THEN
-        INSERT INTO users (id, organization_id, org_unit_id, email, name, status)
-        VALUES (NEW.id, v_invite.organization_id, v_invite.org_unit_id, NEW.email,
-                COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email,'@',1)), 'ACTIVE');
-        INSERT INTO user_roles (user_id, role_id) VALUES (NEW.id, v_invite.intended_role_id);
-        INSERT INTO wallets (organization_id, owner_user_id, purpose)
-        VALUES (v_invite.organization_id, NEW.id, 'PERSONAL');
-        UPDATE invitations SET status = 'ACCEPTED' WHERE id = v_invite.id;
-    END IF;
-    RETURN NEW;
-END; $$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_auth_user();
 
 -- ============================================================================
 -- 24. AUDIT CAPTURE
@@ -1170,90 +1150,127 @@ PERFORM apply_business_rules(p_organization_id, p_entity_type, p_entity_id, p_to
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
--- 20. AUTH USER TRIGGER (Handle new Supabase Auth signups)
+-- 20. AUTH USER TRIGGER (Handle new Supabase Auth signups & OAuth)
 -- ============================================================================
--- This trigger MUST exist for signup to work. It fires when auth.users is created
--- and automatically creates the corresponding users row + PERSONAL wallet
+-- This trigger fires when auth.users is created and automatically creates
+-- the corresponding users row, organization, role, and wallets.
 
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user() RETURNS TRIGGER AS $$
-DECLARE
-    v_invitation RECORD;
+DECLARE 
+    v_invite_id UUID;
+    v_invite_org_id UUID;
+    v_invite_unit_id UUID;
+    v_invite_role_id UUID;
+    v_org_id UUID;
+    v_unit_id UUID;
+    v_role_id UUID;
+    v_has_invitations BOOLEAN;
     v_user_name TEXT;
 BEGIN
-    -- Find the most recent PENDING invitation for this email that hasn't expired
-    SELECT * INTO v_invitation
-    FROM invitations
-    WHERE email = NEW.email
-      AND status = 'PENDING'
-      AND expires_at > NOW()
-    ORDER BY created_at DESC
-    LIMIT 1;
-
-    -- If no invitation found, user cannot be linked to an organization yet
-    IF v_invitation IS NULL THEN
-        RAISE WARNING 'handle_new_auth_user: No pending invitation found for email % — user auth created but not linked to organization', NEW.email;
-        RETURN NEW;
-    END IF;
-
-    -- Extract name from metadata if provided, otherwise use email prefix
     v_user_name := COALESCE(
         NEW.raw_user_meta_data->>'name',
+        NEW.raw_user_meta_data->>'full_name',
         SPLIT_PART(NEW.email, '@', 1)
     );
 
-    -- Create users row in public schema, linked to organization via invitation
-    INSERT INTO public.users (
-        id,
-        organization_id,
-        org_unit_id,
-        email,
-        name,
-        employment_type,
-        status,
-        created_at,
-        updated_at
-    ) VALUES (
-        NEW.id,
-        v_invitation.organization_id,
-        v_invitation.org_unit_id,
-        NEW.email,
-        v_user_name,
-        'FULL_TIME'::employment_type,
-        'ACTIVE'::user_status,
-        NOW(),
-        NOW()
-    ) ON CONFLICT (id) DO NOTHING;
+    -- Check if invitations table exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'invitations'
+    ) INTO v_has_invitations;
 
-    -- Create user_roles entry with the intended role from invitation
-    IF v_invitation.intended_role_id IS NOT NULL THEN
-        INSERT INTO public.user_roles (user_id, role_id)
-        VALUES (NEW.id, v_invitation.intended_role_id)
-        ON CONFLICT DO NOTHING;
+    IF v_has_invitations THEN
+        BEGIN
+            EXECUTE 'SELECT id, organization_id, org_unit_id, intended_role_id FROM public.invitations WHERE email = $1 AND status = ''PENDING'' AND expires_at > clock_timestamp() ORDER BY created_at DESC LIMIT 1'
+            INTO v_invite_id, v_invite_org_id, v_invite_unit_id, v_invite_role_id
+            USING NEW.email;
+        EXCEPTION WHEN OTHERS THEN
+            v_invite_id := NULL;
+        END;
     END IF;
 
-    -- Create PERSONAL wallet for new user
-    INSERT INTO public.wallets (
-        organization_id,
-        owner_user_id,
-        purpose,
-        balance,
-        created_at
-    ) VALUES (
-        v_invitation.organization_id,
-        NEW.id,
-        'PERSONAL'::wallet_purpose,
-        0,
-        NOW()
-    ) ON CONFLICT (owner_user_id, purpose) DO NOTHING;
+    IF v_invite_id IS NOT NULL THEN
+        -- Invited user signup flow
+        INSERT INTO public.users (id, organization_id, org_unit_id, email, name, status, employment_type)
+        VALUES (
+            NEW.id, v_invite_org_id, v_invite_unit_id, NEW.email,
+            v_user_name,
+            'ACTIVE'::user_status,
+            'FULL_TIME'::employment_type
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            organization_id = EXCLUDED.organization_id,
+            org_unit_id = EXCLUDED.org_unit_id,
+            name = EXCLUDED.name,
+            status = 'ACTIVE';
 
-    -- Mark invitation as ACCEPTED
-    UPDATE invitations
-    SET status = 'ACCEPTED'
-    WHERE id = v_invitation.id;
+        IF v_invite_role_id IS NOT NULL THEN
+            INSERT INTO public.user_roles (user_id, role_id)
+            VALUES (NEW.id, v_invite_role_id)
+            ON CONFLICT DO NOTHING;
+        END IF;
+        
+        INSERT INTO public.wallets (organization_id, owner_user_id, purpose, balance)
+        VALUES (v_invite_org_id, NEW.id, 'PERSONAL'::wallet_purpose, 0)
+        ON CONFLICT DO NOTHING;
+        
+        EXECUTE 'UPDATE public.invitations SET status = ''ACCEPTED'' WHERE id = $1' USING v_invite_id;
+    ELSE
+        -- Self-signup / OAuth flow (New organization creator)
+        INSERT INTO public.organizations (name, type)
+        VALUES (
+            v_user_name || '''s Organization',
+            'GENERIC'::organization_type
+        )
+        RETURNING id INTO v_org_id;
 
+        -- Create root department org_unit
+        INSERT INTO public.org_units (organization_id, name, unit_type)
+        VALUES (
+            v_org_id,
+            'Main',
+            'DEPARTMENT'
+        )
+        RETURNING id INTO v_unit_id;
+
+        -- Create user record in public.users
+        INSERT INTO public.users (id, organization_id, org_unit_id, email, name, status, employment_type)
+        VALUES (
+            NEW.id, v_org_id, v_unit_id, NEW.email,
+            v_user_name,
+            'ACTIVE'::user_status,
+            'FULL_TIME'::employment_type
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            organization_id = EXCLUDED.organization_id,
+            org_unit_id = EXCLUDED.org_unit_id,
+            name = EXCLUDED.name,
+            status = 'ACTIVE';
+
+        -- Create standard DIRECTOR role for this organization
+        INSERT INTO public.roles (organization_id, name, scope_level, is_system_role)
+        VALUES (v_org_id, 'Director', 'DIRECTOR', true)
+        RETURNING id INTO v_role_id;
+
+        INSERT INTO public.user_roles (user_id, role_id)
+        VALUES (NEW.id, v_role_id)
+        ON CONFLICT DO NOTHING;
+
+        -- Create wallets
+        INSERT INTO public.wallets (organization_id, owner_user_id, purpose, balance)
+        VALUES (v_org_id, NEW.id, 'PERSONAL'::wallet_purpose, 0)
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO public.wallets (organization_id, owner_user_id, purpose, balance)
+        VALUES (v_org_id, NEW.id, 'SALARY_POOL'::wallet_purpose, 0)
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO public.wallets (organization_id, owner_user_id, purpose, balance)
+        VALUES (v_org_id, NEW.id, 'LOAN_POOL'::wallet_purpose, 0)
+        ON CONFLICT DO NOTHING;
+    END IF;
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-    -- Log error but don't fail the auth operation
     RAISE WARNING 'handle_new_auth_user error for %: %', NEW.email, SQLERRM;
     RETURN NEW;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;

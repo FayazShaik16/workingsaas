@@ -1,8 +1,14 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { getSessionUser } from "@/lib/auth/session"
+import { getRedirectPath } from "@/lib/auth/get-redirect"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function Home() {
+export default async function Home() {
+  const user = await getSessionUser()
+  const workspacePath = user?.organizationId ? getRedirectPath(user) : null
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <div className="max-w-2xl w-full space-y-8">
@@ -17,8 +23,15 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {workspacePath ? (
+            <Link href={workspacePath} className="w-full sm:w-auto">
+              <Button size="lg" className="w-full">
+                Go to Workspace
+              </Button>
+            </Link>
+          ) : null}
           <Link href="/login" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full">
+            <Button size="lg" variant={workspacePath ? "outline" : "default"} className="w-full">
               Sign In
             </Button>
           </Link>

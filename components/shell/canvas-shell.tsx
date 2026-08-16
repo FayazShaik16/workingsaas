@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Header } from "./header"
 import { Sidebar } from "./sidebar"
@@ -162,6 +163,18 @@ export function CanvasShell({
 
   // Get navigation items for current role scope
   const navigationItems = getNavItemsForRole(organization.id, currentRole, badges)
+
+  // Fast prefetch for instant, seamless navigation
+  useEffect(() => {
+    if (!organization?.id) return
+    availableRoles.forEach((role) => {
+      const roleBase = SCOPE_TO_BASE[role] || "member"
+      router.prefetch(`/${organization.id}/${roleBase}`)
+    })
+    navigationItems.forEach((item) => {
+      router.prefetch(item.href)
+    })
+  }, [availableRoles, organization?.id, navigationItems, router])
 
   // Handle role switching via dropdown select
   const handleRoleChange = (roleScope: string) => {

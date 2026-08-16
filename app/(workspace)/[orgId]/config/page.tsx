@@ -1,41 +1,46 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default async function ConfigDashboardPage() {
-  const user = await requireAuth()
-  await requireScope("SYSTEM_ADMIN")
+interface PageProps {
+  params: Promise<{ orgId: string }>
+}
 
-  const supabase = await createClient()
+export default async function ConfigDashboardPage({ params }: PageProps) {
+  const { orgId } = await params
+  await requireAuth()
+  await requireScope("SYSTEM_ADMIN", "DIRECTOR")
+
+  const admin = createAdminClient()
 
   // Get all configuration entities
-  const { data: workflows } = await supabase
+  const { data: workflows } = await admin
     .from("workflow_definitions")
     .select("id, entity_type, is_active")
-    .eq("organization_id", user.organizationId)
+    .eq("organization_id", orgId)
 
-  const { data: businessRules } = await supabase
+  const { data: businessRules } = await admin
     .from("business_rules")
     .select("id, entity_type, trigger_event, is_active")
-    .eq("organization_id", user.organizationId)
+    .eq("organization_id", orgId)
 
-  const { data: accessRules } = await supabase
+  const { data: accessRules } = await admin
     .from("access_control_rules")
     .select("id, entity_type, role_scope, operation")
-    .eq("organization_id", user.organizationId)
+    .eq("organization_id", orgId)
 
-  const { data: qualifiers } = await supabase
+  const { data: qualifiers } = await admin
     .from("reference_qualifiers")
     .select("id, source_entity, target_entity")
-    .eq("organization_id", user.organizationId)
+    .eq("organization_id", orgId)
 
-  const { data: notifications } = await supabase
+  const { data: notifications } = await admin
     .from("notification_definitions")
     .select("id, trigger_event, is_active")
-    .eq("organization_id", user.organizationId)
+    .eq("organization_id", orgId)
 
   return (
     <div className="space-y-6 p-6">

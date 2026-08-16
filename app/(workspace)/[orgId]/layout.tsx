@@ -23,34 +23,59 @@ const SCOPE_TO_BASE: Record<string, string> = {
   MEMBER:        "member",
 }
 
-async function getWorkspaceContext(orgId: string) {
-  const user = await requireAuth()
+import { cache } from "react"
+
+const getCachedOrg = cache(async (orgId: string) => {
   const supabase = await createClient()
-
-  // STRICT multi-tenancy: wrong org → redirect to user's actual org
-  if (user.organizationId !== orgId) {
-    const primaryScope = user.scopeLevels?.[0] || "MEMBER"
-    const roleBase = SCOPE_TO_BASE[primaryScope] || "member"
-    redirect(`/${user.organizationId}/${roleBase}`)
-  }
-
-  // Get organization
   const { data: org } = await supabase
     .from("organizations")
     .select("id, name, template_key")
     .eq("id", orgId)
     .single()
+  return org
+})
 
-  // Get user's roles — return scope_level (not display name) for reliable mapping
-  const { data: userRoles } = await supabase
-    .from("user_roles")
-    .select("roles(id, name, scope_level)")
-    .eq("user_id", user.id)
+async function getWorkspaceContext(orgId: string) {
+  const user = await requireAuth()
 
-  // Scope levels assigned to user
-  const scopeLevels: string[] = (userRoles ?? [])
-    .map((ur: any) => ur.roles?.scope_level)
-    .filter(Boolean)
+  // STRICT multi-tenancy with dynamic invitation reconciliation
+  if (user.organizationId !== orgId) {
+    const supabase = await createClient()
+    const { data: invite } = await supabase
+      .from("invitations")
+      .select("*")
+      .eq("organization_id", orgId)
+      .eq("email", user.email)
+      .maybeSingle()
+
+    if (invite) {
+      await supabase.from("users").update({ organization_id: orgId }).eq("id", user.id)
+      user.organizationId = orgId
+    } else {
+      const primaryScope = user.scopeLevels?.[0] || "MEMBER"
+      const roleBase = SCOPE_TO_BASE[primaryScope] || "member"
+      redirect(`/${user.organizationId}/${roleBase}`)
+    }
+  }
+
+  // Get cached organization metadata
+  const org = await getCachedOrg(orgId)
+
+  // Dynamic role hierarchy expansion so executives can preview all subordinate dashboards
+  const directScopes = user.scopeLevels || []
+  const expandedRoles = new Set<string>(directScopes.length > 0 ? directScopes : ["MEMBER"])
+
+  if (expandedRoles.has("SYSTEM_ADMIN")) {
+    expandedRoles.add("DIRECTOR")
+    expandedRoles.add("FINANCE_ADMIN")
+    expandedRoles.add("ORG_UNIT_LEAD")
+    expandedRoles.add("MEMBER")
+  } else if (expandedRoles.has("DIRECTOR")) {
+    expandedRoles.add("SYSTEM_ADMIN")
+    expandedRoles.add("MEMBER")
+  } else if (expandedRoles.has("ORG_UNIT_LEAD") || expandedRoles.has("FINANCE_ADMIN") || expandedRoles.has("DEPT_ADMIN")) {
+    expandedRoles.add("MEMBER")
+  }
 
   return {
     user: {
@@ -60,8 +85,7 @@ async function getWorkspaceContext(orgId: string) {
       avatar_url: undefined,
     },
     organization: org,
-    // Pass user's actual assigned roles only
-    availableRoles: scopeLevels,
+    availableRoles: Array.from(expandedRoles),
   }
 }
 
