@@ -13,8 +13,9 @@ interface MemberProgressProps {
 }
 
 export function MemberProgress({ earnedTokens, monthlyTarget, activeLoanAmount, loanDueDate }: MemberProgressProps) {
-  const progressPercent = Math.min(100, Math.round((earnedTokens / monthlyTarget) * 100))
-  const shortfall = Math.max(0, monthlyTarget - earnedTokens)
+  const safeTarget = Number(monthlyTarget) > 0 ? Number(monthlyTarget) : 50
+  const progressPercent = Math.min(100, Math.round((earnedTokens / safeTarget) * 100))
+  const shortfall = Math.max(0, safeTarget - earnedTokens)
 
   return (
     <div className="space-y-6">

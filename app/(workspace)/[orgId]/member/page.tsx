@@ -16,13 +16,13 @@ export default async function MemberDashboardPage({ params }: PageProps) {
   // 1. Fetch user profile
   const { data: profile } = await supabase
     .from("users")
-    .select("name, designation, progress_percentage")
+    .select("name, designation, progress_percentage, target_credits")
     .eq("id", user.id)
     .single()
 
   const userName = profile?.name || "Faculty Member"
 
-  // 2. Fetch monthly target from compensation policy
+  // 2. Fetch monthly target from user record with compensation policy fallback
   const { data: compensation } = await supabase
     .from("compensation_policies")
     .select("monthly_target_credits")
@@ -30,7 +30,7 @@ export default async function MemberDashboardPage({ params }: PageProps) {
     .eq("scope_type", "ORG_WIDE")
     .single()
 
-  const monthlyTarget = compensation?.monthly_target_credits || 50
+  const monthlyTarget = Number(profile?.target_credits) || Number(compensation?.monthly_target_credits) || 50
 
   // 3. Fetch user's credit balance from PERSONAL wallet
   const { data: wallet } = await supabase
