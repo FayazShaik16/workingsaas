@@ -13,10 +13,11 @@ export async function createNewAuthUser(
   organizationId: string
 ) {
   const supabase = await createClient()
+  const db = supabase as any
 
   try {
     // Create users row
-    const { data: newUser, error: userError } = await supabase
+    const { data: newUser, error: userError } = await db
       .from("users")
       .insert({
         id: authUserId,
@@ -32,7 +33,7 @@ export async function createNewAuthUser(
     if (userError) throw userError
 
     // Create PERSONAL wallet
-    const { data: wallet, error: walletError } = await supabase
+    const { data: wallet, error: walletError } = await db
       .from("wallets")
       .insert({
         organization_id: organizationId,
@@ -62,10 +63,11 @@ export async function acceptInvitation(
   name: string
 ) {
   const supabase = await createClient()
+  const db = supabase as any
 
   try {
     // Get invitation row
-    const { data: invitation, error: inviteError } = await supabase
+    const { data: invitation, error: inviteError } = await db
       .from("invitations")
       .select("*")
       .eq("token", invitationToken)
@@ -75,7 +77,7 @@ export async function acceptInvitation(
     if (inviteError || !invitation) throw new Error("Invalid or expired invitation")
 
     // Create user
-    const { data: newUser, error: userError } = await supabase
+    const { data: newUser, error: userError } = await db
       .from("users")
       .insert({
         id: authUserId,
@@ -91,7 +93,7 @@ export async function acceptInvitation(
     if (userError) throw userError
 
     // Create PERSONAL wallet
-    await supabase.from("wallets").insert({
+    await db.from("wallets").insert({
       organization_id: invitation.organization_id,
       owner_user_id: authUserId,
       purpose: "PERSONAL",
@@ -100,14 +102,14 @@ export async function acceptInvitation(
 
     // Assign role if specified
     if (invitation.intended_role_id) {
-      await supabase.from("user_roles").insert({
+      await db.from("user_roles").insert({
         user_id: authUserId,
         role_id: invitation.intended_role_id,
       })
     }
 
     // Mark invitation accepted
-    await supabase
+    await db
       .from("invitations")
       .update({ status: "ACCEPTED" })
       .eq("id", invitation.id)

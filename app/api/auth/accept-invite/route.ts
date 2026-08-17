@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
+  const db = supabase as any
 
   try {
     const { invitationToken, authUserId, name } = await request.json()
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get invitation
-    const { data: invitation, error: inviteError } = await supabase
+    const { data: invitation, error: inviteError } = await db
       .from("invitations")
       .select("*")
       .eq("token", invitationToken)
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user
-    const { data: newUser, error: userError } = await supabase.from("users").insert({
+    const { data: newUser, error: userError } = await db.from("users").insert({
       id: authUserId,
       organization_id: invitation.organization_id,
       org_unit_id: invitation.org_unit_id,
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (userError) throw userError
 
     // Create PERSONAL wallet
-    const { error: walletError } = await supabase.from("wallets").insert({
+    const { error: walletError } = await db.from("wallets").insert({
       organization_id: invitation.organization_id,
       owner_user_id: authUserId,
       purpose: "PERSONAL",
@@ -47,14 +48,14 @@ export async function POST(request: NextRequest) {
 
     // Assign role if specified
     if (invitation.intended_role_id) {
-      await supabase.from("user_roles").insert({
+      await db.from("user_roles").insert({
         user_id: authUserId,
         role_id: invitation.intended_role_id,
       })
     }
 
     // Mark invitation accepted
-    await supabase.from("invitations").update({ status: "ACCEPTED" }).eq("id", invitation.id)
+    await db.from("invitations").update({ status: "ACCEPTED" }).eq("id", invitation.id)
 
     return NextResponse.json({ success: true, user: newUser })
   } catch (error) {

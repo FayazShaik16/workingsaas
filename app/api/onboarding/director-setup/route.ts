@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
+  const db = supabase as any
 
   try {
     // Get authenticated user
@@ -17,30 +18,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Verify user is SYSTEM_ADMIN of this org
-    const { data: userRoles, error: roleError } = await supabase
+    // Verify user is DIRECTOR or SYSTEM_ADMIN of this org
+    const { data: userRoles, error: roleError } = await db
       .from("user_roles")
       .select("roles(scope_level)")
       .eq("user_id", authData.user.id)
 
     if (roleError) throw roleError
 
-    const isAdmin = userRoles?.some((ur: any) => ur.roles?.scope_level === "SYSTEM_ADMIN")
+    const isAdmin = (userRoles || []).some(
+      (ur: any) => ur.roles?.scope_level === "SYSTEM_ADMIN" || ur.roles?.scope_level === "DIRECTOR"
+    )
     if (!isAdmin) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
     }
 
     // Create org_units tree (flat list → root-level units)
-    const createdUnits = []
+    const createdUnits: any[] = []
     for (const unit of orgUnits) {
-      const { data: orgUnit, error: unitError } = await supabase
+      const { data: orgUnit, error: unitError } = await db
         .from("org_units")
         .insert({
           organization_id: organizationId,
           parent_id: null,
           unit_type: unit.unitType || "DEPARTMENT",
           name: unit.name,
-          path: null, // Will be computed by trigger
+          path: null,
         })
         .select()
         .single()
@@ -50,9 +53,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create roles
-    const createdRoles = []
+    const createdRoles: any[] = []
     for (const role of roles) {
-      const { data: newRole, error: roleCreateError } = await supabase
+      const { data: newRole, error: roleCreateError } = await db
         .from("roles")
         .insert({
           organization_id: organizationId,

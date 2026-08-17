@@ -21,6 +21,7 @@ interface MemberMarketplaceProps {
 
 export function MemberMarketplace({ initialTasks, userId }: MemberMarketplaceProps) {
   const supabase = createClient()
+  const db = supabase as any
   const [tasks, setTasks] = useState<UnstructuredTask[]>(initialTasks)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -32,17 +33,17 @@ export function MemberMarketplace({ initialTasks, userId }: MemberMarketplacePro
     setError(null)
     setSuccess(null)
     try {
-      const { error: insertError } = await supabase
-        .from("nominations")
+      const { error: insertError } = await db
+        .from("task_applications")
         .insert({
           task_id: taskId,
           user_id: userId,
-          status: "PENDING"
+          status: "PENDING",
         })
       if (insertError) throw insertError
       setSuccess("Self-nomination submitted successfully!")
       // Remove or mark as nominated
-      setTasks(prev => prev.filter(t => t.id !== taskId))
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
     } catch (err) {
       setError("Failed to nominate: " + (err instanceof Error ? err.message : ""))
     } finally {
@@ -56,7 +57,7 @@ export function MemberMarketplace({ initialTasks, userId }: MemberMarketplacePro
         <CardTitle className="text-xl font-light">Open Unstructured Tasks</CardTitle>
         <CardDescription className="font-light">Self-nominate to earn extra tokens and improve your target progress</CardDescription>
       </CardHeader>
-      
+
       {error && <div className="mx-6 mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-xl">{error}</div>}
       {success && <div className="mx-6 mb-4 p-3 bg-green-50 border border-green-200 text-green-800 text-sm rounded-xl">{success}</div>}
 

@@ -139,8 +139,8 @@ export default async function DirectorDashboardPage() {
           {teamMembers && teamMembers.length > 0 ? (
             <DataTablePrimitive
               columns={columns}
-              data={teamMembers}
-              pageSize={15}
+              data={(teamMembers || []) as any}
+              enableSearch={true}
               searchPlaceholder="Search team members..."
             />
           ) : (

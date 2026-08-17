@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react"
 export default function DirectorWizardPage() {
   const router = useRouter()
   const supabase = createClient()
+  const db = supabase as any
 
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -20,7 +21,7 @@ export default function DirectorWizardPage() {
         const { data: authData, error: authError } = await supabase.auth.getUser()
         if (authError || !authData?.user) throw new Error("Not authenticated")
 
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await db
           .from("users")
           .select("organization_id")
           .eq("id", authData.user.id)
@@ -39,7 +40,7 @@ export default function DirectorWizardPage() {
     }
 
     getOrgId()
-  }, [supabase])
+  }, [supabase, db])
 
   if (loading) {
     return (

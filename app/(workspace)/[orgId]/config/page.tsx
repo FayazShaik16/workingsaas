@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { formatRole } from "@/lib/utils/formatters"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -185,7 +186,7 @@ export default async function ConfigDashboardPage({ params }: PageProps) {
                     <div key={rule.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
                         <p className="font-medium">{rule.operation} on {rule.entity_type}</p>
-                        <p className="text-xs text-muted-foreground">Role: {rule.role_scope}</p>
+                        <p className="text-xs text-muted-foreground">Scope: {formatRole(rule.role_scope)}</p>
                       </div>
                       <Button size="sm" variant="outline">Edit</Button>
                     </div>

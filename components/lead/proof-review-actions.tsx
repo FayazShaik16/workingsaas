@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, FormEvent } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,7 @@ export default function ProofReviewActions({
         throw new Error(err.error || "Failed to approve")
       }
 
+      setShowApproveDialog(false)
       router.push("/lead")
       router.refresh()
     } catch (error) {
@@ -77,6 +78,7 @@ export default function ProofReviewActions({
         throw new Error(err.error || "Failed to reject")
       }
 
+      setShowRejectDialog(false)
       router.push("/lead")
       router.refresh()
     } catch (error) {
@@ -109,44 +111,26 @@ export default function ProofReviewActions({
         </div>
 
         <div className="flex gap-2 pt-4">
-          <ConfirmActionDialog
-            title="Approve Task"
-            description={`Approve "${taskTitle}" and award ${creditValue} credits?`}
-            action="Approve"
-            variant="default"
-            onConfirm={handleApprove}
-            loading={loading}
+          <Button
+            size="lg"
+            className="flex-1"
             disabled={loading}
+            onClick={() => setShowApproveDialog(true)}
           >
-            <Button
-              size="lg"
-              className="flex-1"
-              disabled={loading}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve & Award Credits
-            </Button>
-          </ConfirmActionDialog>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Approve & Award Credits
+          </Button>
 
-          <ConfirmActionDialog
-            title="Reject Task"
-            description={`Reject "${taskTitle}" and return to assigned user?`}
-            action="Reject"
-            variant="destructive"
-            onConfirm={handleReject}
-            loading={loading}
-            disabled={!rejectionReason.trim() || loading}
+          <Button
+            size="lg"
+            variant="outline"
+            className="flex-1"
+            disabled={loading}
+            onClick={() => setShowRejectDialog(true)}
           >
-            <Button
-              size="lg"
-              variant="outline"
-              className="flex-1"
-              disabled={loading}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Reject Submission
-            </Button>
-          </ConfirmActionDialog>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Reject Submission
+          </Button>
         </div>
 
         {showRejectDialog && (
@@ -164,6 +148,27 @@ export default function ProofReviewActions({
             />
           </div>
         )}
+
+        <ConfirmActionDialog
+          isOpen={showApproveDialog}
+          onOpenChange={setShowApproveDialog}
+          title="Approve Task"
+          description={`Approve "${taskTitle}" and award ${creditValue} credits?`}
+          actionLabel="Approve"
+          onConfirm={handleApprove}
+          isLoading={loading}
+        />
+
+        <ConfirmActionDialog
+          isOpen={showRejectDialog}
+          onOpenChange={setShowRejectDialog}
+          title="Reject Task"
+          description={`Reject "${taskTitle}" and return to assigned user?`}
+          actionLabel="Reject"
+          isDangerous={true}
+          onConfirm={handleReject}
+          isLoading={loading}
+        />
       </CardContent>
     </Card>
   )

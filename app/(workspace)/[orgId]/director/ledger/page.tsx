@@ -1,9 +1,7 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
-import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ScrollText, ArrowUpRight, ArrowDownLeft, ShieldCheck, Hash } from "lucide-react"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { DirectorLedgerAudit, LedgerTransaction } from "@/components/director/director-ledger-audit"
+import { ScrollText } from "lucide-react"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -11,109 +9,83 @@ interface PageProps {
 
 export default async function DirectorLedgerPage({ params }: PageProps) {
   const { orgId } = await params
-  await requireAuth()
-  await requireScope("DIRECTOR", "SYSTEM_ADMIN")
+  const user = await requireAuth()
+  await requireScope("DIRECTOR", "SYSTEM_ADMIN", "FINANCE_ADMIN")
 
-  const supabase = await createClient()
+  const admin = createAdminClient()
+  const db = admin as any
 
-  // Fetch token transactions / immutable ledger entries
-  const { data: transactions } = await supabase
+  // 1. Fetch token transactions in this org with wallet details
+  const { data: rawTx } = await db
     .from("token_transactions")
     .select(`
       id,
       amount,
       type,
-      reference_type,
-      reference_id,
+      status,
       blockchain_tx_hash,
       created_at,
-      from_wallet:from_wallet_id(purpose, owner_user_id),
-      to_wallet:to_wallet_id(purpose, owner_user_id)
+      from_wallet:from_wallet_id (
+        id,
+        purpose,
+        owner_user_id,
+        users:owner_user_id (name)
+      ),
+      to_wallet:to_wallet_id (
+        id,
+        purpose,
+        owner_user_id,
+        users:owner_user_id (name)
+      )
     `)
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
-    .limit(50)
+    .limit(100)
+
+  const formattedTx: LedgerTransaction[] = (rawTx || []).map((t: any) => {
+    const fromWallet = t.from_wallet
+    const toWallet = t.to_wallet
+
+    const fromLabel = fromWallet
+      ? fromWallet.purpose === "PERSONAL"
+        ? `Faculty (${fromWallet.users?.name || "Member"})`
+        : fromWallet.purpose
+      : "Treasury / Mint"
+
+    const toLabel = toWallet
+      ? toWallet.purpose === "PERSONAL"
+        ? `Faculty (${toWallet.users?.name || "Member"})`
+        : toWallet.purpose
+      : "Vault / Burn"
+
+    const facultyName = toWallet?.users?.name || fromWallet?.users?.name || undefined
+
+    return {
+      id: t.id,
+      amount: Number(t.amount || 0),
+      type: t.type || "TRANSFER",
+      status: t.status,
+      blockchain_tx_hash: t.blockchain_tx_hash,
+      created_at: t.created_at,
+      from_wallet_label: fromLabel,
+      to_wallet_label: toLabel,
+      faculty_name: facultyName,
+    }
+  })
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Organization Ledger & Audit Log</h1>
-        <p className="text-muted-foreground mt-1">
-          Cryptographically auditable transaction ledger for non-monetary token issuance, transfers & burn
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+          <ScrollText className="h-8 w-8 text-primary" />
+          Executive Ledger & Cryptographic Audit
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Immutable double-entry journal verifying all capability token issuances, work-loan disbursements, and monthly salary sweeps.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <ScrollText className="h-5 w-5 text-primary" />
-            Immutable Transaction Journal
-          </CardTitle>
-          <CardDescription>
-            Verified double-entry bookkeeping records for all enterprise work credit distributions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {(!transactions || transactions.length === 0) ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No transactions recorded in the ledger yet. Transactions are created when tasks are verified.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Transaction ID</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>From</TableHead>
-                  <TableHead>To</TableHead>
-                  <TableHead>Hash / Proof</TableHead>
-                  <TableHead className="text-right">Timestamp</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx: any) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {tx.id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {tx.type || "TRANSFER"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono font-semibold">
-                      +{Number(tx.amount).toLocaleString()} WORK
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {tx.from_wallet?.purpose || "TREASURY"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {tx.to_wallet?.purpose || "EMPLOYEE_WALLET"}
-                    </TableCell>
-                    <TableCell>
-                      {tx.blockchain_tx_hash ? (
-                        <span className="font-mono text-xs text-primary flex items-center gap-1">
-                          <Hash className="h-3 w-3" />
-                          {tx.blockchain_tx_hash.slice(0, 10)}...
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                          Internal Ledger Verified
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <DirectorLedgerAudit orgId={orgId} transactions={formattedTx} />
     </div>
   )
 }

@@ -28,6 +28,8 @@ interface SidebarProps {
   onRoleChange?: (role: string) => void
 }
 
+import { SignOutButton } from "@/components/auth/sign-out-button"
+
 export function Sidebar({
   user,
   organization,
@@ -46,8 +48,12 @@ export function Sidebar({
         onRoleChange={onRoleChange}
       />
       <SearchBar />
-      <Navigation items={navigationItems} />
-      <div className="flex-1" />
+      <div className="flex-1 overflow-y-auto">
+        <Navigation items={navigationItems} />
+      </div>
+      <div className="p-3 border-t bg-muted/20">
+        <SignOutButton variant="sidebar" showText={true} />
+      </div>
     </div>
   )
 }

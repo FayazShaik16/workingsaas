@@ -33,12 +33,13 @@ import {
 } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 
-interface DataTablePrimitiveProps<TData, TValue> {
+export interface DataTablePrimitiveProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   enableSearch?: boolean
   searchPlaceholder?: string
   searchKey?: string
+  pageSize?: number
 }
 
 export function DataTablePrimitive<TData, TValue>({
@@ -47,6 +48,7 @@ export function DataTablePrimitive<TData, TValue>({
   enableSearch = false,
   searchPlaceholder = "Search...",
   searchKey = "name",
+  pageSize = 10,
 }: DataTablePrimitiveProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -62,6 +64,11 @@ export function DataTablePrimitive<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    initialState: {
+      pagination: {
+        pageSize: pageSize,
+      },
+    },
     state: {
       sorting,
       columnFilters,
@@ -172,9 +179,9 @@ export function DataTablePrimitive<TData, TValue>({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {[10, 20, 30, 40, 50].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
+            {[10, 20, 30, 40, 50].map((size) => (
+              <SelectItem key={size} value={`${size}`}>
+                {size}
               </SelectItem>
             ))}
           </SelectContent>

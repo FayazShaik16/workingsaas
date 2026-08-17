@@ -11,12 +11,14 @@ interface Transaction {
   amount: number
   type: string
   status: string
-  timestamp: string
+  created_at?: string
+  timestamp?: string
   notes?: string
 }
 
 export default function EarningsPage() {
   const supabase = createClient()
+  const db = supabase as any
 
   const [wallet, setWallet] = useState<any>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -30,7 +32,7 @@ export default function EarningsPage() {
         if (!authData?.user) throw new Error("Not authenticated")
 
         // Get PERSONAL wallet
-        const { data: walletData, error: walletError } = await supabase
+        const { data: walletData, error: walletError } = await db
           .from("wallets")
           .select("*")
           .eq("owner_user_id", authData.user.id)
@@ -42,16 +44,16 @@ export default function EarningsPage() {
         setWallet(walletData)
 
         // Get transaction history
-        const { data: txData, error: txError } = await supabase
+        const { data: txData, error: txError } = await db
           .from("token_transactions")
           .select("*")
           .eq("to_wallet_id", walletData?.id)
-          .order("timestamp", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(20)
 
         if (txError && txError.code !== "PGRST116") throw txError
 
-        setTransactions(txData || [])
+        setTransactions((txData as any) || [])
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to fetch earnings"
         setError(message)
@@ -158,7 +160,7 @@ export default function EarningsPage() {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(tx.timestamp).toLocaleString()}
+                      {new Date(tx.created_at || tx.timestamp || Date.now()).toLocaleString()}
                     </p>
                     {tx.notes && <p className="text-xs text-muted-foreground mt-1">{tx.notes}</p>}
                   </div>

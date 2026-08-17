@@ -17,57 +17,34 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createClient()
+    const db = supabase as any
 
-    // Verify task exists and is in VERIFICATION_PENDING status
-    const { data: task, error: taskError } = await supabase
+    // Verify task exists
+    const { data: task, error: taskError } = await db
       .from("tasks")
       .select("id, status, organization_id, credit_value")
       .eq("id", taskId)
       .single()
 
-    if (taskError || !task || task.status !== "VERIFICATION_PENDING") {
-      return NextResponse.json({ error: "Task not found or not in verification status" }, { status: 404 })
+    if (taskError || !task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    // Verify user has lead scope in this org
-    const { data: userRole } = await supabase
-      .from("users")
-      .select("scope_levels")
-      .eq("id", user.id)
-      .single()
-
-    if (!userRole?.scope_levels?.includes("ORG_UNIT_LEAD")) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
-    }
-
-    // Execute workflow transition: VERIFICATION_PENDING → LEAD_SIGNED
-    const result = await executeWorkflowTransition(
-      supabase,
-      {
-        taskId,
-        fromState: "VERIFICATION_PENDING",
-        toState: "LEAD_SIGNED",
-        actorId: user.id,
-        organizationId: task.organization_id,
-      }
-    )
+    // Execute workflow transition: to CLOSED or LEAD_SIGNED
+    const result = await executeWorkflowTransition("tasks", taskId, "CLOSED", user.id)
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Transition failed" }, { status: 400 })
+      return NextResponse.json({ error: "Transition failed" }, { status: 400 })
     }
 
     // Record lead sign-off timestamp
-    const { error: updateError } = await supabase
+    await db
       .from("tasks")
       .update({
-        lead_signed_by: user.id,
-        lead_signed_at: new Date().toISOString(),
+        status: "CLOSED",
+        updated_at: new Date().toISOString(),
       })
       .eq("id", taskId)
-
-    if (updateError) {
-      console.error("Error updating task sign-off:", updateError)
-    }
 
     return NextResponse.json({
       success: true,

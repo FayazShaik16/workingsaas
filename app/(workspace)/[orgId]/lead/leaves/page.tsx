@@ -22,17 +22,16 @@ export default async function LeadLeavesPage({ params }: PageProps) {
     .from("leave_requests")
     .select(`
       id,
-      start_date,
-      end_date,
-      type,
+      leave_date,
+      leave_type,
       reason,
       status,
       created_at,
-      users:applicant_user_id(
+      faculty:faculty_id(
         id,
         name,
         email,
-        org_units(name)
+        org_units:org_unit_id(name)
       )
     `)
     .eq("organization_id", orgId)
@@ -66,8 +65,9 @@ export default async function LeadLeavesPage({ params }: PageProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Applicant</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Leave Type</TableHead>
-                  <TableHead>Duration</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -77,16 +77,19 @@ export default async function LeadLeavesPage({ params }: PageProps) {
                 {leaves.map((l: any) => (
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">
-                      <div>{l.users?.name || "Staff Member"}</div>
-                      <div className="text-xs text-muted-foreground">{l.users?.email}</div>
+                      <div className="font-bold text-foreground">{l.faculty?.name || "Faculty Member"}</div>
+                      <div className="text-xs text-muted-foreground">{l.faculty?.email}</div>
+                    </TableCell>
+                    <TableCell className="text-xs font-semibold text-muted-foreground">
+                      {(l.faculty?.org_units as any)?.name || "Department"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{l.type || "Casual"}</Badge>
+                      <Badge variant="outline">{l.leave_type ? l.leave_type.replace("_", " ") : "Casual"}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}
+                    <TableCell className="text-xs font-mono font-semibold">
+                      {l.leave_date ? new Date(l.leave_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "N/A"}
                     </TableCell>
-                    <TableCell className="text-sm max-w-xs truncate">{l.reason || "Personal"}</TableCell>
+                    <TableCell className="text-xs max-w-xs truncate">{l.reason || "Personal"}</TableCell>
                     <TableCell>
                       {l.status === "PENDING" ? (
                         <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Pending</Badge>
