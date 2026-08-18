@@ -112,7 +112,7 @@ export function TaskCreatorWizard({
           description,
           tokenValue: parseFloat(tokenValue),
           deadline,
-          orgUnitId,
+          orgUnitId: orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null),
           skillTags: selectedTags,
           validationMode,
           requiresPeerReview,
@@ -213,6 +213,11 @@ export function TaskCreatorWizard({
                     <SelectValue placeholder="Select department..." />
                   </SelectTrigger>
                   <SelectContent>
+                    {role === "DIRECTOR" && (
+                      <SelectItem value="INSTITUTION_WIDE" className="font-bold text-primary">
+                        🏛️ Institution-Wide (All Faculty)
+                      </SelectItem>
+                    )}
                     {orgUnits.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {formatDepartment(u.name)}
