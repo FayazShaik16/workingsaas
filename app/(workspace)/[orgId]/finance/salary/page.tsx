@@ -46,7 +46,7 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
     .select("id, name")
     .eq("organization_id", orgId)
 
-  const unitMap = new Map((units || []).map((u: any) => [u.id, u.name]))
+  const unitMap = new Map<string, string>((units || []).map((u: any) => [u.id, String(u.name || "Department")]))
 
   const formattedMembers: FinanceFacultyMember[] = teachingStaff.map((u) => {
     const targetCredits = Number(u.target_credits || 50.0)

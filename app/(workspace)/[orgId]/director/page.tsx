@@ -541,9 +541,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
           </CardHeader>
           <CardContent className="p-4">
             <DirectorActions
-              orgId={orgId}
-              salaryPoolBalance={salaryPool}
-              loanPoolBalance={loanPool}
+              initialPendingLoans={parsedPendingLoans}
             />
           </CardContent>
         </Card>
