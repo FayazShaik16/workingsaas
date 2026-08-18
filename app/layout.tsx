@@ -9,9 +9,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'WorkLedger',
-  description: 'Enterprise performance and work-accountability platform',
-  generator: 'v0.app',
+  title: 'WorkLedger · Non-Monetary Merit-Based Verification Layer & Claim-Check Engine',
+  description: 'An immutable proof-of-work verification layer bridging daily operational reality to monthly payroll authorization with zero-sum mathematical certainty.',
+  generator: 'WorkLedger',
   icons: {
     icon: [
       {
