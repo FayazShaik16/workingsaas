@@ -61,21 +61,15 @@ async function getWorkspaceContext(orgId: string) {
   // Get cached organization metadata
   const org = await getCachedOrg(orgId)
 
-  // Dynamic role hierarchy expansion so executives can preview all subordinate dashboards
-  const directScopes = user.scopeLevels || []
-  const expandedRoles = new Set<string>(directScopes.length > 0 ? directScopes : ["MEMBER"])
-
-  if (expandedRoles.has("SYSTEM_ADMIN")) {
-    expandedRoles.add("DIRECTOR")
-    expandedRoles.add("FINANCE_ADMIN")
-    expandedRoles.add("ORG_UNIT_LEAD")
-    expandedRoles.add("MEMBER")
-  } else if (expandedRoles.has("DIRECTOR")) {
-    expandedRoles.add("SYSTEM_ADMIN")
-    expandedRoles.add("MEMBER")
-  } else if (expandedRoles.has("ORG_UNIT_LEAD") || expandedRoles.has("FINANCE_ADMIN") || expandedRoles.has("DEPT_ADMIN")) {
-    expandedRoles.add("MEMBER")
-  }
+  // Complete institutional role registry for universal role switcher dropdown
+  const ALL_INSTITUTIONAL_ROLES = [
+    "DIRECTOR",
+    "ORG_UNIT_LEAD",
+    "DEPT_ADMIN",
+    "MEMBER",
+    "FINANCE_ADMIN",
+    "SYSTEM_ADMIN",
+  ]
 
   return {
     user: {
@@ -85,7 +79,7 @@ async function getWorkspaceContext(orgId: string) {
       avatar_url: undefined,
     },
     organization: org,
-    availableRoles: Array.from(expandedRoles),
+    availableRoles: ALL_INSTITUTIONAL_ROLES,
   }
 }
 

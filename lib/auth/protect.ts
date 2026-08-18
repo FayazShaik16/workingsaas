@@ -25,6 +25,13 @@ export async function requireScope(...scopes: string[]) {
     redirect("/login")
   }
 
+  // SYSTEM_ADMIN and DIRECTOR have universal multi-role inspection access
+  const isPrivileged =
+    user.scopeLevels.includes("SYSTEM_ADMIN") || user.scopeLevels.includes("DIRECTOR")
+  if (isPrivileged) {
+    return user
+  }
+
   const hasRequiredScope = scopes.some((scope) => hasScope(user.scopeLevels, scope))
   if (!hasRequiredScope) {
     const { getRedirectPath } = await import("./get-redirect")

@@ -34,6 +34,15 @@ const ROLE_DISPLAY_NAMES: Record<string, string> = {
   MEMBER: "Faculty",
 }
 
+const ROLE_ICONS: Record<string, React.ReactNode> = {
+  SYSTEM_ADMIN: <Shield className="h-3.5 w-3.5 text-violet-500" />,
+  DIRECTOR: <Zap className="h-3.5 w-3.5 text-amber-500" />,
+  FINANCE_ADMIN: <CreditCard className="h-3.5 w-3.5 text-emerald-500" />,
+  ORG_UNIT_LEAD: <UserCheck className="h-3.5 w-3.5 text-sky-500" />,
+  DEPT_ADMIN: <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500" />,
+  MEMBER: <Users className="h-3.5 w-3.5 text-slate-500" />,
+}
+
 export function IdentityBanner({
   user,
   organization,
@@ -49,6 +58,7 @@ export function IdentityBanner({
     .slice(0, 2)
 
   const currentDisplayName = ROLE_DISPLAY_NAMES[currentRole] || currentRole
+  const currentIcon = ROLE_ICONS[currentRole] || <Users className="h-3.5 w-3.5 text-slate-500" />
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b bg-background">
@@ -64,18 +74,20 @@ export function IdentityBanner({
 
       {availableRoles.length > 1 && (
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-muted cursor-pointer font-medium border bg-card">
-            {currentDisplayName}
-            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl hover:bg-muted cursor-pointer font-semibold border bg-card shadow-2xs">
+            {currentIcon}
+            <span>{currentDisplayName}</span>
+            <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-md">
             {availableRoles.map((roleScope) => (
               <DropdownMenuItem
                 key={roleScope}
                 onClick={() => onRoleChange?.(roleScope)}
-                className="cursor-pointer text-xs"
+                className="cursor-pointer text-xs flex items-center gap-2 px-2.5 py-2 rounded-lg font-medium"
               >
-                {ROLE_DISPLAY_NAMES[roleScope] || roleScope}
+                {ROLE_ICONS[roleScope]}
+                <span>{ROLE_DISPLAY_NAMES[roleScope] || roleScope}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

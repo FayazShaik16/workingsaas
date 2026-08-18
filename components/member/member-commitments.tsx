@@ -34,19 +34,20 @@ interface MemberCommitmentsProps {
 export function MemberCommitments({ commitments, schedule: initialSchedule, orgId }: MemberCommitmentsProps) {
   const router = useRouter()
   const supabase = createClient()
+  const db = supabase as any
   const [schedule, setSchedule] = useState<ScheduleItem[]>(initialSchedule)
   const [actionLoading, setActionLoading] = useState(false)
 
   const handleMarkAttendance = async (taskId: string) => {
     setActionLoading(true)
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("tasks")
         .update({ status: "CLOSED" })
         .eq("id", taskId)
 
       if (error) throw error
-      setSchedule(prev => prev.map(s => s.id === taskId ? { ...s, status: "CLOSED" } : s))
+      setSchedule((prev) => prev.map((s) => (s.id === taskId ? { ...s, status: "CLOSED" } : s)))
     } catch (err) {
       console.error("Failed to mark session:", err)
     } finally {

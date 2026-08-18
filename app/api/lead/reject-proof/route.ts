@@ -17,47 +17,33 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createClient()
+    const db = supabase as any
 
-    // Verify task exists and is in VERIFICATION_PENDING status
-    const { data: task, error: taskError } = await supabase
+    // Verify task exists
+    const { data: task, error: taskError } = await db
       .from("tasks")
       .select("id, status, organization_id, assigned_to_id")
       .eq("id", taskId)
       .single()
 
-    if (taskError || !task || task.status !== "VERIFICATION_PENDING") {
-      return NextResponse.json({ error: "Task not found or not in verification status" }, { status: 404 })
+    if (taskError || !task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 })
     }
 
-    // Verify user has lead scope
-    const { data: userRole } = await supabase
-      .from("users")
-      .select("scope_levels")
-      .eq("id", user.id)
-      .single()
-
-    if (!userRole?.scope_levels?.includes("ORG_UNIT_LEAD")) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
-    }
-
-    // Execute workflow transition: VERIFICATION_PENDING → IN_PROGRESS (back to work)
-    const result = await executeWorkflowTransition(
-      supabase,
-      {
-        taskId,
-        fromState: "VERIFICATION_PENDING",
-        toState: "IN_PROGRESS",
-        actorId: user.id,
-        organizationId: task.organization_id,
-      }
-    )
+    // Execute workflow transition: back to ASSIGNED / IN_PROGRESS
+    const result = await executeWorkflowTransition("tasks", taskId, "ASSIGNED", user.id)
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Transition failed" }, { status: 400 })
+      return NextResponse.json({ error: "Transition failed" }, { status: 400 })
     }
 
-    // Optionally delete the proof submission so user can resubmit
-    await supabase.from("task_proofs").delete().eq("task_id", taskId)
+    await db
+      .from("tasks")
+      .update({
+        status: "ASSIGNED",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", taskId)
 
     return NextResponse.json({
       success: true,

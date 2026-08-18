@@ -47,40 +47,39 @@ interface SlotProps extends React.HTMLAttributes<HTMLElement> {
 
 function Slot({ children, ...props }: SlotProps) {
   if (!React.isValidElement(children)) return null
-  return React.cloneElement(children as React.ReactElement<any>, {
+  const childElement = children as React.ReactElement<any>
+  return React.cloneElement(childElement, {
     ...props,
-    ...children.props,
-    className: cn(props.className, children.props.className),
+    ...(childElement.props || {}),
+    className: cn(props.className, childElement.props?.className),
   })
 }
 
-interface ButtonProps extends ButtonPrimitive.Props, VariantProps<typeof buttonVariants> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 
-function Button({
-  className,
-  variant = 'default',
-  size = 'default',
-  asChild = false,
-  ...props
-}: ButtonProps) {
-  if (asChild) {
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = 'default', size = 'default', asChild = false, ...props }, ref) => {
+    if (asChild) {
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          {...props}
+        />
+      )
+    }
+
     return (
-      <Slot
+      <button
+        ref={ref}
+        data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         {...props}
       />
     )
   }
-
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-}
+)
+Button.displayName = 'Button'
 
 export { Button, buttonVariants }

@@ -111,7 +111,7 @@ export default function RecurringScheduleGenerator() {
         })
       }
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from("tasks")
         .insert(tasksToInsert)
 

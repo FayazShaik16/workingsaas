@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowRight } from "lucide-react"
+import { formatRole } from "@/lib/utils/formatters"
 
 type TeamMember = {
   id: string
@@ -37,8 +38,8 @@ export function TeamRosterTable({ teamMembers, orgId }: TeamRosterTableProps) {
       cell: ({ row }) => (
         <div className="flex gap-1 flex-wrap">
           {row.original.scope_levels?.map((scope) => (
-            <Badge key={scope} variant="secondary" className="text-xs font-light rounded-md px-2 py-0.5">
-              {scope}
+            <Badge key={scope} variant="secondary" className="text-xs font-semibold rounded-md px-2 py-0.5">
+              {formatRole(scope)}
             </Badge>
           ))}
         </div>
@@ -66,7 +67,7 @@ export function TeamRosterTable({ teamMembers, orgId }: TeamRosterTableProps) {
     <DataTablePrimitive
       columns={columns}
       data={teamMembers}
-      pageSize={15}
+      enableSearch={true}
       searchPlaceholder="Search team members..."
     />
   )

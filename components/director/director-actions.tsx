@@ -21,6 +21,8 @@ interface DirectorActionsProps {
 
 export function DirectorActions({ initialPendingLoans }: DirectorActionsProps) {
   const supabase = createClient()
+  const db = supabase as any
+
   const [pendingLoans, setPendingLoans] = useState<PendingLoan[]>(initialPendingLoans)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,14 +33,14 @@ export function DirectorActions({ initialPendingLoans }: DirectorActionsProps) {
     setError(null)
     setSuccess(null)
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("loans")
         .update({ status: "ACTIVE" })
         .eq("id", loanId)
 
       if (updateError) throw updateError
       setSuccess("Loan request approved successfully!")
-      setPendingLoans(prev => prev.filter(l => l.id !== loanId))
+      setPendingLoans((prev) => prev.filter((l) => l.id !== loanId))
     } catch (err) {
       setError("Failed to approve loan request.")
     } finally {
@@ -51,14 +53,14 @@ export function DirectorActions({ initialPendingLoans }: DirectorActionsProps) {
     setError(null)
     setSuccess(null)
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("loans")
         .update({ status: "REJECTED" })
         .eq("id", loanId)
 
       if (updateError) throw updateError
       setSuccess("Loan request rejected.")
-      setPendingLoans(prev => prev.filter(l => l.id !== loanId))
+      setPendingLoans((prev) => prev.filter((l) => l.id !== loanId))
     } catch (err) {
       setError("Failed to reject loan request.")
     } finally {
@@ -72,7 +74,7 @@ export function DirectorActions({ initialPendingLoans }: DirectorActionsProps) {
         <CardTitle className="text-lg font-light">Pending Loan Approvals</CardTitle>
         <CardDescription className="font-light">Approve or reject token loan advances</CardDescription>
       </CardHeader>
-      
+
       {error && <div className="mx-6 mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-xl">{error}</div>}
       {success && <div className="mx-6 mb-4 p-3 bg-green-50 border border-green-200 text-green-800 text-sm rounded-xl">{success}</div>}
 

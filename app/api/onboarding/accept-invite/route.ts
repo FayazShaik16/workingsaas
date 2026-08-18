@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
+    const db = supabase as any
 
     // 1. Verify user is logged in
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Fetch invitation details
-    const { data: invitation, error: inviteError } = await supabase
+    const { data: invitation, error: inviteError } = await db
       .from("invitations")
       .select("*")
       .eq("token", token)
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Get current user details in public.users to check if they have an old org
-    const { data: publicUser } = await supabase
+    const { data: publicUser } = await db
       .from("users")
       .select("organization_id")
       .eq("id", user.id)
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     const oldOrgId = publicUser?.organization_id
 
     // 4. Upsert (insert or update) the user record to link them to the organization
-    const { error: userUpsertError } = await supabase
+    const { error: userUpsertError } = await db
       .from("users")
       .upsert({
         id: user.id,
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
 
     // 5. Assign intended role
     if (invitation.intended_role_id) {
-      const { error: roleError } = await supabase
+      const { error: roleError } = await db
         .from("user_roles")
         .insert({
           user_id: user.id,
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     // 6. Create PERSONAL wallet in the new organization
-    const { error: walletError } = await supabase
+    const { error: walletError } = await db
       .from("wallets")
       .insert({
         organization_id: invitation.organization_id,
@@ -98,20 +99,20 @@ export async function POST(request: Request) {
     })
 
     // 8. Mark invitation as ACCEPTED
-    await supabase
+    await db
       .from("invitations")
       .update({ status: "ACCEPTED" })
       .eq("id", invitation.id)
 
     // 9. Optional cleanup: If the old organization was a placeholder created on raw signup, delete it
     if (oldOrgId && oldOrgId !== invitation.organization_id) {
-      const { count } = await supabase
+      const { count } = await db
         .from("users")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", oldOrgId)
       
       if (count === 1) {
-        await supabase.from("organizations").delete().eq("id", oldOrgId)
+        await db.from("organizations").delete().eq("id", oldOrgId)
       }
     }
 

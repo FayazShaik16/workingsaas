@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Users, UserPlus, Building2, Shield, Mail, CheckCircle2, Clock } from "lucide-react"
+import { formatRole, formatDepartment, formatStatus } from "@/lib/utils/formatters"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -48,16 +49,20 @@ export default async function AdminUsersPage({ params }: PageProps) {
     const roleObj = userRoleMapping?.roles
     const unitObj = allUnits.find((unit: any) => unit.id === u.org_unit_id)
 
+    const rawRole = roleObj?.name || roleObj?.scope_level || (u.designation?.toLowerCase().includes("director") ? "DIRECTOR" : "MEMBER")
+    const cleanRoleName = formatRole(rawRole)
+    const cleanDeptName = formatDepartment(unitObj?.name)
+
     return {
       id: u.id,
       name: u.name || "Member",
       email: u.email,
-      employeeId: u.employee_id || "N/A",
-      designation: u.designation || "Staff Member",
-      department: unitObj?.name || "Unassigned / Root",
-      roleName: roleObj?.name || (roleObj?.scope_level === "DIRECTOR" ? "Director" : "Member"),
+      employeeId: u.employee_id || `EMP-${u.id.replace(/-/g, "").slice(0, 5).toUpperCase()}`,
+      designation: u.designation || "Faculty / Staff",
+      department: cleanDeptName,
+      roleName: cleanRoleName,
       scopeLevel: roleObj?.scope_level || "MEMBER",
-      status: u.status || "ACTIVE",
+      status: formatStatus(u.status || "ACTIVE"),
       progress: Number(u.progress_percentage || 0),
       createdAt: u.created_at ? new Date(u.created_at).toLocaleDateString() : "Recent",
     }

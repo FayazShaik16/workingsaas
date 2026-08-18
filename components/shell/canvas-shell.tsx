@@ -25,6 +25,7 @@ import {
   Wallet,
   ScrollText,
   Shield,
+  Sparkles,
 } from "lucide-react"
 
 interface NavItem {
@@ -98,6 +99,7 @@ export function getNavItemsForRole(
     DIRECTOR: [
       { label: "Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "Org Structure", href: `${base}/org-tree`, icon: <GitBranch className="h-4 w-4" /> },
+      { label: "Post Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Invite Team", href: `${base}/invite-team`, icon: <Users className="h-4 w-4" /> },
       { label: "Dept Reports", href: `${base}/reports`, icon: <BarChart3 className="h-4 w-4" /> },
       { label: "Loan Approvals", href: `${base}/loans`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.loans },
@@ -112,8 +114,9 @@ export function getNavItemsForRole(
     ],
     ORG_UNIT_LEAD: [
       { label: "Dept Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
+      { label: "Post Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Leave Queue", href: `${base}/leaves`, icon: <ClipboardList className="h-4 w-4" />, badge: badges?.leaves },
-      { label: "Task Verify", href: `${base}/verify`, icon: <CheckSquare className="h-4 w-4" />, badge: badges?.verify },
+      { label: "Attendance & Verify", href: `${base}/verify`, icon: <CheckSquare className="h-4 w-4" />, badge: badges?.verify },
       { label: "Salary Approve", href: `${base}/salary`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.salary },
       { label: "Dept Schedule", href: `${base}/schedule`, icon: <CalendarDays className="h-4 w-4" /> },
       { label: "Settings", href: `${base}/settings`, icon: <Settings className="h-4 w-4" /> },

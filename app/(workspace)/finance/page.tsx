@@ -147,8 +147,8 @@ export default async function FinanceDashboardPage() {
           {wallets && wallets.length > 0 ? (
             <DataTablePrimitive
               columns={columns}
-              data={wallets}
-              pageSize={10}
+              data={(wallets || []) as any}
+              enableSearch={true}
               searchPlaceholder="Search wallets..."
             />
           ) : (

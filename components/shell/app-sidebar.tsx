@@ -28,8 +28,10 @@ import {
   Clock,
   Wallet,
   ScrollText,
+  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SignOutButton } from "@/components/auth/sign-out-button"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -85,6 +87,7 @@ export function getNavItemsForRole(
     DIRECTOR: [
       { label: "Overview",         href: base,                          icon: <LayoutDashboard size={16} /> },
       { label: "Org Structure",    href: `${base}/org-tree`,            icon: <GitBranch size={16} /> },
+      { label: "Post Task",        href: `${base}/tasks/new`,           icon: <Sparkles size={16} /> },
       { label: "Dept Reports",     href: `${base}/reports`,             icon: <BarChart3 size={16} /> },
       { label: "Loan Approvals",   href: `${base}/loans`,               icon: <CreditCard size={16} />, badge: badges?.loans },
       { label: "Ledger Audit",     href: `${base}/ledger`,              icon: <ScrollText size={16} /> },
@@ -98,8 +101,9 @@ export function getNavItemsForRole(
     ],
     ORG_UNIT_LEAD: [
       { label: "Dept Overview",    href: base,                  icon: <LayoutDashboard size={16} /> },
+      { label: "Post Task",        href: `${base}/tasks/new`,   icon: <Sparkles size={16} /> },
       { label: "Leave Queue",      href: `${base}/leaves`,      icon: <ClipboardList size={16} />, badge: badges?.leaves },
-      { label: "Task Verify",      href: `${base}/verify`,      icon: <CheckSquare size={16} />, badge: badges?.verify },
+      { label: "Attendance & Verify", href: `${base}/verify`,   icon: <CheckSquare size={16} />, badge: badges?.verify },
       { label: "Salary Approve",   href: `${base}/salary`,      icon: <CreditCard size={16} />, badge: badges?.salary },
       { label: "Dept Schedule",    href: `${base}/schedule`,    icon: <CalendarDays size={16} /> },
       { label: "Settings",         href: `${base}/settings`,    icon: <Settings size={16} /> },
@@ -238,15 +242,20 @@ function DesktopSidebar({ user, organization, currentRole, availableRoles, navig
       </nav>
 
       {/* ── User footer ── */}
-      <div className="border-t border-white/[0.05] px-2 py-3 flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0 ring-2 ring-white/[0.08]">
-            {user.name?.charAt(0)?.toUpperCase() ?? "?"}
+      <div className="border-t border-white/[0.05] px-2 py-3 flex-shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0 ring-2 ring-white/[0.08]">
+              {user.name?.charAt(0)?.toUpperCase() ?? "?"}
+            </div>
+            <div className="min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150 delay-75">
+              <p className="text-[12px] font-semibold text-white truncate whitespace-nowrap">{user.name}</p>
+              <p className="text-[10px] text-white/35 truncate whitespace-nowrap">{user.email}</p>
+            </div>
           </div>
-          <div className="min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150 delay-75">
-            <p className="text-[12px] font-semibold text-white truncate whitespace-nowrap">{user.name}</p>
-            <p className="text-[10px] text-white/35 truncate whitespace-nowrap">{user.email}</p>
-          </div>
+        </div>
+        <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150 delay-75 pt-1 border-t border-white/[0.04]">
+          <SignOutButton variant="sidebar" showText={true} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 py-1.5 rounded-lg text-[11px]" />
         </div>
       </div>
     </aside>
@@ -364,7 +373,7 @@ function MobileSidebar({ user, organization, currentRole, availableRoles, naviga
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-white/[0.05] px-4 py-4 flex-shrink-0">
+          <div className="border-t border-white/[0.05] px-4 py-4 flex-shrink-0 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-[12px] font-semibold ring-2 ring-white/[0.07]">
                 {user.name?.charAt(0)?.toUpperCase() ?? "?"}
@@ -373,6 +382,9 @@ function MobileSidebar({ user, organization, currentRole, availableRoles, naviga
                 <p className="text-[12px] font-semibold text-white truncate">{user.name}</p>
                 <p className="text-[10px] text-white/35 truncate">{user.email}</p>
               </div>
+            </div>
+            <div className="pt-2 border-t border-white/[0.04]">
+              <SignOutButton variant="sidebar" showText={true} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 py-1.5 rounded-lg text-xs" />
             </div>
           </div>
         </aside>

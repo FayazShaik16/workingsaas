@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Mail, Copy, Check, UserPlus } from "lucide-react"
+import { formatRole, formatDepartment } from "@/lib/utils/formatters"
 
 export default function InviteTeamPage() {
   const params = useParams()
@@ -41,8 +42,24 @@ export default function InviteTeamPage() {
       const { data: rolesData } = await supabase
         .from("roles")
         .select("id, name, scope_level")
-        .eq("organization_id", orgId)
-      setRoles(rolesData || [])
+      
+      const loadedRoles = (rolesData || []).map((r: any) => ({
+        ...r,
+        name: formatRole(r.name || r.scope_level),
+      }))
+
+      // Default fallback roles if table is empty
+      if (loadedRoles.length === 0) {
+        loadedRoles.push(
+          { id: "role-director", name: "Director", scope_level: "DIRECTOR" },
+          { id: "role-lead", name: "HOD / Dept Lead", scope_level: "ORG_UNIT_LEAD" },
+          { id: "role-dept-admin", name: "Dept Admin", scope_level: "DEPT_ADMIN" },
+          { id: "role-member", name: "Faculty Member", scope_level: "MEMBER" },
+          { id: "role-finance", name: "Finance Admin", scope_level: "FINANCE_ADMIN" },
+          { id: "role-system-admin", name: "System Admin", scope_level: "SYSTEM_ADMIN" }
+        )
+      }
+      setRoles(loadedRoles)
 
       // Fetch org units in the organization
       const { data: unitsData } = await supabase
@@ -54,7 +71,7 @@ export default function InviteTeamPage() {
       // Fetch pending invitations
       const { data: inviteData } = await supabase
         .from("invitations")
-        .select("*, roles(name)")
+        .select("*, roles(name, scope_level)")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false })
       setInvitationsList(inviteData || [])
@@ -178,7 +195,7 @@ export default function InviteTeamPage() {
                   <SelectContent>
                     {roles.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
-                        {r.name}
+                        {formatRole(r.name || r.scope_level)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -194,7 +211,7 @@ export default function InviteTeamPage() {
                   <SelectContent>
                     {orgUnits.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.name}
+                        {formatDepartment(u.name)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -224,7 +241,7 @@ export default function InviteTeamPage() {
                 <div key={inv.id} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="font-medium">{inv.email}</p>
-                    <p className="text-xs text-muted-foreground">{inv.roles?.name || "Member"}</p>
+                    <p className="text-xs text-muted-foreground">{formatRole(inv.roles?.name || inv.roles?.scope_level || "Faculty Member")}</p>
                   </div>
                   <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
                     inv.status === 'ACCEPTED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'

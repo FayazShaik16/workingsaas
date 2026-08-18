@@ -32,6 +32,7 @@ interface LeadManagerViewProps {
 
 export function LeadManagerView({ initialApprovals, initialVerifications, orgId }: LeadManagerViewProps) {
   const supabase = createClient()
+  const db = supabase as any
   const [approvals, setApprovals] = useState<SalaryApproval[]>(initialApprovals)
   const [verifications, setVerifications] = useState<Verification[]>(initialVerifications)
   const [actionLoading, setActionLoading] = useState(false)
@@ -43,14 +44,14 @@ export function LeadManagerView({ initialApprovals, initialVerifications, orgId 
     setError(null)
     setSuccess(null)
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("tasks")
         .update({ status: "LEAD_SIGNED" })
         .eq("id", taskId)
 
       if (updateError) throw updateError
       setSuccess("Task verification approved successfully!")
-      setVerifications(prev => prev.filter(v => v.id !== taskId))
+      setVerifications((prev) => prev.filter((v) => v.id !== taskId))
     } catch (err) {
       setError("Failed to approve verification.")
     } finally {
@@ -63,14 +64,14 @@ export function LeadManagerView({ initialApprovals, initialVerifications, orgId 
     setError(null)
     setSuccess(null)
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("tasks")
         .update({ status: "OPEN" })
         .eq("id", taskId)
 
       if (updateError) throw updateError
       setSuccess("Task returned to Open status.")
-      setVerifications(prev => prev.filter(v => v.id !== taskId))
+      setVerifications((prev) => prev.filter((v) => v.id !== taskId))
     } catch (err) {
       setError("Failed to reject verification.")
     } finally {

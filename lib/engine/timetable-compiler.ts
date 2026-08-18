@@ -162,7 +162,7 @@ export async function compileMonthlyScheduleTasks(
       }
     }
 
-    // Update target credits on user
+    // Update target credits on user: Structured baseline + 10 unstructured quota
     const unstructuredQuota = 10.0
     const calculatedTarget = totalStructuredCredits > 0 ? totalStructuredCredits + unstructuredQuota : 50.0
 
@@ -193,6 +193,46 @@ export async function compileMonthlyScheduleTasks(
       error: error?.message || "Failed to compile schedule",
     }
   }
+}
+
+/**
+ * generateMonthlyScheduleTasks
+ * Named function requested for Phase 1 denominator engine.
+ * Automatically resolves organizationId if omitted.
+ */
+export async function generateMonthlyScheduleTasks(
+  facultyId: string,
+  month: number,
+  year: number,
+  organizationId?: string
+): Promise<CompileResult> {
+  let resolvedOrgId = organizationId
+
+  if (!resolvedOrgId) {
+    const supabase = await createClient()
+    const { data: user } = await supabase
+      .from("users")
+      .select("organization_id")
+      .eq("id", facultyId)
+      .single()
+
+    resolvedOrgId = (user as any)?.organization_id
+  }
+
+  if (!resolvedOrgId) {
+    return {
+      success: false,
+      facultyId,
+      month,
+      year,
+      tasksCreated: 0,
+      structuredCredits: 0,
+      targetCredits: 50,
+      error: "Could not resolve organization ID for faculty",
+    }
+  }
+
+  return compileMonthlyScheduleTasks(resolvedOrgId, facultyId, year, month)
 }
 
 /**

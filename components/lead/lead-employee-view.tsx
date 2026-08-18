@@ -25,6 +25,7 @@ interface LeadEmployeeViewProps {
 
 export function LeadEmployeeView({ personalProgress, earnedTokens, targetTokens, schedule: initialSchedule }: LeadEmployeeViewProps) {
   const supabase = createClient()
+  const db = supabase as any
   const [schedule, setSchedule] = useState<ScheduleItem[]>(initialSchedule)
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -32,13 +33,13 @@ export function LeadEmployeeView({ personalProgress, earnedTokens, targetTokens,
     setActionLoading(true)
     try {
       // Mark lecture session as closed (done) in database
-      const { error } = await supabase
+      const { error } = await db
         .from("tasks")
         .update({ status: "CLOSED" })
         .eq("id", taskId)
 
       if (error) throw error
-      setSchedule(prev => prev.map(s => s.id === taskId ? { ...s, status: "CLOSED" } : s))
+      setSchedule((prev) => prev.map((s) => (s.id === taskId ? { ...s, status: "CLOSED" } : s)))
     } catch (err) {
       console.error("Failed to update status:", err)
     } finally {

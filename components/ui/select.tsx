@@ -2,11 +2,98 @@
 
 import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
-
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+import { formatRole, isUUID } from "@/lib/utils/formatters"
 
-const Select = SelectPrimitive.Root
+// Global Context for item label resolution across Base UI popups
+const SelectItemLabelContext = React.createContext<{
+  registerItem: (value: any, label: React.ReactNode) => void
+  unregisterItem: (value: any) => void
+  getLabel: (value: any) => React.ReactNode
+}>({
+  registerItem: () => {},
+  unregisterItem: () => {},
+  getLabel: () => undefined,
+})
+
+function extractItemsFromChildren(children: React.ReactNode): Record<string, React.ReactNode> {
+  const itemMap: Record<string, React.ReactNode> = {}
+
+  function walk(node: React.ReactNode) {
+    if (!node) return
+    if (React.isValidElement(node)) {
+      const props = node.props as any
+      if (props && "value" in props && props.value !== undefined && props.children !== undefined) {
+        itemMap[String(props.value)] = props.children
+      }
+      if (props && props.children) {
+        if (Array.isArray(props.children)) {
+          props.children.forEach(walk)
+        } else {
+          walk(props.children)
+        }
+      }
+    } else if (Array.isArray(node)) {
+      node.forEach(walk)
+    }
+  }
+
+  walk(children)
+  return itemMap
+}
+
+function Select({
+  onValueChange,
+  items,
+  children,
+  ...props
+}: Omit<SelectPrimitive.Root.Props<any>, "onValueChange"> & {
+  onValueChange?: (value: any) => void
+}) {
+  const itemLabelsRef = React.useRef<Map<any, React.ReactNode>>(new Map())
+  const [, setTick] = React.useState(0)
+
+  const registerItem = React.useCallback((value: any, label: React.ReactNode) => {
+    if (value != null && label != null) {
+      if (itemLabelsRef.current.get(value) !== label) {
+        itemLabelsRef.current.set(value, label)
+        setTick((t) => t + 1)
+      }
+    }
+  }, [])
+
+  const unregisterItem = React.useCallback((value: any) => {
+    if (value != null) {
+      itemLabelsRef.current.delete(value)
+    }
+  }, [])
+
+  const getLabel = React.useCallback((value: any) => {
+    return itemLabelsRef.current.get(value)
+  }, [])
+
+  // Auto extract items mapping from children to populate Base UI internal items dictionary
+  const extractedItems = React.useMemo(() => {
+    return extractItemsFromChildren(children)
+  }, [children])
+
+  const mergedItems = items || (Object.keys(extractedItems).length > 0 ? extractedItems : undefined)
+
+  return (
+    <SelectItemLabelContext.Provider value={{ registerItem, unregisterItem, getLabel }}>
+      <SelectPrimitive.Root
+        items={mergedItems}
+        onValueChange={(value) => {
+          if (onValueChange) onValueChange(value)
+        }}
+        {...(props as any)}
+      >
+        {children}
+      </SelectPrimitive.Root>
+    </SelectItemLabelContext.Provider>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -18,13 +105,45 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, placeholder, children, ...props }: SelectPrimitive.Value.Props) {
+  const { getLabel } = React.useContext(SelectItemLabelContext)
+
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
+      placeholder={placeholder}
       {...props}
-    />
+    >
+      {(value: any) => {
+        if (typeof children === "function") {
+          return children(value)
+        }
+        if (children) {
+          return children
+        }
+        if (value == null || value === "") {
+          return placeholder ?? null
+        }
+        
+        // 1. Check registered item label from SelectItem
+        const registeredLabel = getLabel(value)
+        if (registeredLabel != null) {
+          return registeredLabel
+        }
+
+        // 2. Format role code or department UUID
+        if (typeof value === "string") {
+          if (isUUID(value)) {
+            // Never expose raw UUID
+            return placeholder ?? "Selected Item"
+          }
+          return formatRole(value)
+        }
+
+        return value
+      }}
+    </SelectPrimitive.Value>
   )
 }
 
@@ -111,11 +230,24 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  value,
+  label,
   ...props
 }: SelectPrimitive.Item.Props) {
+  const { registerItem, unregisterItem } = React.useContext(SelectItemLabelContext)
+
+  React.useEffect(() => {
+    if (value != null && children != null) {
+      registerItem(value, label || children)
+      return () => unregisterItem(value)
+    }
+  }, [value, label, children, registerItem, unregisterItem])
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      value={value}
+      label={typeof label === "string" ? label : typeof children === "string" ? children : undefined}
       className={cn(
         "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
@@ -162,8 +294,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <ChevronUpIcon
-      />
+      <ChevronUpIcon />
     </SelectPrimitive.ScrollUpArrow>
   )
 }
@@ -181,8 +312,7 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <ChevronDownIcon
-      />
+      <ChevronDownIcon />
     </SelectPrimitive.ScrollDownArrow>
   )
 }

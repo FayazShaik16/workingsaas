@@ -11,9 +11,10 @@ export default async function LeadDashboardPage() {
   await requireScope("ORG_UNIT_LEAD")
 
   const supabase = await createClient()
+  const db = supabase as any
 
   // Get verification pending tasks assigned to org_units under user's supervision
-  const { data: verificationTasks, error } = await supabase
+  const { data: verificationTasks, error } = await db
     .from("tasks")
     .select(`
       id,
@@ -22,27 +23,27 @@ export default async function LeadDashboardPage() {
       assigned_to_id,
       status,
       deadline,
-      users!tasks_assigned_to_id_fkey(name, email),
+      users(name, email),
       task_proofs(id, submitted_at, file_url)
     `)
     .eq("status", "VERIFICATION_PENDING")
     .eq("organization_id", user.organizationId)
     .order("deadline", { ascending: true })
 
-  if (error) throw error
+  if (error) console.error("Error fetching lead verification tasks:", error)
 
   const pendingCount = verificationTasks?.length || 0
 
   // Get team statistics
-  const { data: teamStats } = await supabase
+  const { data: teamStats } = await db
     .from("tasks")
     .select("assigned_to_id, status")
     .eq("organization_id", user.organizationId)
     .in("status", ["IN_PROGRESS", "VERIFICATION_PENDING", "LEAD_SIGNED"])
 
-  const tasksInProgress = teamStats?.filter((t) => t.status === "IN_PROGRESS").length || 0
-  const tasksAwaitingReview = teamStats?.filter((t) => t.status === "VERIFICATION_PENDING").length || 0
-  const tasksCompleted = teamStats?.filter((t) => t.status === "LEAD_SIGNED").length || 0
+  const tasksInProgress = teamStats?.filter((t: any) => t.status === "IN_PROGRESS").length || 0
+  const tasksAwaitingReview = teamStats?.filter((t: any) => t.status === "VERIFICATION_PENDING").length || 0
+  const tasksCompleted = teamStats?.filter((t: any) => t.status === "LEAD_SIGNED").length || 0
 
   type VerificationTask = {
     id: string
@@ -86,7 +87,7 @@ export default async function LeadDashboardPage() {
       cell: ({ row }) => {
         const proofs = row.original.task_proofs || []
         return (
-          <div className="text-sm">
+          <div className="text-xs">
             {proofs.length > 0 ? (
               <a href={proofs[0].file_url || "#"} className="text-blue-600 hover:underline">
                 View Proof
@@ -135,13 +136,13 @@ export default async function LeadDashboardPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Awaiting Review</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{tasksAwaitingReview}</div>
+            <div className="text-2xl font-bold text-amber-600">{tasksAwaitingReview}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Verified</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{tasksCompleted}</div>
@@ -150,10 +151,10 @@ export default async function LeadDashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Team Members</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Team Size</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{new Set(teamStats?.map((t) => t.assigned_to_id)).size}</div>
+            <div className="text-2xl font-bold">{new Set((teamStats || []).map((t: any) => t.assigned_to_id)).size}</div>
           </CardContent>
         </Card>
       </div>
@@ -161,14 +162,14 @@ export default async function LeadDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Tasks Awaiting Review ({pendingCount})</CardTitle>
-          <CardDescription>Click "Review" to view proof and approve or reject the submission</CardDescription>
+          <CardDescription>Click &quot;Review&quot; to view proof and approve or reject the submission</CardDescription>
         </CardHeader>
         <CardContent>
           {verificationTasks && verificationTasks.length > 0 ? (
             <DataTablePrimitive
               columns={columns}
-              data={verificationTasks}
-              pageSize={10}
+              data={(verificationTasks || []) as any}
+              enableSearch={true}
               searchPlaceholder="Search tasks..."
             />
           ) : (

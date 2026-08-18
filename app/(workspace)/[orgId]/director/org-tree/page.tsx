@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { formatRole, formatDepartment, formatStatus } from "@/lib/utils/formatters"
 import {
   Loader2,
   Plus,
@@ -137,20 +138,20 @@ export default function OrgTreePage() {
         .from("org_units")
         .select("*")
         .eq("organization_id", orgId)
-      const loadedUnits = unitsData || []
+      const loadedUnits: OrgUnit[] = (unitsData as any) || []
       setUnits(loadedUnits)
 
       // 2. Fetch all roles in the database
       const { data: rolesData } = await supabase
         .from("roles")
         .select("*")
-      const loadedRoles = rolesData || []
+      const loadedRoles: any[] = (rolesData as any) || []
 
-      // 3. Fetch user_roles
+      // 3. Fetch user_roles with role definitions
       const { data: userRolesData } = await supabase
         .from("user_roles")
-        .select("user_id, role_id")
-      const loadedUserRoles = userRolesData || []
+        .select("user_id, role_id, roles(id, name, scope_level)")
+      const loadedUserRoles: any[] = (userRolesData as any) || []
 
       // 4. Fetch members
       const { data: usersData } = await supabase
@@ -159,31 +160,54 @@ export default function OrgTreePage() {
         .eq("organization_id", orgId)
 
       const roleMap = new Map<string, any>()
-      loadedRoles.forEach((r: any) => roleMap.set(r.id, r))
+      loadedRoles.forEach((r: any) => {
+        roleMap.set(r.id, {
+          ...r,
+          name: formatRole(r.name || r.scope_level),
+        })
+      })
 
       const formattedMembers: OrgMember[] = (usersData || []).map((u: any) => {
         const ur = loadedUserRoles.find((r: any) => r.user_id === u.id)
         const matchedRoleId = ur?.role_id || ""
-        let matchedRole = loadedRoles.find((r: any) => r.id === matchedRoleId)
+        let matchedRole = ur?.roles || loadedRoles.find((r: any) => r.id === matchedRoleId)
 
-        // Fallback for Director if role is not mapped
-        if (!matchedRole && (u.designation?.toLowerCase().includes("director") || !u.org_unit_id)) {
-          matchedRole = loadedRoles.find((r: any) => r.scope_level === "DIRECTOR" || r.name?.toLowerCase().includes("director"))
+        // Fallback for Director / HOD if role is not mapped
+        if (!matchedRole) {
+          if (u.designation?.toLowerCase().includes("director") || !u.org_unit_id) {
+            matchedRole = loadedRoles.find((r: any) => r.scope_level === "DIRECTOR") || {
+              id: "role-director",
+              name: "Director",
+              scope_level: "DIRECTOR",
+            }
+          } else if (u.designation?.toLowerCase().includes("lead") || u.designation?.toLowerCase().includes("hod")) {
+            matchedRole = loadedRoles.find((r: any) => r.scope_level === "ORG_UNIT_LEAD") || {
+              id: "role-lead",
+              name: "HOD / Dept Lead",
+              scope_level: "ORG_UNIT_LEAD",
+            }
+          } else {
+            matchedRole = loadedRoles.find((r: any) => r.scope_level === "MEMBER") || {
+              id: "role-member",
+              name: "Faculty Member",
+              scope_level: "MEMBER",
+            }
+          }
         }
 
-        if (matchedRoleId && !matchedRole) {
-          matchedRole = {
-            id: matchedRoleId,
-            name: "Director",
-            scope_level: "DIRECTOR",
-          }
-          roleMap.set(matchedRoleId, matchedRole)
+        const cleanRole = matchedRole ? {
+          ...matchedRole,
+          name: formatRole(matchedRole.name || matchedRole.scope_level),
+        } : null
+
+        if (cleanRole?.id) {
+          roleMap.set(cleanRole.id, cleanRole)
         }
 
         return {
           ...u,
-          role: matchedRole || null,
-          roleId: matchedRole?.id || matchedRoleId,
+          role: cleanRole,
+          roleId: cleanRole?.id || matchedRoleId,
         }
       })
       setMembers(formattedMembers)
@@ -1032,8 +1056,9 @@ export default function OrgTreePage() {
                     </div>
                   </div>
                   <div className="pt-3 border-t text-xs text-muted-foreground space-y-2 font-medium">
-                    <p><strong>Department ID:</strong> <span className="font-mono text-[10px] block truncate">{selectedNode.data.id}</span></p>
-                    <p><strong>Staff Headcount:</strong> {members.filter(m => m.org_unit_id === selectedNode.data.id).length} Active</p>
+                    <p><strong>Unit Name:</strong> <span className="font-semibold text-foreground">{selectedNode.data.name}</span></p>
+                    <p><strong>Unit Category:</strong> <span className="font-semibold text-primary">{formatDepartment(selectedNode.data)}</span></p>
+                    <p><strong>Staff Headcount:</strong> <span className="font-semibold text-foreground">{members.filter(m => m.org_unit_id === selectedNode.data.id).length} Active Faculty</span></p>
                   </div>
                 </div>
               ) : (
