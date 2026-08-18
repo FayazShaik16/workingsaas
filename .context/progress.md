@@ -23,3 +23,4 @@
 | [2026-08-19] Phase 5: Dashboard truthfulness pass — 100% database-driven queries with honest zero states | | |
 | [2026-08-19] Phase 6: Demo seed datasets (faculty_import.csv, timetable_import.csv) + comprehensive presentation script (DEMO_SCRIPT.md) | | |
 | [2026-08-19] Phase 7: Live Runtime Acceptance Suite (Tests A-M) executed & verified 100% PASS against Supabase | | [ ] Rehearse 9:00 AM demo click-path |
+| [2026-08-19] Phase 8: Demo Credential Recovery & Restoration — reset & verified deterministic passwords for 4 demo accounts | | |

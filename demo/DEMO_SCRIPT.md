@@ -3,18 +3,20 @@
 ---
 
 ## 🏛️ Executive Narrative: The Non-Monetary Proof-of-Work Layer
-> **Core Pitch**: *"WorkLedger is not a payroll processor or a simple to-do tracker. It is a non-monetary verification and capability accounting layer that sits between structured/unstructured faculty contributions and institutional salary release. It solves the 'Fixed Pay for Unequal Work' dilemma by transforming physical timetable compliance and institutional citizenship into cryptographically auditable proof-of-work tokens."*
+> **Core Pitch**: *"WorkLedger is a verification and capability accounting layer that sits between structured classroom teaching, unstructured institutional citizenship, and monthly salary release. It solves the 'Fixed Pay for Unequal Work' dilemma by converting verified milestone evidence into auditable work credits and maintaining an unalterable transaction ledger without altering existing labour contracts or payroll rails."*
 
 ---
 
-## 🔑 Demo Personas & Credentials
+## 🔑 Demo Personas & Active Credentials
 
-| Role | Name | Email | Default Password | Workspace Route |
+| Role | Name | Email | Direct Login Password | Workspace Route |
 | :--- | :--- | :--- | :--- | :--- |
-| **Director / Executive** | Director MVGR | `director@mvgr.edu.in` | `Admin@123!` | `/[orgId]/director` |
-| **HOD (CSE Dept)** | Dr. R. Ravikanth | `hod.cse@mvgr.edu.in` | `Mvgr@2026!` | `/[orgId]/lead` |
-| **Faculty (CSE)** | Dr. P. Satyanarayana | `faculty.cse1@mvgr.edu.in` | `Mvgr@2026!` | `/[orgId]/member` |
-| **Finance Administrator**| Accounts Officer | `finance@mvgr.edu.in` | `Admin@123!` | `/[orgId]/finance/salary` |
+| **Director / Executive** | Dr. K. V. L. Raju | `director@mvgr.edu.in` | `DemoDirector@2026!` | `/[orgId]/director` |
+| **HOD (CSE Dept)** | Dr. R. Ravikanth | `hod.cse@mvgr.edu.in` | `DemoHod@2026!` | `/[orgId]/lead` |
+| **Faculty (CSE)** | Dr. P. Satyanarayana | `faculty.cse1@mvgr.edu.in` | `DemoFaculty@2026!` | `/[orgId]/member` |
+| **Finance Administrator**| Accounts Officer | `finance@mvgr.edu.in` | `DemoFinance@2026!` | `/[orgId]/finance/salary` |
+
+*Note: All 4 presenter accounts have `must_change_password: false` pre-configured for instant zero-friction presentation access.*
 
 ---
 
@@ -64,7 +66,7 @@
 4. Click **Batch Approve & Release Credits**:
    - Marks attendance `CONDUCTED`.
    - Releases rate card credits (`1.0 WORK`) into faculty's `PERSONAL` wallet.
-   - Triggers `recompute_user_progress` and anchors cryptographic transaction on the ledger.
+   - Triggers `recompute_user_progress` and writes an auditable transaction to the double-entry ledger.
 
 ---
 

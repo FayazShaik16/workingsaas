@@ -1,11 +1,10 @@
 # Active Context
 
 ## Current Sprint Execution
-- Completed Full Transformation into real-data-driven WorkLedger SaaS platform for 9:00 AM demo.
-- Verified 100% of Live Database Runtime Acceptance Tests (Tests A through M) against live Supabase instance (`https://bzgqvwqzbjqpfunnyfwe.supabase.co`) with zero mock fallbacks.
-- Verified: Clean Org + Director Creation, Bulk Faculty Ingestion, Forced First-Login Password Change, Timetable Ingestion & 75/25 Compiler, Attendance -> HOD Verification -> Wallet Credit, Task Pool Scoping, Teaching Staff Denominator Isolation, and Dashboard Truthfulness.
-- TypeScript compiler verified with 0 errors across codebase (`npx tsc --noEmit`).
+- Restoring deterministic demo credentials and login access for the 4 core demo presenter accounts (`director@mvgr.edu.in`, `hod.cse@mvgr.edu.in`, `faculty.cse1@mvgr.edu.in`, `finance@mvgr.edu.in`) in the live acceptance organization.
+- Writing and executing `scripts/restore-demo-access.ts` against the live Supabase instance.
+- Updating auth metadata (`email_confirm: true`, `must_change_password: false`) and setting standard passwords while preserving all organization, timetable, task, wallet, and ledger rows.
 
 ## Next Operational Action
-- Ready for live 9:00 AM demo walkthrough following `demo/DEMO_SCRIPT.md`.
+- Run `scripts/restore-demo-access.ts`, commit, push to `origin/main`, and output the clear login matrix.
 
