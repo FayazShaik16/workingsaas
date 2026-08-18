@@ -1,0 +1,16 @@
+Faculty Email,Day,Period,Start Time,End Time,Activity Type,Subject Code,Subject Name,Program,Section,Room
+faculty.cse1@mvgr.edu.in,MON,1,09:00:00,09:50:00,TEACHING_LECTURE,CS301,Database Management Systems,BTECH-CSE,3rd Yr CSE-A,LH-101
+faculty.cse1@mvgr.edu.in,MON,2,09:50:00,10:40:00,CLASS_PREP,,,,,,Faculty Cabin 12
+faculty.cse1@mvgr.edu.in,TUE,3,10:50:00,11:40:00,TUTORIAL,CS301,DBMS Tutorial,BTECH-CSE,3rd Yr CSE-A,CR-204
+faculty.cse1@mvgr.edu.in,WED,5,13:30:00,15:10:00,TEACHING_LAB,CS302,Database Systems Lab,BTECH-CSE,3rd Yr CSE-A,Lab 3
+faculty.cse1@mvgr.edu.in,THU,6,14:20:00,15:10:00,CO_CURRICULAR,,,,,,Seminar Hall
+faculty.cse1@mvgr.edu.in,FRI,7,15:20:00,16:10:00,ADMIN_ASSIST,,,,,,Exam Cell
+faculty.cse2@mvgr.edu.in,MON,3,10:50:00,11:40:00,TEACHING_LECTURE,CS303,Operating Systems,BTECH-CSE,3rd Yr CSE-B,LH-102
+faculty.cse2@mvgr.edu.in,TUE,1,09:00:00,09:50:00,TEACHING_LECTURE,CS303,Operating Systems,BTECH-CSE,3rd Yr CSE-B,LH-102
+faculty.cse2@mvgr.edu.in,THU,5,13:30:00,15:10:00,TEACHING_LAB,CS304,OS Internals Lab,BTECH-CSE,3rd Yr CSE-B,Lab 1
+hod.cse@mvgr.edu.in,MON,4,11:40:00,12:30:00,TEACHING_LECTURE,CS401,Distributed Systems,BTECH-CSE,4th Yr CSE-A,LH-201
+hod.cse@mvgr.edu.in,WED,2,09:50:00,10:40:00,TEACHING_LECTURE,CS401,Distributed Systems,BTECH-CSE,4th Yr CSE-A,LH-201
+hod.cse@mvgr.edu.in,FRI,1,09:00:00,09:50:00,ADMIN_ASSIST,,,,,,HOD Office
+faculty.ece1@mvgr.edu.in,MON,2,09:50:00,10:40:00,TEACHING_LECTURE,EC301,Digital Signal Processing,BTECH-ECE,3rd Yr ECE-A,LH-301
+faculty.ece1@mvgr.edu.in,WED,4,11:40:00,12:30:00,TEACHING_LECTURE,EC301,Digital Signal Processing,BTECH-ECE,3rd Yr ECE-A,LH-301
+faculty.ece1@mvgr.edu.in,FRI,5,13:30:00,15:10:00,TEACHING_LAB,EC302,DSP Simulation Lab,BTECH-ECE,3rd Yr ECE-A,ECE Lab 2
