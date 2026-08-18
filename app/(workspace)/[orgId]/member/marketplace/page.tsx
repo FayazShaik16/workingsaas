@@ -67,15 +67,18 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
 
   // Filter tasks based on visibility scope and department isolation
   const scopedTasks = (rawTasks || []).filter((t: any) => {
-    if (t.visibility_scope === "ORGANIZATION") return true
+    const scope = t.visibility_scope || (t.custom_fields as any)?.visibility_scope
+    if (scope === "ORGANIZATION") return true
     if (!t.org_unit_id || t.org_unit_id === userOrgUnitId) return true
     return false
   })
 
   // Sort organization-scoped tasks first, then by date
   scopedTasks.sort((a: any, b: any) => {
-    if (a.visibility_scope === "ORGANIZATION" && b.visibility_scope !== "ORGANIZATION") return -1
-    if (a.visibility_scope !== "ORGANIZATION" && b.visibility_scope === "ORGANIZATION") return 1
+    const aScope = a.visibility_scope || (a.custom_fields as any)?.visibility_scope
+    const bScope = b.visibility_scope || (b.custom_fields as any)?.visibility_scope
+    if (aScope === "ORGANIZATION" && bScope !== "ORGANIZATION") return -1
+    if (aScope !== "ORGANIZATION" && bScope === "ORGANIZATION") return 1
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
 

@@ -175,7 +175,8 @@ export async function POST(req: Request) {
               year_of_study: 3,
               current_semester: 5,
               section: sectionName,
-              student_count: 60,
+              academic_year: "2025-2026",
+              is_active: true,
             })
             .select("id")
             .single()
@@ -198,8 +199,10 @@ export async function POST(req: Request) {
               program_id: programId,
               code: subCode,
               name: slot.subjectName?.trim() || subCode,
-              credits: 3.0,
+              credits: 3,
+              semester: 5,
               subject_type: activityType.includes("LAB") ? "LAB" : "THEORY",
+              is_active: true,
             })
             .select("id")
             .single()
@@ -232,7 +235,6 @@ export async function POST(req: Request) {
                 subject_id: subjectId,
                 batch_id: batchId,
                 academic_year: "2025-2026",
-                semester: 5,
                 is_active: true,
               })
               .select("id")

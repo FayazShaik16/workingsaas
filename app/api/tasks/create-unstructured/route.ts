@@ -59,30 +59,45 @@ export async function POST(req: Request) {
     const targetOrgUnitId = isDirectorOrAdmin ? (orgUnitId || null) : (user.orgUnitId || orgUnitId || null)
 
     // 2. Insert the unstructured open pool task (standardized on credit_value)
-    const { data: newTask, error: insertError } = await db
+    const taskPayload: any = {
+      organization_id: orgId,
+      org_unit_id: targetOrgUnitId,
+      task_type_id: taskTypeId,
+      category: "UNSTRUCTURED",
+      title: title.trim(),
+      description: enrichedDescription,
+      credit_value: credits,
+      creator_id: user.id,
+      assigned_to_id: null, // Open pool
+      status: "OPEN",
+      custom_fields: { visibility_scope: visibilityScope, skillTags, validationMode },
+      deadline: deadline ? new Date(deadline).toISOString() : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Try inserting with visibility_scope column, fallback to custom_fields
+    let newTask = null
+    const { data: inserted, error: insertError } = await db
       .from("tasks")
-      .insert({
-        organization_id: orgId,
-        org_unit_id: targetOrgUnitId,
-        task_type_id: taskTypeId,
-        category: "UNSTRUCTURED",
-        visibility_scope: visibilityScope,
-        title: title.trim(),
-        description: enrichedDescription,
-        credit_value: credits,
-        creator_id: user.id,
-        assigned_to_id: null, // Open pool
-        status: "OPEN",
-        deadline: deadline ? new Date(deadline).toISOString() : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .insert({ ...taskPayload, visibility_scope: visibilityScope })
       .select()
       .single()
 
     if (insertError) {
-      console.error("[create-unstructured] insert error:", insertError)
-      throw new Error(`Failed to create unstructured task: ${insertError.message}`)
+      const { data: fallbackInserted, error: fallbackError } = await db
+        .from("tasks")
+        .insert(taskPayload)
+        .select()
+        .single()
+
+      if (fallbackError) {
+        console.error("[create-unstructured] insert error:", fallbackError)
+        throw new Error(`Failed to create unstructured task: ${fallbackError.message}`)
+      }
+      newTask = fallbackInserted
+    } else {
+      newTask = inserted
     }
 
     return NextResponse.json({
