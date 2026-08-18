@@ -20,9 +20,20 @@ export interface BatchCompileResult {
   error?: string
 }
 
+export interface SalaryEligibilityResult {
+  eligible: boolean
+  progressPct: number
+  earned: number
+  target: number
+  structuredEarned: number
+  unstructuredEarned: number
+  hasVerifiedUnstructured: boolean
+}
+
 /**
  * Compiles weekly timetable slots into concrete recurring task instances for a faculty member.
  * Strictly idempotent: executing multiple times for the same month skips already generated slot instances.
+ * Implements the 75/25 credit model (target = S / 0.75).
  */
 export async function compileMonthlyScheduleTasks(
   organizationId: string,
@@ -83,6 +94,7 @@ export async function compileMonthlyScheduleTasks(
           start_time,
           end_time,
           room,
+          task_type_code,
           is_active
         )
       `)
@@ -92,17 +104,35 @@ export async function compileMonthlyScheduleTasks(
 
     if (assignError) throw assignError
 
-    // Resolve default structured task type
-    const { data: defaultTaskType } = await db
-      .from("task_type_definitions")
-      .select("id, default_credit_value")
+    // Fetch standalone slots (e.g. CLASS_PREP, TUTORIAL, etc.)
+    const { data: standaloneSlots } = await db
+      .from("timetable_slots")
+      .select("id, day_of_week, period_number, start_time, end_time, room, task_type_code, is_active")
       .eq("organization_id", organizationId)
-      .eq("category", "STRUCTURED")
-      .limit(1)
-      .maybeSingle()
+      .eq("faculty_id", facultyId)
+      .is("subject_assignment_id", null)
+      .eq("is_active", true)
 
-    const fallbackTaskTypeId = defaultTaskType?.id || "00000000-0000-0000-0000-000000000001"
-    const defaultCredit = Number(defaultTaskType?.default_credit_value || 1.0)
+    // Fetch rate card definitions
+    const { data: taskTypes } = await db
+      .from("task_type_definitions")
+      .select("id, code, default_credit_value")
+      .eq("organization_id", organizationId)
+
+    const creditByCode = new Map<string, { id: string; credit: number }>()
+    for (const tt of taskTypes || []) {
+      if (tt.code) {
+        creditByCode.set(tt.code, {
+          id: tt.id,
+          credit: Number(tt.default_credit_value || 1.0),
+        })
+      }
+    }
+
+    const defaultType = creditByCode.get("TEACHING_LECTURE") || {
+      id: "00000000-0000-0000-0000-000000000001",
+      credit: 1.0,
+    }
 
     const dayMap = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
     let tasksCreatedCount = 0
@@ -117,6 +147,7 @@ export async function compileMonthlyScheduleTasks(
 
       const dateStr = d.toISOString().split("T")[0]
 
+      // A. Subject Assignment Slots
       for (const assignment of assignments ?? []) {
         const subject = assignment.subjects as any
         const slots = (assignment.timetable_slots as any[]) ?? []
@@ -124,14 +155,17 @@ export async function compileMonthlyScheduleTasks(
         for (const slot of slots) {
           if (!slot.is_active || slot.day_of_week !== dowString) continue
 
-          const slotCredit = defaultCredit
+          const code = slot.task_type_code || (subject?.subject_type === "LAB" ? "TEACHING_LAB" : "TEACHING_LECTURE")
+          const typeDef = creditByCode.get(code) || defaultType
+          const slotCredit = typeDef.credit
           totalStructuredCredits += slotCredit
 
           tasksToInsert.push({
             organization_id: organizationId,
             org_unit_id: orgUnitId,
-            task_type_id: fallbackTaskTypeId,
+            task_type_id: typeDef.id,
             category: "STRUCTURED",
+            visibility_scope: "ORG_UNIT",
             title: `${subject?.code || "SUB"} - ${subject?.name || "Lecture"} (Period ${slot.period_number})`,
             description: `Scheduled ${subject?.subject_type || "THEORY"} session on ${dateStr} in ${slot.room || "Classroom"}`,
             credit_value: slotCredit,
@@ -145,6 +179,35 @@ export async function compileMonthlyScheduleTasks(
             deadline: `${dateStr}T${slot.end_time || "17:00:00"}Z`,
           })
         }
+      }
+
+      // B. Standalone Structured Slots (Class Prep, Tutorials, Admin Assist)
+      for (const slot of standaloneSlots ?? []) {
+        if (!slot.is_active || slot.day_of_week !== dowString) continue
+
+        const code = slot.task_type_code || "CLASS_PREP"
+        const typeDef = creditByCode.get(code) || defaultType
+        const slotCredit = typeDef.credit
+        totalStructuredCredits += slotCredit
+
+        tasksToInsert.push({
+          organization_id: organizationId,
+          org_unit_id: orgUnitId,
+          task_type_id: typeDef.id,
+          category: "STRUCTURED",
+          visibility_scope: "ORG_UNIT",
+          title: `${code.replace(/_/g, " ")} (Period ${slot.period_number})`,
+          description: `Scheduled activity on ${dateStr} in ${slot.room || "Department"}`,
+          credit_value: slotCredit,
+          creator_id: facultyId,
+          assigned_to_id: facultyId,
+          status: "ASSIGNED",
+          source_timetable_slot_id: slot.id,
+          scheduled_date: dateStr,
+          academic_batch_id: null,
+          subject_id: null,
+          deadline: `${dateStr}T${slot.end_time || "17:00:00"}Z`,
+        })
       }
     }
 
@@ -162,9 +225,19 @@ export async function compileMonthlyScheduleTasks(
       }
     }
 
-    // Update target credits on user: Structured baseline + 10 unstructured quota
-    const unstructuredQuota = 10.0
-    const calculatedTarget = totalStructuredCredits > 0 ? totalStructuredCredits + unstructuredQuota : 50.0
+    // 75/25 Model: Target = S / 0.75 (Structured is 75%, dynamic is 25%)
+    let calculatedTarget = 50.0
+    if (totalStructuredCredits > 0) {
+      calculatedTarget = Math.round((totalStructuredCredits / 0.75) * 100) / 100
+    } else {
+      const { data: policy } = await db
+        .from("compensation_policies")
+        .select("monthly_target_credits")
+        .eq("organization_id", organizationId)
+        .eq("scope_type", "ORG_WIDE")
+        .maybeSingle()
+      calculatedTarget = Number(policy?.monthly_target_credits || 50.0)
+    }
 
     await db
       .from("users")
@@ -196,43 +269,81 @@ export async function compileMonthlyScheduleTasks(
 }
 
 /**
- * generateMonthlyScheduleTasks
- * Named function requested for Phase 1 denominator engine.
- * Automatically resolves organizationId if omitted.
+ * Check salary eligibility for a faculty member. Single source of truth.
+ * Eligible <=> earned_credits >= 0.85 * target_credits AND at least one VERIFIED unstructured task.
  */
-export async function generateMonthlyScheduleTasks(
-  facultyId: string,
-  month: number,
-  year: number,
-  organizationId?: string
-): Promise<CompileResult> {
-  let resolvedOrgId = organizationId
+export async function checkSalaryEligibility(
+  userId: string,
+  year?: number,
+  month?: number
+): Promise<SalaryEligibilityResult> {
+  const supabase = await createClient()
+  const db = supabase as any
 
-  if (!resolvedOrgId) {
-    const supabase = await createClient()
-    const { data: user } = await supabase
-      .from("users")
-      .select("organization_id")
-      .eq("id", facultyId)
-      .single()
+  const currentYear = year || new Date().getFullYear()
+  const currentMonth = month || new Date().getMonth() + 1
 
-    resolvedOrgId = (user as any)?.organization_id
-  }
+  // 1. Try DB RPC first
+  const { data: rpcData, error: rpcError } = await db.rpc("check_salary_eligibility", {
+    p_user_id: userId,
+    p_year: currentYear,
+    p_month: currentMonth,
+  })
 
-  if (!resolvedOrgId) {
+  if (!rpcError && rpcData) {
     return {
-      success: false,
-      facultyId,
-      month,
-      year,
-      tasksCreated: 0,
-      structuredCredits: 0,
-      targetCredits: 50,
-      error: "Could not resolve organization ID for faculty",
+      eligible: Boolean(rpcData.eligible),
+      progressPct: Number(rpcData.progress_pct || 0),
+      earned: Number(rpcData.earned || 0),
+      target: Number(rpcData.target || 50),
+      structuredEarned: Number(rpcData.structured_earned || 0),
+      unstructuredEarned: Number(rpcData.unstructured_earned || 0),
+      hasVerifiedUnstructured: Boolean(rpcData.has_verified_unstructured),
     }
   }
 
-  return compileMonthlyScheduleTasks(resolvedOrgId, facultyId, year, month)
+  // 2. TypeScript fallback
+  const { data: user } = await db
+    .from("users")
+    .select("target_credits")
+    .eq("id", userId)
+    .single()
+
+  const target = Number(user?.target_credits || 50.0)
+
+  const { data: tasks } = await db
+    .from("tasks")
+    .select("category, credit_value, status")
+    .eq("assigned_to_id", userId)
+    .in("status", ["CLOSED", "LEAD_SIGNED", "VERIFIED"])
+
+  let structuredEarned = 0
+  let unstructuredEarned = 0
+  let hasVerifiedUnstructured = false
+
+  for (const t of tasks || []) {
+    const val = Number(t.credit_value || 0)
+    if (t.category === "STRUCTURED") {
+      structuredEarned += val
+    } else if (t.category === "UNSTRUCTURED") {
+      unstructuredEarned += val
+      hasVerifiedUnstructured = true
+    }
+  }
+
+  const earned = structuredEarned + unstructuredEarned
+  const progressPct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0
+  const eligible = earned >= 0.85 * target && hasVerifiedUnstructured
+
+  return {
+    eligible,
+    progressPct,
+    earned,
+    target,
+    structuredEarned,
+    unstructuredEarned,
+    hasVerifiedUnstructured,
+  }
 }
 
 /**
@@ -276,14 +387,28 @@ export async function compileOrganizationScheduleTasks(
       }
     }
 
-    // 2. Fallback: fetch distinct faculty with active assignments
+    // 2. Fallback: fetch distinct faculty with active assignments or slots
     const { data: assignments } = await db
       .from("subject_assignments")
       .select("faculty_id")
       .eq("organization_id", organizationId)
       .eq("is_active", true)
 
-    const facultyIds = Array.from(new Set((assignments || []).map((a: any) => a.faculty_id).filter(Boolean)))
+    const { data: slots } = await db
+      .from("timetable_slots")
+      .select("faculty_id")
+      .eq("organization_id", organizationId)
+      .not("faculty_id", "is", null)
+      .eq("is_active", true)
+
+    const facultyIds = Array.from(
+      new Set(
+        [
+          ...(assignments || []).map((a: any) => a.faculty_id),
+          ...(slots || []).map((s: any) => s.faculty_id),
+        ].filter(Boolean)
+      )
+    )
 
     const results: CompileResult[] = []
     let totalTasks = 0
