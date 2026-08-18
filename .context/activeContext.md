@@ -1,10 +1,14 @@
 # Active Context
 
 ## Current Sprint Execution
-- Completed restructuring of workspace routing to dynamic multi-tenant structure `/[orgId]/[role]`.
-- Implemented department calendar and schedule generator pages under the lead workspace route.
-- Updated authentication and wizard flows to route through the dynamic landing pages.
+- Completed Full Transformation into real-data-driven WorkLedger SaaS platform for 9:00 AM demo.
+- Standardized all credit/token nomenclature to `credit_value` and eliminated all hardcoded mock fallbacks.
+- Built bulk faculty importer with drag-and-drop CSV/XLSX parsing, auto-column mapping, validation preview, and first-login forced password change.
+- Built full weekly timetable importer + manual slot builder + 75/25 monthly compiler engine ($C_{\text{target}} = S / 0.75$).
+- Implemented task pool visibility scoping (`ORGANIZATION` vs `ORG_UNIT`) with department isolation and pinned institution-wide tasks.
+- Connected the complete attendance -> verification -> credit disbursement -> progress recomputation -> salary claim / work-loan -> finance batch reversal lifecycle.
+- Created complete realistic demo dataset (`demo/faculty_import.csv`, `demo/timetable_import.csv`) and presentation guide (`demo/DEMO_SCRIPT.md`).
 
 ## Next Operational Action
-- Run verification tests to ensure dynamic routing redirects correctly.
-- Apply database SQL patches (`db-patch.sql`) to production/local Supabase schema.
+- Run live demo walkthrough starting with Director baseline, roster ingestion, timetable compilation, attendance logging, HOD approval, and finance batch reversal.
+- Push latest committed commits (`main`) to GitHub repository.
