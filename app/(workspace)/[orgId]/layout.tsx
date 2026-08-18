@@ -37,10 +37,16 @@ const getCachedOrg = cache(async (orgId: string) => {
 
 async function getWorkspaceContext(orgId: string) {
   const user = await requireAuth()
+  const supabase = await createClient()
+
+  // 0. Forced password rotation guard
+  const { data: authData } = await supabase.auth.getUser()
+  if (authData.user?.user_metadata?.must_change_password === true) {
+    redirect("/auth/change-password")
+  }
 
   // STRICT multi-tenancy with dynamic invitation reconciliation
   if (user.organizationId !== orgId) {
-    const supabase = await createClient()
     const { data: invite } = await supabase
       .from("invitations")
       .select("*")
