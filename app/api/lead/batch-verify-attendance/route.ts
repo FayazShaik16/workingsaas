@@ -149,6 +149,9 @@ export async function POST(req: Request) {
           })
 
           totalTokensDisbursed += creditReward
+
+          // Recompute progress percentage in DB
+          await db.rpc("recompute_user_progress", { p_user_id: facultyId })
         }
 
         processedCount++

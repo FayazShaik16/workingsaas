@@ -146,6 +146,8 @@ export default async function MemberDashboardPage({ params }: PageProps) {
             monthlyTarget={monthlyTarget}
             activeLoanAmount={activeLoanAmount}
             loanDueDate={loanDueDate}
+            orgId={orgId}
+            userId={user.id}
           />
         </div>
       </div>

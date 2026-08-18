@@ -20,9 +20,18 @@ export default async function MemberSchedulePage({ params }: PageProps) {
       academic_year,
       subjects (id, code, name, credits, subject_type),
       academic_batches (id, section, year_of_study, current_semester, student_count, academic_programs (name, code)),
-      timetable_slots (id, day_of_week, period_number, start_time, end_time, room, is_active)
+      timetable_slots (id, day_of_week, period_number, start_time, end_time, room, task_type_code, is_active)
     `)
     .eq("faculty_id", user.id)
+    .eq("is_active", true)
+
+  // Fetch standalone non-teaching slots
+  const { data: standaloneSlots } = await db
+    .from("timetable_slots")
+    .select("id, day_of_week, period_number, start_time, end_time, room, task_type_code, is_active")
+    .eq("organization_id", orgId)
+    .eq("faculty_id", user.id)
+    .is("subject_assignment_id", null)
     .eq("is_active", true)
 
   // 2. Fetch recent attendance records for this faculty member (last 30 days)
@@ -52,6 +61,7 @@ export default async function MemberSchedulePage({ params }: PageProps) {
   const schedule: Record<string, SlotEntry[]> = {}
   days.forEach((d) => (schedule[d] = []))
 
+  // A. Teaching Assignment Slots
   for (const assignment of assignments ?? []) {
     for (const slot of (assignment.timetable_slots as any[]) ?? []) {
       if (!slot.is_active) continue
@@ -78,10 +88,28 @@ export default async function MemberSchedulePage({ params }: PageProps) {
     }
   }
 
+  // B. Standalone Structured Slots (Class Prep, Tutorials, Admin Assist)
+  for (const slot of standaloneSlots ?? []) {
+    if (!slot.is_active) continue
+    const code = slot.task_type_code || "CLASS_PREP"
+    schedule[slot.day_of_week]?.push({
+      slotId: slot.id,
+      assignmentId: "",
+      period: slot.period_number,
+      startTime: slot.start_time?.slice(0, 5) || "09:00",
+      endTime: slot.end_time?.slice(0, 5) || "09:50",
+      room: slot.room,
+      subjectCode: code.replace(/_/g, " "),
+      subjectName: `${code.replace(/_/g, " ")} Period`,
+      batch: "Department Core",
+      semester: 0,
+      programme: "Academic Load",
+      dayOfWeek: slot.day_of_week,
+    })
+  }
+
   // Sort each day by period number
   days.forEach((d) => schedule[d].sort((a, b) => a.period - b.period))
-
-  const totalSlots = Object.values(schedule).flat().length
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
