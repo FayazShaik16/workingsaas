@@ -16,11 +16,12 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
   // 1. Fetch user progress & targets
   const { data: userProfile } = await db
     .from("users")
-    .select("id, name, target_credits, progress_percentage")
+    .select("id, name, org_unit_id, target_credits, progress_percentage")
     .eq("id", user.id)
     .single()
 
   const targetCredits = Number(userProfile?.target_credits || 50.0)
+  const userOrgUnitId = userProfile?.org_unit_id || user.orgUnitId
 
   // 2. Fetch user's earned credits from personal wallet
   const { data: wallet } = await db
@@ -34,7 +35,8 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
   const earnedCredits = Number(wallet?.balance || 0)
   const progressPercentage = targetCredits > 0 ? (earnedCredits / targetCredits) * 100 : 0
 
-  // 3. Fetch all OPEN unstructured marketplace tasks in this organization
+  // 3. Fetch all OPEN unstructured marketplace tasks in this organization with visibility filtering
+  // Show (visibility_scope = 'ORGANIZATION') OR (visibility_scope = 'ORG_UNIT' AND org_unit_id = userOrgUnitId)
   const { data: rawTasks } = await db
     .from("tasks")
     .select(`
@@ -42,9 +44,9 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
       title,
       description,
       credit_value,
-      token_value,
       category,
       status,
+      visibility_scope,
       deadline,
       created_at,
       creator:creator_id (name),
@@ -52,28 +54,44 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
     `)
     .eq("organization_id", orgId)
     .eq("status", "OPEN")
+    .eq("category", "UNSTRUCTURED")
     .order("created_at", { ascending: false })
 
-  // 4. Fetch tasks user has already applied for
+  // 4. Fetch tasks user has already applied for (nominations / task_applications)
   const { data: userApplications } = await db
-    .from("task_applications")
+    .from("nominations")
     .select("task_id")
     .eq("user_id", user.id)
 
   const appliedTaskIds = new Set((userApplications || []).map((a: any) => a.task_id))
 
-  const formattedTasks: MarketplaceTask[] = (rawTasks || []).map((t: any) => ({
+  // Filter tasks based on visibility scope and department isolation
+  const scopedTasks = (rawTasks || []).filter((t: any) => {
+    if (t.visibility_scope === "ORGANIZATION") return true
+    if (!t.org_unit_id || t.org_unit_id === userOrgUnitId) return true
+    return false
+  })
+
+  // Sort organization-scoped tasks first, then by date
+  scopedTasks.sort((a: any, b: any) => {
+    if (a.visibility_scope === "ORGANIZATION" && b.visibility_scope !== "ORGANIZATION") return -1
+    if (a.visibility_scope !== "ORGANIZATION" && b.visibility_scope === "ORGANIZATION") return 1
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
+  const formattedTasks: MarketplaceTask[] = scopedTasks.map((t: any) => ({
     id: t.id,
     title: t.title,
     description: t.description,
-    credit_value: Number(t.credit_value || t.token_value || 1.0),
-    token_value: Number(t.token_value || t.credit_value || 1.0),
+    credit_value: Number(t.credit_value || 1.0),
+    token_value: Number(t.credit_value || 1.0), // kept for backwards component compatibility
     category: t.category,
     status: t.status,
+    visibility_scope: t.visibility_scope || "ORG_UNIT",
     deadline: t.deadline,
     created_at: t.created_at,
     creator_name: t.creator?.name || "Department Lead",
-    org_unit_name: t.org_units?.name || "Institutional Pool",
+    org_unit_name: t.visibility_scope === "ORGANIZATION" ? "Institution-Wide" : (t.org_units?.name || "Department Pool"),
     org_unit_id: t.org_units?.id,
     applied_by_user: appliedTaskIds.has(t.id),
   }))

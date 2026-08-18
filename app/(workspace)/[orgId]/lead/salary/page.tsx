@@ -1,5 +1,6 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getTeachingStaff } from "@/lib/queries/teaching-staff"
 import { HODSalaryApprovalConsole, FacultySalaryProfile } from "@/components/lead/hod-salary-approval-console"
 import { CreditCard } from "lucide-react"
 
@@ -15,56 +16,74 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Fetch department faculty members
-  const { data: rawUsers } = await db
+  // 1. Fetch current user profile to determine department
+  const { data: userProfile } = await db
     .from("users")
-    .select(`
-      id,
-      name,
-      email,
-      target_credits,
-      progress_percentage,
-      quality_score,
-      status,
-      org_units (name)
-    `)
-    .eq("organization_id", orgId)
-    .order("progress_percentage", { ascending: false })
+    .select("org_unit_id")
+    .eq("id", user.id)
+    .single()
 
-  // 2. Fetch personal wallet balances for each user
+  const deptId = userProfile?.org_unit_id || user.orgUnitId
+
+  // 2. Fetch canonical teaching staff (scoped to this department if lead)
+  const teachingStaff = await getTeachingStaff(admin, orgId, deptId || undefined)
+  const staffIds = teachingStaff.map((s) => s.id)
+
+  // 3. Fetch personal wallet balances for each teaching staff member
   const { data: wallets } = await db
     .from("wallets")
     .select("owner_user_id, balance")
     .eq("organization_id", orgId)
     .eq("purpose", "PERSONAL")
+    .in("owner_user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
 
   const walletMap = new Map((wallets || []).map((w: any) => [w.owner_user_id, Number(w.balance || 0)]))
 
-  // 3. Fetch attendance counts per faculty
+  // 4. Fetch attendance records count per faculty
   const { data: attendanceStats } = await db
     .from("attendance_records")
     .select("faculty_id, status")
     .eq("organization_id", orgId)
-    .eq("status", "VERIFIED")
+    .in("status", ["VERIFIED", "CONDUCTED"])
+    .in("faculty_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
 
   const attendanceCountMap = new Map<string, number>()
   for (const a of attendanceStats || []) {
     attendanceCountMap.set(a.faculty_id, (attendanceCountMap.get(a.faculty_id) || 0) + 1)
   }
 
-  // 4. Fetch approved leaves count
+  // 5. Fetch approved leaves count
   const { data: leaveStats } = await db
     .from("leaves")
     .select("user_id, status")
     .eq("organization_id", orgId)
     .eq("status", "APPROVED")
+    .in("user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
 
   const leaveCountMap = new Map<string, number>()
   for (const l of leaveStats || []) {
     leaveCountMap.set(l.user_id, (leaveCountMap.get(l.user_id) || 0) + 1)
   }
 
-  const formattedMembers: FacultySalaryProfile[] = (rawUsers || []).map((u: any) => {
+  // 6. Fetch active loans to determine debt state
+  const { data: activeLoans } = await db
+    .from("loans")
+    .select("user_id")
+    .eq("organization_id", orgId)
+    .eq("status", "ACTIVE")
+    .in("user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
+
+  const activeLoanUserSet = new Set((activeLoans || []).map((l: any) => l.user_id))
+
+  // 7. Fetch org units for names
+  const { data: units } = await db
+    .from("org_units")
+    .select("id, name")
+    .eq("organization_id", orgId)
+
+  const unitMap = new Map((units || []).map((u: any) => [u.id, u.name]))
+
+  const formattedMembers: FacultySalaryProfile[] = teachingStaff.map((u) => {
     const targetCredits = Number(u.target_credits || 50.0)
     const earnedCredits = Number(walletMap.get(u.id) || 0)
     const calculatedProgress = targetCredits > 0 ? Math.round((earnedCredits / targetCredits) * 100) : 0
@@ -76,11 +95,11 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
       progress_percentage: calculatedProgress,
       earned_credits: earnedCredits,
       target_credits: targetCredits,
-      quality_score: Number(u.quality_score || 4.8),
+      quality_score: Number(u.quality_score || 5.0),
       attendance_logged_count: attendanceCountMap.get(u.id) || 0,
       approved_leaves_count: leaveCountMap.get(u.id) || 0,
-      has_active_loan: false,
-      org_unit_name: u.org_units?.name || "Department",
+      has_active_loan: activeLoanUserSet.has(u.id),
+      org_unit_name: u.org_unit_id ? unitMap.get(u.org_unit_id) || "Department" : "Department",
       status: u.status || "ACTIVE",
     }
   })
@@ -93,7 +112,7 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
           Department Salary Release Approval Queue
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Review employee monthly work progress against the 85% cryptographic verification threshold and apply digital signatures before Finance release.
+          Review teaching faculty monthly work progress against the 85% cryptographic verification threshold and apply digital signatures before Finance release.
         </p>
       </div>
 

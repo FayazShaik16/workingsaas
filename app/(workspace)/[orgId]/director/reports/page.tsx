@@ -1,19 +1,15 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getTeachingStaff } from "@/lib/queries/teaching-staff"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   BarChart3,
   Building2,
   Users,
-  CheckCircle2,
   TrendingUp,
   AlertTriangle,
-  Download,
-  ArrowUpRight,
-  ShieldCheck,
   Award,
   Layers,
 } from "lucide-react"
@@ -29,30 +25,27 @@ export default async function DirectorReportsPage({ params }: PageProps) {
 
   const admin = createAdminClient()
 
-  // Fetch departments, users, and tasks in parallel
+  // Fetch departments, canonical teaching staff, and tasks in parallel
   const [
-    { data: orgUnits, error: unitsError },
-    { data: users, error: usersError },
-    { data: tasks, error: tasksError },
+    { data: orgUnits },
+    teachingStaff,
+    { data: tasks },
   ] = await Promise.all([
     admin.from("org_units").select("*").eq("organization_id", orgId),
-    admin
-      .from("users")
-      .select("id, name, email, designation, org_unit_id, progress_percentage, quality_score, status")
-      .eq("organization_id", orgId),
+    getTeachingStaff(admin, orgId),
     admin
       .from("tasks")
-      .select("id, status, token_value, org_unit_id")
+      .select("id, status, credit_value, org_unit_id")
       .eq("organization_id", orgId),
   ])
 
   const allUnits = orgUnits || []
-  const allUsers = users || []
+  const allTeachingStaff = teachingStaff || []
   const allTasks = tasks || []
 
-  // Compute departmental statistics dynamically
+  // Compute departmental statistics dynamically over teaching staff only
   const deptStats = allUnits.map((unit: any) => {
-    const deptMembers = allUsers.filter((u: any) => u.org_unit_id === unit.id)
+    const deptMembers = allTeachingStaff.filter((u: any) => u.org_unit_id === unit.id)
     const memberCount = deptMembers.length
     const activeMembers = deptMembers.filter((m: any) => m.status === "ACTIVE").length
 
@@ -64,11 +57,11 @@ export default async function DirectorReportsPage({ params }: PageProps) {
 
     const unitTasks = allTasks.filter((t: any) => t.org_unit_id === unit.id)
     const completedTasks = unitTasks.filter(
-      (t: any) => t.status === "VERIFIED" || t.status === "COMPLETED"
+      (t: any) => t.status === "VERIFIED" || t.status === "COMPLETED" || t.status === "CLOSED" || t.status === "LEAD_SIGNED"
     ).length
     const totalTokensDistributed = unitTasks
-      .filter((t: any) => t.status === "VERIFIED")
-      .reduce((sum: number, t: any) => sum + Number(t.token_value || 0), 0)
+      .filter((t: any) => t.status === "VERIFIED" || t.status === "CLOSED" || t.status === "LEAD_SIGNED")
+      .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
 
     const eligibleCount = deptMembers.filter(
       (m: any) => Number(m.progress_percentage || 0) >= 85
@@ -98,21 +91,21 @@ export default async function DirectorReportsPage({ params }: PageProps) {
     }
   })
 
-  // Global aggregates
-  const totalEmployees = allUsers.length
+  // Global aggregates over teaching staff only
+  const totalEmployees = allTeachingStaff.length
   const totalDepts = allUnits.length
   const overallAvgProgress =
-    allUsers.length > 0
+    totalEmployees > 0
       ? Math.round(
-          allUsers.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
-            allUsers.length
+          allTeachingStaff.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
+            totalEmployees
         )
       : 0
   const totalTokensReleased = allTasks
-    .filter((t: any) => t.status === "VERIFIED")
-    .reduce((sum: number, t: any) => sum + Number(t.token_value || 0), 0)
+    .filter((t: any) => t.status === "VERIFIED" || t.status === "CLOSED" || t.status === "LEAD_SIGNED")
+    .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
 
-  const totalEligibleStaff = allUsers.filter(
+  const totalEligibleStaff = allTeachingStaff.filter(
     (u: any) => Number(u.progress_percentage || 0) >= 85
   ).length
 
@@ -151,7 +144,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
         <Card className="rounded-2xl border-2 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Total Staff & Faculty
+              Teaching Faculty
             </CardTitle>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <Users className="h-4 w-4" />
@@ -168,7 +161,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
         <Card className="rounded-2xl border-2 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Institution Avg Progress
+              Faculty Avg Progress
             </CardTitle>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <TrendingUp className="h-4 w-4" />
@@ -194,7 +187,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
         <Card className="rounded-2xl border-2 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Verified Tokens Earned
+              Verified Credits Earned
             </CardTitle>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Award className="h-4 w-4" />
@@ -204,7 +197,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
             <div className="text-2xl font-black text-foreground">
               {totalTokensReleased.toLocaleString()} WORK
             </div>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">Proof-backed liquidity</p>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Proof-backed credit output</p>
           </CardContent>
         </Card>
       </div>
@@ -234,7 +227,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
               <Building2 className="h-10 w-10 text-muted-foreground/50 mx-auto" />
               <p className="font-bold text-foreground">No Departments Configured Yet</p>
               <p className="text-xs">
-                Visit the Executive Organization Tree to add your institution&apos;s departments.
+                Visit the Executive Organization Tree or Import Desk to configure departments.
               </p>
             </div>
           ) : (
@@ -244,11 +237,11 @@ export default async function DirectorReportsPage({ params }: PageProps) {
                   <TableRow>
                     <TableHead className="font-bold text-xs">Department Unit</TableHead>
                     <TableHead className="font-bold text-xs">Type</TableHead>
-                    <TableHead className="font-bold text-xs">Headcount</TableHead>
+                    <TableHead className="font-bold text-xs">Faculty Count</TableHead>
                     <TableHead className="font-bold text-xs">Avg Work Progress</TableHead>
                     <TableHead className="font-bold text-xs">85% Salary Eligibility</TableHead>
                     <TableHead className="font-bold text-xs">Verified Tasks</TableHead>
-                    <TableHead className="font-bold text-xs">Tokens Earned</TableHead>
+                    <TableHead className="font-bold text-xs">Credits Earned</TableHead>
                     <TableHead className="font-bold text-xs">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -269,7 +262,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-semibold text-xs text-foreground">
-                        {dept.memberCount} staff
+                        {dept.memberCount} faculty
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">

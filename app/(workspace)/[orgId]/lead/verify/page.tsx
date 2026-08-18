@@ -99,7 +99,7 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
     .select(`
       id,
       title,
-      token_value,
+      credit_value,
       status,
       created_at,
       category,
@@ -118,7 +118,8 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
   const formattedTasks: UnstructuredTaskItem[] = (rawTasks || []).map((t: any) => ({
     id: t.id,
     title: t.title,
-    token_value: Number(t.token_value || 0),
+    credit_value: Number(t.credit_value || 0),
+    token_value: Number(t.credit_value || 0),
     status: t.status,
     created_at: t.created_at,
     assigned_to: t.assigned_to ? {

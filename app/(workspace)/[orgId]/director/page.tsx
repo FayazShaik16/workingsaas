@@ -1,5 +1,6 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getTeachingStaff } from "@/lib/queries/teaching-staff"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -35,22 +36,22 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   // 1. Fetch all organizational core data in parallel
   const [
     { data: wallets },
-    { data: users },
+    teachingStaff,
     { data: units },
     { data: tasks },
     { data: loanRequests },
     { data: activeLoansData },
   ] = await Promise.all([
     admin.from("wallets").select("id, purpose, balance, owner_user_id").eq("organization_id", orgId),
-    admin.from("users").select("id, name, email, designation, org_unit_id, progress_percentage, quality_score, status").eq("organization_id", orgId),
+    getTeachingStaff(admin, orgId),
     admin.from("org_units").select("id, name, unit_type").eq("organization_id", orgId),
-    admin.from("tasks").select("id, status, token_value, org_unit_id").eq("organization_id", orgId),
+    admin.from("tasks").select("id, status, credit_value, org_unit_id").eq("organization_id", orgId),
     admin.from("loan_requests").select("id, borrower_user_id, amount, reason, status, created_at").eq("organization_id", orgId),
     admin.from("loans").select("id, user_id, amount, status, created_at, description").eq("organization_id", orgId),
   ])
 
   const allWallets = wallets || []
-  const allUsers = users || []
+  const allTeachingStaff = teachingStaff || []
   const allUnits = units || []
   const allTasks = tasks || []
   const allLoanRequests = loanRequests || []
@@ -70,29 +71,29 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
     else treasuryPool += bal
   })
 
-  // If newly initialized with 0 tokens, compute total verified rewards distributed
+  // Compute total verified rewards distributed
   const totalVerifiedTokens = allTasks
-    .filter((t: any) => t.status === "VERIFIED")
-    .reduce((sum: number, t: any) => sum + Number(t.token_value || 0), 0)
+    .filter((t: any) => t.status === "VERIFIED" || t.status === "CLOSED" || t.status === "LEAD_SIGNED")
+    .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
 
   const totalTokens = Math.max(salaryPool + personalPool + loanPool + treasuryPool, totalVerifiedTokens)
 
-  // 3. User Progress & Threshold Metrics
-  const totalEmployees = allUsers.length
-  const belowThresholdUsers = allUsers.filter((u: any) => Number(u.progress_percentage || 0) < 85)
+  // 3. User Progress & Threshold Metrics (Over Teaching Staff Only)
+  const totalEmployees = allTeachingStaff.length
+  const belowThresholdUsers = allTeachingStaff.filter((u: any) => Number(u.progress_percentage || 0) < 85)
   const belowThresholdCount = belowThresholdUsers.length
-  const eligibleCount = allUsers.filter((u: any) => Number(u.progress_percentage || 0) >= 85).length
+  const eligibleCount = allTeachingStaff.filter((u: any) => Number(u.progress_percentage || 0) >= 85).length
   const overallAvgProgress =
     totalEmployees > 0
       ? Math.round(
-          allUsers.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
+          allTeachingStaff.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
             totalEmployees
         )
       : 0
 
-  // 4. Department Progress Heatmap (100% dynamic)
+  // 4. Department Progress Heatmap (Over Teaching Staff Only)
   const heatmap = allUnits.map((unit: any) => {
-    const deptMembers = allUsers.filter((u: any) => u.org_unit_id === unit.id)
+    const deptMembers = allTeachingStaff.filter((u: any) => u.org_unit_id === unit.id)
     const memberCount = deptMembers.length
     const progresses = deptMembers.map((m: any) => Number(m.progress_percentage || 0))
     const avgProgress =
@@ -118,7 +119,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   const parsedActiveLoans = allLoans
     .filter((l: any) => l.status === "ACTIVE" || l.status === "PARTIAL")
     .map((l: any) => {
-      const userObj = allUsers.find((u: any) => u.id === l.user_id)
+      const userObj = allTeachingStaff.find((u: any) => u.id === l.user_id)
       const unitObj = allUnits.find((u: any) => u.id === userObj?.org_unit_id)
       const createdDate = new Date(l.created_at)
       const diffMonths = Math.max(
@@ -129,7 +130,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
 
       return {
         id: l.id,
-        name: userObj?.name || "Staff Member",
+        name: userObj?.name || "Faculty Member",
         department: unitObj?.name || "General",
         amount: Number(l.amount || 0),
         monthsInDebt: diffMonths,
@@ -143,11 +144,11 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   allLoanRequests
     .filter((lr: any) => lr.status === "PENDING")
     .forEach((lr: any) => {
-      const userObj = allUsers.find((u: any) => u.id === lr.borrower_user_id)
+      const userObj = allTeachingStaff.find((u: any) => u.id === lr.borrower_user_id)
       const unitObj = allUnits.find((u: any) => u.id === userObj?.org_unit_id)
       parsedPendingLoans.push({
         id: lr.id,
-        name: userObj?.name || "Staff Member",
+        name: userObj?.name || "Faculty Member",
         department: unitObj?.name || "General",
         amount: Number(lr.amount || 0),
         reason: lr.reason || "Emergency Advance Request",
@@ -158,11 +159,11 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
     .filter((l: any) => l.status === "PENDING")
     .forEach((l: any) => {
       if (!parsedPendingLoans.find((p) => p.id === l.id)) {
-        const userObj = allUsers.find((u: any) => u.id === l.user_id)
+        const userObj = allTeachingStaff.find((u: any) => u.id === l.user_id)
         const unitObj = allUnits.find((u: any) => u.id === userObj?.org_unit_id)
         parsedPendingLoans.push({
           id: l.id,
-          name: userObj?.name || "Staff Member",
+          name: userObj?.name || "Faculty Member",
           department: unitObj?.name || "General",
           amount: Number(l.amount || 0),
           reason: l.description || "Credit shortfall coverage",
@@ -264,7 +265,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
         <Card className={`rounded-2xl border-2 shadow-xs ${belowThresholdCount > 0 ? "border-destructive/40 bg-destructive/5" : ""}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Staff Below Threshold (&lt;85%)
+              Faculty Below Threshold (&lt;85%)
             </CardTitle>
             <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
               <AlertCircle className="h-4 w-4" />
@@ -273,7 +274,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
           <CardContent>
             <div className="text-2xl font-black text-destructive">{belowThresholdCount}</div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
-              {eligibleCount} of {totalEmployees} Staff Eligible
+              {eligibleCount} of {totalEmployees} Faculty Eligible
             </p>
           </CardContent>
         </Card>
@@ -348,40 +349,37 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-4 border-t text-xs">
               <div className="p-3 rounded-xl bg-muted/40 border flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="font-bold text-foreground">Salary Reserves</span>
-                </div>
-                <span className="text-xs font-mono font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-                  {salaryPool.toLocaleString()} WORK ({salaryPercent}%)
+                <span className="text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                  Faculty Wallets
                 </span>
+                <span className="text-base font-black text-foreground mt-1">{personalPool.toLocaleString()} WORK</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{personalPercent}% of pool</span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted/40 border flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
-                  <span className="font-bold text-foreground">Faculty Wallets</span>
-                </div>
-                <span className="text-xs font-mono font-bold mt-1 text-blue-600 dark:text-blue-400">
-                  {personalPool.toLocaleString()} WORK ({personalPercent}%)
+                <span className="text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  Salary Reserve
                 </span>
+                <span className="text-base font-black text-foreground mt-1">{salaryPool.toLocaleString()} WORK</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{salaryPercent}% allocated</span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted/40 border flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                  <span className="font-bold text-foreground">Loan Reserve</span>
-                </div>
-                <span className="text-xs font-mono font-bold mt-1 text-amber-600 dark:text-amber-400">
-                  {loanPool.toLocaleString()} WORK ({loanPercent}%)
+                <span className="text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  Loan Pool
                 </span>
+                <span className="text-base font-black text-foreground mt-1">{loanPool.toLocaleString()} WORK</span>
+                <span className="text-[10px] text-muted-foreground font-mono">{loanPercent}% available</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Department Progress Heatmap */}
-        <Card className="lg:col-span-5 rounded-2xl border-2 shadow-md flex flex-col justify-between">
+        <Card className="lg:col-span-5 rounded-2xl border-2 shadow-md flex flex-col">
           <CardHeader className="pb-2 border-b bg-muted/20">
             <div className="flex items-center justify-between">
               <div>
@@ -389,64 +387,63 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
                   Department Progress Heatmap
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
-                  Milestone achievement indices by academic unit
+                  Mean progress velocity across academic units
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="font-bold text-xs">
-                {heatmap.length} Departments
+              <Badge variant="secondary" className="font-mono text-xs">
+                Avg: {overallAvgProgress}%
               </Badge>
             </div>
           </CardHeader>
 
-          <CardContent className="p-5 space-y-3 flex-1 overflow-y-auto max-h-[340px]">
+          <CardContent className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[350px]">
             {heatmap.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-xs space-y-1">
-                <Building2 className="h-6 w-6 text-muted-foreground mx-auto opacity-50" />
-                <p className="font-bold text-foreground">No Departments Added</p>
-                <p>Visit the Organization Tree to add units.</p>
+              <div className="text-center py-10 text-muted-foreground text-xs">
+                No academic departments configured yet.
               </div>
             ) : (
-              heatmap.map((item) => (
+              heatmap.map((dept) => (
                 <div
-                  key={item.id}
-                  className="p-3 rounded-xl border-2 bg-card hover:border-primary/40 transition flex items-center justify-between gap-3"
+                  key={dept.id}
+                  className="p-3 rounded-xl border bg-card hover:bg-muted/30 transition flex items-center justify-between gap-3"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-xs truncate text-foreground flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="font-extrabold text-xs text-foreground truncate">{item.name}</span>
+                      {dept.name}
                     </div>
-                    <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                      {item.memberCount} Staff Members
-                    </span>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      {dept.memberCount} faculty members
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    <div className="w-16 bg-muted rounded-full h-2 overflow-hidden">
+                    <div className="w-20 bg-muted rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-2 rounded-full ${
-                          item.progress >= 85
+                          dept.progress >= 85
                             ? "bg-emerald-500"
-                            : item.progress >= 70
+                            : dept.progress >= 70
                             ? "bg-amber-500"
                             : "bg-destructive"
                         }`}
-                        style={{ width: `${item.progress}%` }}
+                        style={{ width: `${dept.progress}%` }}
                       />
                     </div>
-                    <span className="text-xs font-mono font-bold text-foreground w-8 text-right">
-                      {item.progress}%
+                    <span className="text-xs font-mono font-bold w-9 text-right text-foreground">
+                      {dept.progress}%
                     </span>
                     <Badge
-                      className={`text-[9px] font-bold ${
-                        item.status === "Healthy"
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                          : item.status === "Watch"
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                          : "bg-destructive/15 text-destructive border-destructive/30"
+                      variant="outline"
+                      className={`text-[9px] font-bold uppercase px-1.5 py-0 ${
+                        dept.status === "Healthy"
+                          ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                          : dept.status === "Watch"
+                          ? "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10"
+                          : "border-destructive/30 text-destructive bg-destructive/10"
                       }`}
                     >
-                      {item.status}
+                      {dept.status}
                     </Badge>
                   </div>
                 </div>
@@ -454,70 +451,103 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
             )}
           </CardContent>
         </Card>
-
       </div>
 
-      {/* Active Work Loans Table */}
-      <Card className="rounded-2xl border-2 shadow-md">
-        <CardHeader className="pb-3 border-b bg-muted/20 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg font-black text-foreground">Active Work Credit Advances</CardTitle>
+      {/* Bottom Section: Active Work-Loans & Governance Triggers */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Active Debt / Loans */}
+        <Card className="lg:col-span-7 rounded-2xl border-2 shadow-md">
+          <CardHeader className="pb-3 border-b bg-muted/20 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-black text-foreground flex items-center gap-2">
+                <Coins className="h-4 w-4 text-amber-500" />
+                Active Institutional Work-Debt
+              </CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                Staff bridging salary gates via work-loan commitments
+              </CardDescription>
+            </div>
+            <Link href={`/${orgId}/director/loans`}>
+              <Button variant="ghost" size="sm" className="text-xs font-bold gap-1 text-primary">
+                View All <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </CardHeader>
+
+          <CardContent className="p-4">
+            {parsedActiveLoans.length === 0 && parsedPendingLoans.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-xs space-y-1">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500/60 mx-auto" />
+                <p className="font-bold text-foreground">Zero Active Work Debt</p>
+                <p>All faculty are meeting proof targets organically.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {parsedPendingLoans.map((pl: any) => (
+                  <div
+                    key={pl.id}
+                    className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-foreground flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        {pl.name} ({pl.department})
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{pl.reason}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                        {pl.amount} WORK
+                      </span>
+                      <Badge className="bg-amber-500 text-white text-[10px]">Pending Approval</Badge>
+                    </div>
+                  </div>
+                ))}
+
+                {parsedActiveLoans.map((al: any) => (
+                  <div
+                    key={al.id}
+                    className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-foreground">{al.name} ({al.department})</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Active for {al.monthsInDebt} month(s)
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-bold text-foreground">{al.amount} WORK</span>
+                      <Badge variant="outline" className="text-[10px] font-bold">
+                        {al.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Director Executive Actions */}
+        <Card className="lg:col-span-5 rounded-2xl border-2 shadow-md">
+          <CardHeader className="pb-3 border-b bg-muted/20">
+            <CardTitle className="text-base font-black text-foreground">
+              Institutional Governance Actions
+            </CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Outstanding employee debit balances against collateral work milestones
+              Cycle budget minting & emergency ledger freezes
             </CardDescription>
-          </div>
-          <Badge variant="outline" className="font-bold text-xs">
-            {parsedActiveLoans.length} Active Loans
-          </Badge>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-muted/40 text-muted-foreground font-bold uppercase text-[10px]">
-                <tr className="border-b">
-                  <th className="py-3 px-4">Faculty Name</th>
-                  <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Loan Amount</th>
-                  <th className="py-3 px-4">Duration in Debt</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {parsedActiveLoans.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground font-medium text-xs">
-                      No active emergency loans or debit balances in the organization.
-                    </td>
-                  </tr>
-                ) : (
-                  parsedActiveLoans.map((loan) => (
-                    <tr key={loan.id} className="hover:bg-muted/30 transition">
-                      <td className="py-3 px-4 font-bold text-foreground">{loan.name}</td>
-                      <td className="py-3 px-4 text-muted-foreground font-medium">{loan.department}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-primary">
-                        {Number(loan.amount).toLocaleString()} WORK
-                      </td>
-                      <td className="py-3 px-4 font-medium text-muted-foreground">
-                        {loan.monthsInDebt} {loan.monthsInDebt === 1 ? "month" : "months"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="secondary" className="text-[10px] font-bold">
-                          {loan.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pending Loan Approvals list (Interactive Container) */}
-      <DirectorActions initialPendingLoans={parsedPendingLoans} />
-
+          </CardHeader>
+          <CardContent className="p-4">
+            <DirectorActions
+              orgId={orgId}
+              salaryPoolBalance={salaryPool}
+              loanPoolBalance={loanPool}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

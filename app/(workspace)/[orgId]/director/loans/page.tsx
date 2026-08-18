@@ -44,7 +44,7 @@ export default async function DirectorLoansPage({ params }: PageProps) {
     .eq("purpose", "LOAN_POOL")
     .maybeSingle()
 
-  const poolBalance = Number(loanWallet?.balance || 5000)
+  const poolBalance = Number(loanWallet?.balance ?? 0)
 
   const formattedRequests: LoanRequestItem[] = (rawRequests || []).map((r: any) => ({
     id: r.id,

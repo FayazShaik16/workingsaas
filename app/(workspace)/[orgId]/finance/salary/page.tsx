@@ -1,5 +1,6 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getTeachingStaff } from "@/lib/queries/teaching-staff"
 import { FinanceSalaryConsole, FinanceFacultyMember } from "@/components/finance/finance-salary-console"
 import { DollarSign } from "lucide-react"
 
@@ -15,20 +16,9 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Fetch all faculty members in this org
-  const { data: rawUsers } = await db
-    .from("users")
-    .select(`
-      id,
-      name,
-      email,
-      target_credits,
-      progress_percentage,
-      status,
-      org_units (name)
-    `)
-    .eq("organization_id", orgId)
-    .order("progress_percentage", { ascending: false })
+  // 1. Fetch only teaching staff in this org
+  const teachingStaff = await getTeachingStaff(admin, orgId)
+  const staffIds = teachingStaff.map((s) => s.id)
 
   // 2. Fetch personal wallet balances
   const { data: wallets } = await db
@@ -36,10 +26,11 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
     .select("owner_user_id, balance")
     .eq("organization_id", orgId)
     .eq("purpose", "PERSONAL")
+    .in("owner_user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
 
   const walletMap = new Map((wallets || []).map((w: any) => [w.owner_user_id, Number(w.balance || 0)]))
 
-  // 3. Fetch SALARY_POOL balance
+  // 3. Fetch SALARY_POOL balance (with honest 0 fallback)
   const { data: salaryPoolWallet } = await db
     .from("wallets")
     .select("balance")
@@ -47,9 +38,17 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
     .eq("purpose", "SALARY_POOL")
     .maybeSingle()
 
-  const poolBalance = Number(salaryPoolWallet?.balance || 10000)
+  const poolBalance = Number(salaryPoolWallet?.balance ?? 0)
 
-  const formattedMembers: FinanceFacultyMember[] = (rawUsers || []).map((u: any) => {
+  // 4. Fetch org units for names
+  const { data: units } = await db
+    .from("org_units")
+    .select("id, name")
+    .eq("organization_id", orgId)
+
+  const unitMap = new Map((units || []).map((u: any) => [u.id, u.name]))
+
+  const formattedMembers: FinanceFacultyMember[] = teachingStaff.map((u) => {
     const targetCredits = Number(u.target_credits || 50.0)
     const walletBalance = Number(walletMap.get(u.id) || 0)
     const progress = targetCredits > 0 ? Math.round((walletBalance / targetCredits) * 100) : 0
@@ -61,7 +60,7 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
       progress_percentage: progress,
       target_credits: targetCredits,
       wallet_balance: walletBalance,
-      org_unit_name: u.org_units?.name || "General",
+      org_unit_name: u.org_unit_id ? unitMap.get(u.org_unit_id) || "Department" : "Department",
       status: u.status || "ACTIVE",
     }
   })

@@ -72,14 +72,14 @@ export async function POST(req: Request) {
         // B. Update corresponding task to CLOSED
         const { data: task } = await db
           .from("tasks")
-          .select("id, credit_value, token_value")
+          .select("id, credit_value")
           .eq("source_timetable_slot_id", slotId)
           .eq("scheduled_date", classDate)
           .eq("assigned_to_id", facultyId)
           .limit(1)
           .maybeSingle()
 
-        const creditReward = Number(task?.credit_value || task?.token_value || 1.0)
+        const creditReward = Number(task?.credit_value || 1.0)
 
         if (task?.id) {
           await db

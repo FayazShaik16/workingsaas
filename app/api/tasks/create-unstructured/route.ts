@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getSessionUser } from "@/lib/auth/session"
+import { getSessionUser, hasScope } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -54,18 +54,22 @@ export async function POST(req: Request) {
       enrichedDescription += `\n**Verification Method**: ${validationMode}`
     }
 
-    // 2. Insert the unstructured open pool task
+    const isDirectorOrAdmin = hasScope(user.scopeLevels, "DIRECTOR") || hasScope(user.scopeLevels, "SYSTEM_ADMIN")
+    const visibilityScope = isDirectorOrAdmin ? "ORGANIZATION" : "ORG_UNIT"
+    const targetOrgUnitId = isDirectorOrAdmin ? (orgUnitId || null) : (user.orgUnitId || orgUnitId || null)
+
+    // 2. Insert the unstructured open pool task (standardized on credit_value)
     const { data: newTask, error: insertError } = await db
       .from("tasks")
       .insert({
         organization_id: orgId,
-        org_unit_id: orgUnitId || user.orgUnitId || null,
+        org_unit_id: targetOrgUnitId,
         task_type_id: taskTypeId,
         category: "UNSTRUCTURED",
+        visibility_scope: visibilityScope,
         title: title.trim(),
         description: enrichedDescription,
         credit_value: credits,
-        token_value: credits,
         creator_id: user.id,
         assigned_to_id: null, // Open pool
         status: "OPEN",

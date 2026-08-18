@@ -47,9 +47,10 @@ export interface MarketplaceTask {
   title: string
   description: string | null
   credit_value: number
-  token_value: number
+  token_value?: number
   category: string
   status: string
+  visibility_scope?: string
   deadline: string | null
   created_at: string
   creator_name?: string
@@ -122,13 +123,14 @@ export function MarketplaceDiscoveryGrid({
       }
 
       // 3. Minimum Reward
-      if (minReward > 0 && task.token_value < minReward) {
+      const taskCredits = task.credit_value ?? task.token_value ?? 1.0
+      if (minReward > 0 && taskCredits < minReward) {
         return false
       }
 
       // 4. Fairness Filter (highlight/filter tasks that can bridge the shortfall)
       if (fairnessOnly && isBelowTarget) {
-        if (task.token_value < Math.min(2.0, creditShortfall)) {
+        if (taskCredits < Math.min(2.0, creditShortfall)) {
           return false
         }
       }
@@ -294,9 +296,11 @@ export function MarketplaceDiscoveryGrid({
           </div>
         ) : (
           filteredTasks.map((task) => {
-            const isHighYield = task.token_value >= 5.0
-            const bridgesDeficit = isBelowTarget && task.token_value >= creditShortfall
+            const taskCredits = task.credit_value ?? task.token_value ?? 1.0
+            const isHighYield = taskCredits >= 5.0
+            const bridgesDeficit = isBelowTarget && taskCredits >= creditShortfall
             const countdownText = formatDeadlineCountdown(task.deadline)
+            const isOrgWide = task.visibility_scope === "ORGANIZATION" || task.org_unit_name === "Institution-Wide"
 
             return (
               <Card
@@ -304,13 +308,15 @@ export function MarketplaceDiscoveryGrid({
                 className={`rounded-2xl border transition-all flex flex-col justify-between hover:shadow-md ${
                   bridgesDeficit
                     ? "border-amber-500/50 bg-amber-500/5"
+                    : isOrgWide
+                    ? "border-primary/40 bg-primary/5"
                     : "border-muted/70 bg-background/60"
                 }`}
               >
                 <CardHeader className="pb-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <Badge
-                      variant="outline"
+                      variant={isOrgWide ? "default" : "outline"}
                       className="text-[10px] font-medium rounded-md truncate max-w-44"
                     >
                       <Building2 className="h-3 w-3 mr-1 text-primary/70" />
@@ -319,7 +325,7 @@ export function MarketplaceDiscoveryGrid({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
-                        +{task.token_value.toFixed(1)} WORK
+                        +{taskCredits.toFixed(1)} WORK
                       </span>
                     </div>
                   </div>
@@ -336,26 +342,33 @@ export function MarketplaceDiscoveryGrid({
                   )}
                 </CardHeader>
 
-                <CardContent className="space-y-4 pt-0">
-                  <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                    {task.description || "No specific instructions provided."}
-                  </p>
+                <CardContent className="pt-0 space-y-4">
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {task.description}
+                    </p>
+                  )}
 
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-muted/40 font-mono">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-primary/70" /> {countdownText}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      By {task.creator_name || "Lead"}
-                    </span>
+                  {/* Metadata row */}
+                  <div className="pt-2 border-t border-muted/50 flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{countdownText}</span>
+                    </div>
+                    <span>By {task.creator_name || "Lead"}</span>
                   </div>
 
                   {/* Action Button */}
-                  <div className="pt-1">
+                  <div>
                     {task.applied_by_user ? (
-                      <Badge className="w-full justify-center py-2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-bold rounded-xl">
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Application Submitted
-                      </Badge>
+                      <Button
+                        size="sm"
+                        disabled
+                        variant="secondary"
+                        className="w-full rounded-xl text-xs font-medium text-muted-foreground"
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Nomination Submitted
+                      </Button>
                     ) : (
                       <Button
                         size="sm"
@@ -366,7 +379,7 @@ export function MarketplaceDiscoveryGrid({
                             : ""
                         }`}
                       >
-                        <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Nominate Myself (+{task.token_value.toFixed(1)})
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Nominate Myself (+{taskCredits.toFixed(1)})
                       </Button>
                     )}
                   </div>
@@ -388,7 +401,7 @@ export function MarketplaceDiscoveryGrid({
               <div>
                 <DialogTitle className="text-lg font-bold">Self-Nominate for Task</DialogTitle>
                 <DialogDescription className="text-xs">
-                  {activeTask?.org_unit_name || "Department"} · +{activeTask?.token_value.toFixed(1)} WORK Tokens
+                  {activeTask?.org_unit_name || "Department"} · +{(activeTask?.credit_value ?? activeTask?.token_value ?? 1.0).toFixed(1)} WORK Tokens
                 </DialogDescription>
               </div>
             </div>
@@ -415,7 +428,7 @@ export function MarketplaceDiscoveryGrid({
                 </p>
                 <div className="flex items-center justify-between pt-2 border-t border-muted/60 text-[11px] font-mono text-muted-foreground">
                   <span>Deadline: {activeTask.deadline ? new Date(activeTask.deadline).toLocaleDateString() : "Flexible"}</span>
-                  <span className="text-emerald-600 font-bold">Reward: +{activeTask.token_value.toFixed(1)} WORK</span>
+                  <span className="text-emerald-600 font-bold">Reward: +{(activeTask.credit_value ?? activeTask.token_value ?? 1.0).toFixed(1)} WORK</span>
                 </div>
               </div>
 
