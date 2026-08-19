@@ -15,8 +15,21 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Fetch pending attendance records for this organization
-  const { data: rawAttendance } = await db
+  const isOrgWide =
+    user.scopeLevels.includes("DIRECTOR") || user.scopeLevels.includes("SYSTEM_ADMIN")
+
+  let deptId = user.orgUnitId
+  if (!deptId) {
+    const { data: userProfile } = await db
+      .from("users")
+      .select("org_unit_id")
+      .eq("id", user.id)
+      .single()
+    deptId = userProfile?.org_unit_id
+  }
+
+  // 1. Fetch pending attendance records for this department / organization
+  let attendanceQuery = db
     .from("attendance_records")
     .select(`
       id,
@@ -30,7 +43,8 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
         id,
         name,
         email,
-        designation
+        designation,
+        org_unit_id
       ),
       timetable_slots (
         id,
@@ -46,9 +60,15 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
       )
     `)
     .eq("organization_id", orgId)
+    .in("status", ["SUBMITTED", "PENDING", "IN_REVIEW"])
     .order("created_at", { ascending: false })
 
-  const formattedAttendance: AttendanceRecordItem[] = (rawAttendance || []).map((r: any) => {
+  const { data: rawAttendance } = await attendanceQuery
+  const filteredAttendance = !isOrgWide && deptId
+    ? (rawAttendance || []).filter((r: any) => r.faculty?.org_unit_id === deptId)
+    : (rawAttendance || [])
+
+  const formattedAttendance: AttendanceRecordItem[] = (filteredAttendance || []).map((r: any) => {
     const slot = r.timetable_slots
     const assignment = slot?.subject_assignments
     const subject = assignment?.subjects
@@ -93,8 +113,8 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
     }
   })
 
-  // 2. Fetch unstructured tasks submitted for verification in this org
-  const { data: rawTasks } = await db
+  // 2. Fetch unstructured tasks submitted for verification in this org / department
+  let tasksQuery = db
     .from("tasks")
     .select(`
       id,
@@ -103,6 +123,7 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
       status,
       created_at,
       category,
+      org_unit_id,
       assigned_to:assigned_to_id (
         id,
         name,
@@ -114,6 +135,12 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
     .eq("category", "UNSTRUCTURED")
     .in("status", ["VERIFICATION_PENDING", "PENDING_VERIFICATION", "SUBMITTED", "IN_REVIEW"])
     .order("created_at", { ascending: false })
+
+  if (!isOrgWide && deptId) {
+    tasksQuery = tasksQuery.eq("org_unit_id", deptId)
+  }
+
+  const { data: rawTasks } = await tasksQuery
 
   const formattedTasks: UnstructuredTaskItem[] = (rawTasks || []).map((t: any) => ({
     id: t.id,

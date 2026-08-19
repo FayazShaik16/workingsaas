@@ -232,7 +232,7 @@ export async function POST(req: Request) {
               designation: finalDesignation,
               employee_id: row.employeeId?.trim() || null,
               status: "ACTIVE",
-              target_credits: 50.0,
+              target_credits: 0.0,
               progress_percentage: 0.0,
               updated_at: new Date().toISOString(),
             },
