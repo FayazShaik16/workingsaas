@@ -90,7 +90,6 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
     title: t.title,
     description: t.description,
     credit_value: Number(t.credit_value || 1.0),
-    token_value: Number(t.credit_value || 1.0), // kept for backwards component compatibility
     category: t.category,
     status: t.status,
     visibility_scope: t.visibility_scope || "ORG_UNIT",

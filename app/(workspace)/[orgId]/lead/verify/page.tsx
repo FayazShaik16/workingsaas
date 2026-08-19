@@ -146,7 +146,6 @@ export default async function LeadVerifyQueuePage({ params }: PageProps) {
     id: t.id,
     title: t.title,
     credit_value: Number(t.credit_value || 0),
-    token_value: Number(t.credit_value || 0),
     status: t.status,
     created_at: t.created_at,
     assigned_to: t.assigned_to ? {

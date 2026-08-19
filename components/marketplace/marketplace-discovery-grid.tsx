@@ -48,7 +48,6 @@ export interface MarketplaceTask {
   title: string
   description: string | null
   credit_value: number
-  token_value?: number
   category: string
   status: string
   visibility_scope?: string
@@ -124,7 +123,7 @@ export function MarketplaceDiscoveryGrid({
       }
 
       // 3. Minimum Reward
-      const taskCredits = task.credit_value ?? task.token_value ?? 1.0
+      const taskCredits = Number(task.credit_value || 1.0)
       if (minReward > 0 && taskCredits < minReward) {
         return false
       }
@@ -274,13 +273,13 @@ export function MarketplaceDiscoveryGrid({
               onValueChange={(val) => setMinReward(Number(val))}
             >
               <SelectTrigger className="rounded-xl text-xs h-9 min-w-32 font-mono">
-                <SelectValue placeholder="Min Tokens" />
+                <SelectValue placeholder="Min Credits" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="0">Any Reward</SelectItem>
-                <SelectItem value="2">≥ 2.0 Tokens</SelectItem>
-                <SelectItem value="5">≥ 5.0 Tokens</SelectItem>
-                <SelectItem value="8">≥ 8.0 Tokens</SelectItem>
+                <SelectItem value="2">≥ 2.0 Credits</SelectItem>
+                <SelectItem value="5">≥ 5.0 Credits</SelectItem>
+                <SelectItem value="8">≥ 8.0 Credits</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -297,7 +296,7 @@ export function MarketplaceDiscoveryGrid({
           </div>
         ) : (
           filteredTasks.map((task) => {
-            const taskCredits = task.credit_value ?? task.token_value ?? 1.0
+            const taskCredits = Number(task.credit_value || 1.0)
             const isHighYield = taskCredits >= 5.0
             const bridgesDeficit = isBelowTarget && taskCredits >= creditShortfall
             const countdownText = formatDeadlineCountdown(task.deadline)
@@ -402,7 +401,7 @@ export function MarketplaceDiscoveryGrid({
               <div>
                 <DialogTitle className="text-lg font-bold">Self-Nominate for Task</DialogTitle>
                 <DialogDescription className="text-xs">
-                  {activeTask?.org_unit_name || "Department"} · +{(activeTask?.credit_value ?? activeTask?.token_value ?? 1.0).toFixed(1)} WORK Tokens
+                  {activeTask?.org_unit_name || "Department"} · +{Number(activeTask?.credit_value || 1.0).toFixed(1)} WORK Credits
                 </DialogDescription>
               </div>
             </div>
@@ -429,7 +428,7 @@ export function MarketplaceDiscoveryGrid({
                 </p>
                 <div className="flex items-center justify-between pt-2 border-t border-muted/60 text-[11px] font-mono text-muted-foreground">
                   <span>Deadline: {activeTask.deadline ? new Date(activeTask.deadline).toLocaleDateString() : "Flexible"}</span>
-                  <span className="text-emerald-600 font-bold">Reward: +{(activeTask.credit_value ?? activeTask.token_value ?? 1.0).toFixed(1)} WORK</span>
+                  <span className="text-emerald-600 font-bold">Reward: +{Number(activeTask.credit_value || 1.0).toFixed(1)} WORK</span>
                 </div>
               </div>
 

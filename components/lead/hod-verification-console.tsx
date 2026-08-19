@@ -73,8 +73,7 @@ export interface AttendanceRecordItem {
 export interface UnstructuredTaskItem {
   id: string
   title: string
-  credit_value?: number
-  token_value?: number
+  credit_value: number
   status: string
   created_at: string
   assigned_to: {
@@ -596,7 +595,7 @@ export function HODVerificationConsole({
                           </div>
                         </TableCell>
                         <TableCell className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          +{task.credit_value ?? task.token_value ?? 1} WORK
+                          +{Number(task.credit_value || 1).toFixed(1)} WORK
                         </TableCell>
                         <TableCell>
                           <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px]">
