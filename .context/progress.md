@@ -22,5 +22,13 @@
 | [2026-08-19] Phase 4: Attendance -> HOD Verification -> PERSONAL wallet credit -> Progress Recompute -> Salary Claim / Work Loan -> Finance Batch Reversal | | |
 | [2026-08-19] Phase 5: Dashboard truthfulness pass — 100% database-driven queries with honest zero states | | |
 | [2026-08-19] Phase 6: Demo seed datasets (faculty_import.csv, timetable_import.csv) + comprehensive presentation script (DEMO_SCRIPT.md) | | |
-| [2026-08-19] Phase 7: Live Runtime Acceptance Suite (Tests A-M) executed & verified 100% PASS against Supabase | | [ ] Rehearse 9:00 AM demo click-path |
+| [2026-08-19] Phase 7: Live Runtime Acceptance Suite (Tests A-M) executed & verified 100% PASS against Supabase | | |
 | [2026-08-19] Phase 8: Demo Credential Recovery & Restoration — reset & verified deterministic passwords for 4 demo accounts | | |
+| [2026-08-19] Master Rebuild Phase 0: Role model & actor separation — SYSTEM_ADMIN only signup, preview-mode banner, strict MEMBER teaching staff filter | | |
+| [2026-08-19] Master Rebuild Phase 1: Real bulk faculty CSV/XLSX import with initial honest 0 targets & forced password rotation | | |
+| [2026-08-19] Master Rebuild Phase 2: Dept Admin CRUD modules + 75/25 timetable schedule compiler | | |
+| [2026-08-19] Master Rebuild Phase 3: Total eradication of token_value bug + organization vs org_unit task pool scoping | | |
+| [2026-08-19] Master Rebuild Phase 4: Attendance submission -> HOD verification -> Personal wallet credit -> Live progress recompute | | |
+| [2026-08-19] Master Rebuild Phase 5: Sepolia ERC-20 blockchain integration with ethers.js v6, AES-256 in-memory keys, WalletCard UI, and Etherscan links | | |
+| [2026-08-19] Master Rebuild Phase 6: Live Rehearsal Guide (demo/REHEARSAL_NOTES.md) & 0-error TypeScript validation | | [ ] Rehearse 9:00 AM demo click-path |
+
