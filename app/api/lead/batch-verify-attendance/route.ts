@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 import { anchorTaskRewardOnChain } from "@/lib/blockchain/relayer"
@@ -18,8 +18,8 @@ export async function POST(req: Request) {
 
     const isApprove = action === "APPROVE"
 
-    const supabase = await createClient()
-    const db = supabase as any
+    const admin = createAdminClient()
+    const db = admin as any
 
     // 1. Fetch the target attendance records with timetable slot and subject details
     const { data: records, error: recordsError } = await db

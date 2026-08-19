@@ -33,7 +33,9 @@
 | [2026-08-19] Master Rebuild Phase 6: Live Rehearsal Guide (demo/REHEARSAL_NOTES.md) & 0-error TypeScript validation | | |
 | [2026-08-19] Runtime Hotfix: Fixed role constraint 42P10 bug in ensure-user.ts (safe query-first role & wallet seeding, assigning SYSTEM_ADMIN on fresh signup), fixed [earnings] fetch error on missing wallet, and built /api/dept-admin/curriculum for bulletproof Program/Subject/Batch/Timetable CRUD | | |
 | [2026-08-19] Timetable & Batch Schema Fix: Removed nonexistent student_count column queries across batches/schedule/API routes, and updated dept-admin/timetable page to fetch programs, subjects, batches, and faculty organization-wide with createAdminClient | | |
-| [2026-08-19] Timetable Compiler & Faculty UX Fix: Fixed timetable-compiler query-first deduplication (preventing partial-index 42P10 failure), enabled faculty tasks page to query both direct assignments and nominations, removed hardcoded 50 fallback in compiler, and simplified member earnings UI into an institutional academic credit ledger (removing blockchain jargon for faculty) | | [ ] Rehearse 9:00 AM demo click-path |
+| [2026-08-19] Timetable Compiler & Faculty UX Fix: Fixed timetable-compiler query-first deduplication (preventing partial-index 42P10 failure), enabled faculty tasks page to query both direct assignments and nominations, removed hardcoded 50 fallback in compiler, and simplified member earnings UI into an institutional academic credit ledger (removing blockchain jargon for faculty) | | |
+| [2026-08-19] Faculty Teaching Schedule & Attendance Pipeline Fix: Removed nonexistent task_type_code and timetable_slots.faculty_id queries from member/schedule/page.tsx, allowing allocated classes (e.g. Wednesday period 2) to render immediately for teacher@demo.com, and reinforced attendance logging & HOD approval routes with createAdminClient | | [ ] Rehearse 9:00 AM demo click-path |
+
 
 
 

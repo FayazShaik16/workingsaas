@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Task ID required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const db = supabase as any
+    const admin = createAdminClient()
+    const db = admin as any
 
     // Verify task exists
     const { data: task, error: taskError } = await db
