@@ -61,7 +61,7 @@ export async function compileMonthlyScheduleTasks(
         year,
         tasksCreated: rpcData.tasks_created ?? 0,
         structuredCredits: Number(rpcData.structured_credits ?? 0),
-        targetCredits: Number(rpcData.target_credits ?? 50),
+        targetCredits: Number(rpcData.target_credits ?? 0),
       }
     }
 
