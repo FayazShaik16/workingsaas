@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
+import { WalletCard } from "@/components/blockchain/wallet-card"
 
 interface Transaction {
   id: string
@@ -17,6 +19,8 @@ interface Transaction {
 }
 
 export default function EarningsPage() {
+  const params = useParams()
+  const orgId = (params?.orgId as string) || ""
   const supabase = createClient()
   const db = supabase as any
 
@@ -92,49 +96,62 @@ export default function EarningsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Earnings & Credits</h1>
-        <p className="text-muted-foreground mt-2">Track your token-backed credits and transactions</p>
+        <h1 className="text-3xl font-extrabold tracking-tight">Earnings & Credits</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Dual-layer ledger: Instant off-chain micro-credit engine + verifiable Sepolia testnet on-chain mirror.
+        </p>
       </div>
 
-      {/* Wallet Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Current Balance</CardTitle>
-            <CardDescription>Credits in your PERSONAL wallet</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-primary">{wallet?.balance?.toFixed(2) || "0.00"}</p>
-          </CardContent>
-        </Card>
+      {/* 1. On-Chain Sepolia Record Card */}
+      <WalletCard orgId={orgId} userRole="MEMBER" />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Wallet Status</CardTitle>
-            <CardDescription>Current wallet state</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-medium">
-              {wallet?.is_locked ? (
-                <span className="text-destructive">🔒 Locked</span>
-              ) : (
-                <span className="text-green-700">🔓 Active</span>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+      {/* 2. Off-Chain Ledger Summary */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Off-Chain Ledger (Instant PostgreSQL Engine)
+          </h3>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Total Transactions</CardTitle>
-            <CardDescription>All-time transaction count</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{transactions.length}</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Current Off-Chain Balance</CardTitle>
+              <CardDescription className="text-xs">Credits in your PERSONAL wallet</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black text-primary font-mono">{wallet?.balance?.toFixed(2) || "0.00"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Wallet Status</CardTitle>
+              <CardDescription className="text-xs">Current ledger state</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm font-semibold">
+                {wallet?.is_locked ? (
+                  <span className="text-destructive font-mono">🔒 Locked</span>
+                ) : (
+                  <span className="text-emerald-600 font-mono">🔓 Active & Unlocked</span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Total Micro-Events</CardTitle>
+              <CardDescription className="text-xs">Off-chain transaction count</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black text-foreground font-mono">{transactions.length}</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Transaction History */}

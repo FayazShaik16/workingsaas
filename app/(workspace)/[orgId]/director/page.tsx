@@ -21,6 +21,7 @@ import {
   Award,
 } from "lucide-react"
 import { DirectorActions } from "@/components/director/director-actions"
+import { WalletCard } from "@/components/blockchain/wallet-card"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -452,6 +453,14 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* On-Chain Institutional Treasury Mirror */}
+      <WalletCard
+        orgId={orgId}
+        userRole="DIRECTOR"
+        title="Institutional Treasury Mirror (Sepolia Testnet)"
+        description="Genesis on-chain treasury wallet and cryptographic audit anchor for institutional settlement."
+      />
 
       {/* Bottom Section: Active Work-Loans & Governance Triggers */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
