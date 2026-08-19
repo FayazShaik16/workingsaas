@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth/protect"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { MarketplaceDiscoveryGrid, MarketplaceTask } from "@/components/marketplace/marketplace-discovery-grid"
 import { Sparkles } from "lucide-react"
 
@@ -10,8 +10,8 @@ interface PageProps {
 export default async function MemberMarketplacePage({ params }: PageProps) {
   const { orgId } = await params
   const user = await requireAuth()
-  const supabase = await createClient()
-  const db = supabase as any
+  const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch user progress & targets
   const { data: userProfile } = await db

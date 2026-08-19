@@ -34,7 +34,19 @@ export default function MyTasksPage() {
         const { data: authData } = await supabase.auth.getUser()
         if (!authData?.user) throw new Error("Not authenticated")
 
-        // Get user's nominated tasks that were accepted
+        // 1. Get all tasks directly assigned to this faculty member (both structured and unstructured)
+        const { data: assignedTasks, error: assignError } = await (supabase as any)
+          .from("tasks")
+          .select("id, title, credit_value, status, deadline, category, scheduled_date")
+          .eq("organization_id", orgId)
+          .eq("assigned_to_id", authData.user.id)
+          .order("deadline", { ascending: true })
+
+        if (assignError) {
+          console.warn("[my-tasks] assigned query note:", assignError.message || assignError)
+        }
+
+        // 2. Get user's nominated tasks that were accepted
         const { data: nominations, error: nomError } = await supabase
           .from("nominations")
           .select(
@@ -52,21 +64,42 @@ export default function MyTasksPage() {
           .eq("user_id", authData.user.id)
           .eq("status", "ACCEPTED")
 
-        if (nomError) throw nomError
+        if (nomError) {
+          console.warn("[my-tasks] nominations query note:", nomError.message || nomError)
+        }
 
-        const taskList = nominations?.map((n: any) => n.tasks).filter(Boolean) || []
-        setTasks(taskList)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to fetch tasks"
+        const directList = (assignedTasks || []).map((t: any) => ({
+          ...t,
+          credit_value: Number(t.credit_value || 0),
+        }))
+
+        const nominatedList =
+          nominations
+            ?.map((n: any) => n.tasks)
+            .filter(Boolean)
+            .map((t: any) => ({
+              ...t,
+              credit_value: Number(t.credit_value || 0),
+            })) || []
+
+        // Merge & deduplicate
+        const taskMap = new Map<string, AssignedTask>()
+        for (const t of [...directList, ...nominatedList]) {
+          if (t?.id) taskMap.set(t.id, t)
+        }
+
+        setTasks(Array.from(taskMap.values()))
+      } catch (err: any) {
+        const message = err?.message || "Failed to fetch tasks"
         setError(message)
-        console.error("[my-tasks] fetch failed:", err)
+        console.error("[my-tasks] fetch failed:", message)
       } finally {
         setLoading(false)
       }
     }
 
     fetchTasks()
-  }, [supabase])
+  }, [supabase, orgId])
 
   const statusColors: { [key: string]: string } = {
     DRAFT: "bg-gray-50 text-gray-700",

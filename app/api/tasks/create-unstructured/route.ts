@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, hasScope } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
       )
     }
 
-    const supabase = await createClient()
-    const db = supabase as any
+    const admin = createAdminClient()
+    const db = admin as any
     const orgId = user.organizationId
 
     const credits = parseFloat(tokenValue) || 1.0

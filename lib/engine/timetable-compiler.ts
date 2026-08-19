@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export interface CompileResult {
   success: boolean
@@ -41,42 +41,24 @@ export async function compileMonthlyScheduleTasks(
   year: number,
   month: number
 ): Promise<CompileResult> {
-  const supabase = await createClient()
-  const db = supabase as any
+  const admin = createAdminClient()
+  const db = admin as any
 
   try {
-    // 1. Attempt server RPC compilation if available
-    const { data: rpcData, error: rpcError } = await db.rpc("compile_cycle_tasks_for_faculty", {
-      p_organization_id: organizationId,
-      p_faculty_id: facultyId,
-      p_year: year,
-      p_month: month,
-    })
-
-    if (!rpcError && rpcData?.success) {
-      return {
-        success: true,
-        facultyId,
-        month,
-        year,
-        tasksCreated: rpcData.tasks_created ?? 0,
-        structuredCredits: Number(rpcData.structured_credits ?? 0),
-        targetCredits: Number(rpcData.target_credits ?? 0),
-      }
-    }
-
-    // 2. TypeScript fallback compiler in case RPC is pending DB execution
     const startDate = new Date(Date.UTC(year, month - 1, 1))
     const endDate = new Date(Date.UTC(year, month, 0))
+
+    const startDateStr = startDate.toISOString().split("T")[0]
+    const endDateStr = endDate.toISOString().split("T")[0]
 
     // Fetch user org unit
     const { data: userRecord } = await db
       .from("users")
       .select("org_unit_id")
       .eq("id", facultyId)
-      .single()
+      .maybeSingle()
 
-    const orgUnitId = userRecord?.org_unit_id
+    const orgUnitId = userRecord?.org_unit_id || null
 
     // Fetch active assignments & timetable slots
     const { data: assignments, error: assignError } = await db
@@ -102,7 +84,9 @@ export async function compileMonthlyScheduleTasks(
       .eq("faculty_id", facultyId)
       .eq("is_active", true)
 
-    if (assignError) throw assignError
+    if (assignError) {
+      console.warn("[timetable-compiler] assignError:", assignError)
+    }
 
     // Fetch standalone slots (e.g. CLASS_PREP, TUTORIAL, etc.)
     const { data: standaloneSlots } = await db
@@ -212,21 +196,40 @@ export async function compileMonthlyScheduleTasks(
     }
 
     if (tasksToInsert.length > 0) {
-      const { data: inserted, error: insertError } = await db
+      // Deduplicate against existing tasks in DB to maintain idempotency
+      const { data: existingTasks } = await db
         .from("tasks")
-        .upsert(tasksToInsert, {
-          onConflict: "organization_id,source_timetable_slot_id,scheduled_date",
-          ignoreDuplicates: true,
-        })
-        .select("id")
+        .select("source_timetable_slot_id, scheduled_date")
+        .eq("organization_id", organizationId)
+        .eq("assigned_to_id", facultyId)
+        .gte("scheduled_date", startDateStr)
+        .lte("scheduled_date", endDateStr)
 
-      if (!insertError) {
+      const existingKeys = new Set(
+        (existingTasks || []).map((t: any) => `${t.source_timetable_slot_id}_${t.scheduled_date}`)
+      )
+
+      const uniqueNewTasks = tasksToInsert.filter(
+        (t: any) => !existingKeys.has(`${t.source_timetable_slot_id}_${t.scheduled_date}`)
+      )
+
+      if (uniqueNewTasks.length > 0) {
+        const { data: inserted, error: insertError } = await db
+          .from("tasks")
+          .insert(uniqueNewTasks)
+          .select("id")
+
+        if (insertError) {
+          console.error("[timetable-compiler] Task insertion failed:", insertError)
+          throw insertError
+        }
+
         tasksCreatedCount = inserted?.length || 0
       }
     }
 
     // 75/25 Model: Target = S / 0.75 (Structured is 75%, dynamic is 25%)
-    let calculatedTarget = 50.0
+    let calculatedTarget = 0
     if (totalStructuredCredits > 0) {
       calculatedTarget = Math.round((totalStructuredCredits / 0.75) * 100) / 100
     } else {
@@ -241,7 +244,10 @@ export async function compileMonthlyScheduleTasks(
 
     await db
       .from("users")
-      .update({ target_credits: calculatedTarget, updated_at: new Date().toISOString() })
+      .update({
+        target_credits: calculatedTarget,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", facultyId)
 
     return {
@@ -277,8 +283,8 @@ export async function checkSalaryEligibility(
   year?: number,
   month?: number
 ): Promise<SalaryEligibilityResult> {
-  const supabase = await createClient()
-  const db = supabase as any
+  const admin = createAdminClient()
+  const db = admin as any
 
   const currentYear = year || new Date().getFullYear()
   const currentMonth = month || new Date().getMonth() + 1
@@ -307,7 +313,7 @@ export async function checkSalaryEligibility(
     .from("users")
     .select("target_credits")
     .eq("id", userId)
-    .single()
+    .maybeSingle()
 
   const target = user?.target_credits !== null && user?.target_credits !== undefined ? Number(user.target_credits) : 0
 
@@ -354,40 +360,11 @@ export async function compileOrganizationScheduleTasks(
   year: number,
   month: number
 ): Promise<BatchCompileResult> {
-  const supabase = await createClient()
-  const db = supabase as any
+  const admin = createAdminClient()
+  const db = admin as any
 
   try {
-    // 1. Try DB RPC first
-    const { data: rpcData, error: rpcError } = await db.rpc("compile_cycle_tasks_for_all", {
-      p_organization_id: organizationId,
-      p_year: year,
-      p_month: month,
-    })
-
-    if (!rpcError && rpcData?.success) {
-      const details: CompileResult[] = (rpcData.details || []).map((d: any) => ({
-        success: d.success,
-        facultyId: d.faculty_id,
-        month: d.month,
-        year: d.year,
-        tasksCreated: d.tasks_created,
-        structuredCredits: Number(d.structured_credits),
-        targetCredits: Number(d.target_credits),
-      }))
-
-      const totalTasks = details.reduce((acc, curr) => acc + curr.tasksCreated, 0)
-
-      return {
-        success: true,
-        organizationId,
-        facultyCount: rpcData.faculty_count || details.length,
-        totalTasksCreated: totalTasks,
-        details,
-      }
-    }
-
-    // 2. Fallback: fetch distinct faculty with active assignments or slots
+    // 1. Fetch distinct faculty with active assignments or slots
     const { data: assignments } = await db
       .from("subject_assignments")
       .select("faculty_id")
@@ -401,11 +378,17 @@ export async function compileOrganizationScheduleTasks(
       .not("faculty_id", "is", null)
       .eq("is_active", true)
 
+    const { data: allUsers } = await db
+      .from("users")
+      .select("id")
+      .eq("organization_id", organizationId)
+
     const facultyIds = Array.from(
       new Set(
         [
           ...(assignments || []).map((a: any) => a.faculty_id),
           ...(slots || []).map((s: any) => s.faculty_id),
+          ...(allUsers || []).map((u: any) => u.id),
         ].filter(Boolean)
       )
     )

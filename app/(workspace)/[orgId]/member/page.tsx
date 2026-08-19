@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth/protect"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { MemberProgress } from "@/components/member/member-progress"
 import { MemberCommitments } from "@/components/member/member-commitments"
 import { MemberMarketplace } from "@/components/member/member-marketplace"
@@ -11,24 +11,25 @@ interface PageProps {
 export default async function MemberDashboardPage({ params }: PageProps) {
   const { orgId } = await params
   const user = await requireAuth()
-  const supabase = await createClient()
+  const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch user profile
-  const { data: profile } = await supabase
+  const { data: profile } = await db
     .from("users")
     .select("name, designation, progress_percentage, target_credits")
     .eq("id", user.id)
-    .single()
+    .maybeSingle()
 
   const userName = profile?.name || "Faculty Member"
 
   // 2. Fetch monthly target from user record with compensation policy fallback
-  const { data: compensation } = await supabase
+  const { data: compensation } = await db
     .from("compensation_policies")
     .select("monthly_target_credits")
     .eq("organization_id", orgId)
     .eq("scope_type", "ORG_WIDE")
-    .single()
+    .maybeSingle()
 
   const monthlyTarget =
     profile?.target_credits !== null && profile?.target_credits !== undefined
@@ -38,17 +39,17 @@ export default async function MemberDashboardPage({ params }: PageProps) {
       : 0
 
   // 3. Fetch user's credit balance from PERSONAL wallet
-  const { data: wallet } = await supabase
+  const { data: wallet } = await db
     .from("wallets")
     .select("balance")
     .eq("owner_user_id", user.id)
     .eq("purpose", "PERSONAL")
-    .single()
+    .maybeSingle()
 
-  const earnedTokens = wallet?.balance || 0
+  const earnedTokens = Number(wallet?.balance || 0)
 
   // 4. Fetch user's active commitments (unstructured tasks assigned to them)
-  const { data: activeTasks } = await supabase
+  const { data: activeTasks } = await db
     .from("tasks")
     .select("id, title, credit_value, deadline, status")
     .eq("organization_id", orgId)
@@ -59,13 +60,13 @@ export default async function MemberDashboardPage({ params }: PageProps) {
   const commitments = (activeTasks || []).map((t: any) => ({
     id: t.id,
     title: t.title,
-    reward: t.credit_value,
+    reward: Number(t.credit_value || 0),
     status: t.status,
     deadline: t.deadline
   }))
 
   // 5. Fetch user's structured tasks (schedule sessions / lectures)
-  const { data: scheduleTasks } = await supabase
+  const { data: scheduleTasks } = await db
     .from("tasks")
     .select("id, title, credit_value, status, deadline, description")
     .eq("organization_id", orgId)
@@ -76,25 +77,25 @@ export default async function MemberDashboardPage({ params }: PageProps) {
   const schedule = (scheduleTasks || []).map((t: any) => ({
     id: t.id,
     title: t.title,
-    credit_value: Number(t.credit_value),
+    credit_value: Number(t.credit_value || 0),
     status: t.status,
     deadline: t.deadline,
     description: t.description
   }))
 
   // 6. Fetch outstanding loan details
-  const { data: userLoan } = await supabase
+  const { data: userLoan } = await db
     .from("loans")
     .select("amount, created_at")
     .eq("user_id", user.id)
     .eq("status", "ACTIVE")
-    .single()
+    .maybeSingle()
 
   const activeLoanAmount = userLoan?.amount || 0
   const loanDueDate = userLoan?.created_at || null
 
   // 7. Fetch open unstructured tasks from marketplace
-  const { data: openTasks } = await supabase
+  const { data: openTasks } = await db
     .from("tasks")
     .select("id, title, credit_value, organization_id")
     .eq("status", "OPEN")
