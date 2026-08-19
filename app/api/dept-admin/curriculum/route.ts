@@ -154,7 +154,6 @@ export async function POST(req: Request) {
           year_of_study: Number(yearOfStudy) || 1,
           current_semester: Number(semester) || 1,
           section: section.trim().toUpperCase(),
-          student_count: Number(studentCount) || 60,
           academic_year: academicYear,
           is_active: true,
         })
@@ -163,7 +162,6 @@ export async function POST(req: Request) {
           year_of_study,
           current_semester,
           section,
-          student_count,
           academic_year,
           program_id,
           academic_programs (id, name, code)

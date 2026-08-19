@@ -15,7 +15,7 @@ interface Batch {
   year_of_study: number
   current_semester: number
   section: string
-  student_count: number
+  student_count?: number
   academic_year: string
   program_id: string
   academic_programs?: { name: string; code: string }
@@ -241,7 +241,7 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono font-bold text-xs text-primary">
-                      {b.student_count} Students
+                      {b.student_count || 60} Students
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-medium">
                       {b.academic_year}

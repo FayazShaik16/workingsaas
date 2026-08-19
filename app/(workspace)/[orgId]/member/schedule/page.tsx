@@ -19,7 +19,7 @@ export default async function MemberSchedulePage({ params }: PageProps) {
       id,
       academic_year,
       subjects (id, code, name, credits, subject_type),
-      academic_batches (id, section, year_of_study, current_semester, student_count, academic_programs (name, code)),
+      academic_batches (id, section, year_of_study, current_semester, academic_programs (name, code)),
       timetable_slots (id, day_of_week, period_number, start_time, end_time, room, task_type_code, is_active)
     `)
     .eq("faculty_id", user.id)

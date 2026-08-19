@@ -1,5 +1,5 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { ProgrammesClient } from "@/components/dept-admin/programmes-client"
 
 interface PageProps {
@@ -11,19 +11,19 @@ export default async function DeptAdminProgrammesPage({ params }: PageProps) {
   const user = await requireAuth()
   await requireScope("DEPT_ADMIN", "ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN")
 
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
   // 1. Fetch user department
-  const { data: userData } = await supabase
+  const { data: userData } = await admin
     .from("users")
     .select("org_unit_id")
     .eq("id", user.id)
-    .single()
+    .maybeSingle()
 
   const deptId = userData?.org_unit_id
 
   // 2. Fetch academic programmes
-  const { data: programmes } = await supabase
+  const { data: programmes } = await admin
     .from("academic_programs")
     .select("id, name, code, created_at")
     .eq("organization_id", orgId)
