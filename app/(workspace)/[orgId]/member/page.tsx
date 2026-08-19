@@ -30,7 +30,12 @@ export default async function MemberDashboardPage({ params }: PageProps) {
     .eq("scope_type", "ORG_WIDE")
     .single()
 
-  const monthlyTarget = Number(profile?.target_credits) || Number(compensation?.monthly_target_credits) || 50
+  const monthlyTarget =
+    profile?.target_credits !== null && profile?.target_credits !== undefined
+      ? Number(profile.target_credits)
+      : compensation?.monthly_target_credits
+      ? Number(compensation.monthly_target_credits)
+      : 0
 
   // 3. Fetch user's credit balance from PERSONAL wallet
   const { data: wallet } = await supabase

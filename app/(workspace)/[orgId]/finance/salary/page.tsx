@@ -49,7 +49,7 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
   const unitMap = new Map<string, string>((units || []).map((u: any) => [u.id, String(u.name || "Department")]))
 
   const formattedMembers: FinanceFacultyMember[] = teachingStaff.map((u) => {
-    const targetCredits = Number(u.target_credits || 50.0)
+    const targetCredits = u.target_credits !== null && u.target_credits !== undefined ? Number(u.target_credits) : 0
     const walletBalance = Number(walletMap.get(u.id) || 0)
     const progress = targetCredits > 0 ? Math.round((walletBalance / targetCredits) * 100) : 0
 

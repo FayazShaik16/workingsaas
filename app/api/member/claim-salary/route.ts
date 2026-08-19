@@ -32,9 +32,22 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle()
 
-    const targetCredits = Number(userProfile.target_credits || 50.0)
+    const targetCredits =
+      userProfile.target_credits !== null && userProfile.target_credits !== undefined
+        ? Number(userProfile.target_credits)
+        : 0
     const earnedCredits = Number(wallet?.balance || 0)
-    const progress = targetCredits > 0 ? (earnedCredits / targetCredits) * 100 : 0
+
+    if (targetCredits <= 0) {
+      return NextResponse.json(
+        {
+          error: "Monthly target credits not yet configured. Please ensure your timetable has been compiled.",
+        },
+        { status: 400 }
+      )
+    }
+
+    const progress = (earnedCredits / targetCredits) * 100
 
     if (progress < 85) {
       return NextResponse.json(

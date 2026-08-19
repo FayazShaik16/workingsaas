@@ -184,15 +184,15 @@ export function HODSalaryApprovalConsole({
         <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Digital Signature
+              Total Credits Earned
             </CardTitle>
             <ShieldCheck className="h-4 w-4 text-violet-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-extrabold text-violet-600 dark:text-violet-400 font-mono">
-              Active
+              {members.reduce((sum, m) => sum + Number(m.earned_credits || 0), 0).toFixed(1)}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">ECDSA Non-Monetary Anchor</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Verified Teaching Work Load</p>
           </CardContent>
         </Card>
       </div>

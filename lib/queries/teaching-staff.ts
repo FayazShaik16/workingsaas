@@ -101,7 +101,7 @@ export async function getTeachingStaff(
       employee_id: u.employee_id,
       org_unit_id: u.org_unit_id,
       progress_percentage: Number(u.progress_percentage || 0),
-      target_credits: Number(u.target_credits || 50),
+      target_credits: u.target_credits !== null && u.target_credits !== undefined ? Number(u.target_credits) : 0,
       quality_score: Number(u.quality_score || 0),
       status: u.status,
       roles: (u.user_roles || []).map((ur: any) => ur.roles).filter(Boolean),

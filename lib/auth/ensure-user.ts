@@ -150,13 +150,10 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       }
     }
 
-    // New self-signup / Google OAuth (No prior invitation and no existing user)
+    // New self-signup / Direct signup (No prior invitation and no existing user)
     let orgId: string
-    let unitId: string | null = null
-    let roleId: string | null = null
-    let scopeLevel = "DIRECTOR"
 
-    // Create organization
+    // 1. Create organization
     const { data: newOrg, error: orgErr } = await (admin as any)
       .from("organizations")
       .insert({
@@ -172,44 +169,50 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
     }
     orgId = newOrg.id
 
-    // Create root unit
-    const { data: newUnit } = await (admin as any)
+    // 2. Create root organization unit
+    await (admin as any)
       .from("org_units")
       .insert({
         organization_id: orgId,
         name: "Main",
         unit_type: "DEPARTMENT",
       })
-      .select("id")
-      .single()
 
-    unitId = newUnit?.id || null
-
-    // Upsert user into public.users
+    // 3. Upsert user into public.users with org_unit_id = null (Operator identity)
     await (admin as any).from("users").upsert({
       id: authUser.id,
       organization_id: orgId,
-      org_unit_id: unitId,
+      org_unit_id: null,
       email,
       name,
       status: "ACTIVE",
       employment_type: "FULL_TIME",
     })
 
-    // Ensure DIRECTOR role exists for organization
-    const { data: newRole } = await (admin as any)
-      .from("roles")
-      .insert({
-        organization_id: orgId,
-        name: "Director",
-        scope_level: "DIRECTOR",
-        is_system_role: true,
-      })
-      .select("id, scope_level")
-      .single()
+    // 4. Seed standard deduplicated roles for the organization
+    const standardRoles = [
+      { name: "System Administrator", scope_level: "SYSTEM_ADMIN", is_system_role: true },
+      { name: "Director", scope_level: "DIRECTOR", is_system_role: true },
+      { name: "Head of Department", scope_level: "ORG_UNIT_LEAD", is_system_role: true },
+      { name: "Department Administrator", scope_level: "DEPT_ADMIN", is_system_role: true },
+      { name: "Finance Administrator", scope_level: "FINANCE_ADMIN", is_system_role: true },
+      { name: "Faculty / Member", scope_level: "MEMBER", is_system_role: true },
+    ]
 
-    roleId = newRole?.id || null
-    scopeLevel = newRole?.scope_level || "DIRECTOR"
+    const { data: seededRoles } = await (admin as any)
+      .from("roles")
+      .upsert(
+        standardRoles.map((r) => ({
+          organization_id: orgId,
+          ...r,
+        })),
+        { onConflict: "organization_id,scope_level,name" }
+      )
+      .select("id, scope_level")
+
+    const sysAdminRole = (seededRoles || []).find((r: any) => r.scope_level === "SYSTEM_ADMIN")
+    const roleId = sysAdminRole?.id || null
+    const scopeLevel = "SYSTEM_ADMIN"
 
     if (roleId) {
       await (admin as any).from("user_roles").upsert(
@@ -218,15 +221,23 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       )
     }
 
-    // Create Personal wallet
+    // 5. Create Org-Level Singleton Wallets (SALARY_POOL & LOAN_POOL)
     await (admin as any).from("wallets").upsert(
-      {
-        organization_id: orgId,
-        owner_user_id: authUser.id,
-        purpose: "PERSONAL",
-        balance: 0,
-      },
-      { onConflict: "owner_user_id,purpose" }
+      [
+        {
+          organization_id: orgId,
+          owner_user_id: null,
+          purpose: "SALARY_POOL",
+          balance: 0,
+        },
+        {
+          organization_id: orgId,
+          owner_user_id: null,
+          purpose: "LOAN_POOL",
+          balance: 0,
+        },
+      ],
+      { onConflict: "organization_id,purpose" }
     )
 
     return {
@@ -234,7 +245,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       email,
       name,
       organizationId: orgId,
-      orgUnitId: unitId || undefined,
+      orgUnitId: undefined,
       roles: roleId ? [roleId] : [],
       scopeLevels: [scopeLevel],
     }

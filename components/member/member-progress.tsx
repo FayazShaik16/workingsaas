@@ -47,11 +47,12 @@ export function MemberProgress({
 }: MemberProgressProps) {
   const router = useRouter()
 
-  const safeTarget = Number(monthlyTarget) > 0 ? Number(monthlyTarget) : 50
-  const progressPercent = Math.min(100, Math.round((earnedTokens / safeTarget) * 100))
-  const target85Percent = Math.ceil(safeTarget * 0.85)
-  const shortfall85 = Math.max(0, target85Percent - earnedTokens)
-  const isEligibleForSalary = progressPercent >= 85
+  const hasTarget = Number(monthlyTarget) > 0
+  const safeTarget = hasTarget ? Number(monthlyTarget) : 0
+  const progressPercent = hasTarget ? Math.min(100, Math.round((earnedTokens / safeTarget) * 100)) : 0
+  const target85Percent = hasTarget ? Math.ceil(safeTarget * 0.85) : 0
+  const shortfall85 = hasTarget ? Math.max(0, target85Percent - earnedTokens) : 0
+  const isEligibleForSalary = hasTarget && progressPercent >= 85
 
   // Salary Claim State
   const [claimModalOpen, setClaimModalOpen] = useState(false)
@@ -150,12 +151,14 @@ export function MemberProgress({
             <Badge
               variant={isEligibleForSalary ? "default" : "secondary"}
               className={`text-[10px] font-bold ${
-                isEligibleForSalary
+                !hasTarget
+                  ? "bg-slate-500/15 text-slate-400 border-slate-500/30"
+                  : isEligibleForSalary
                   ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                   : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
               }`}
             >
-              {isEligibleForSalary ? "Eligible (≥85%)" : "Deficit (<85%)"}
+              {!hasTarget ? "Not yet configured" : isEligibleForSalary ? "Eligible (≥85%)" : "Deficit (<85%)"}
             </Badge>
           </div>
 
@@ -173,10 +176,10 @@ export function MemberProgress({
                 cx="80"
                 cy="80"
                 r="64"
-                stroke={isEligibleForSalary ? "#10b981" : "#f59e0b"}
+                stroke={!hasTarget ? "#64748b" : isEligibleForSalary ? "#10b981" : "#f59e0b"}
                 strokeWidth="12"
                 strokeDasharray="402"
-                strokeDashoffset={402 - (402 * progressPercent) / 100}
+                strokeDashoffset={hasTarget ? 402 - (402 * progressPercent) / 100 : 402}
                 strokeLinecap="round"
                 fill="transparent"
                 className="transition-all duration-500"
@@ -191,12 +194,20 @@ export function MemberProgress({
           </div>
 
           <p className="text-xs text-muted-foreground mt-2 font-medium">
-            Dynamic target denominator: <strong className="text-foreground">{safeTarget} tokens</strong>
+            {hasTarget ? (
+              <>Dynamic target denominator: <strong className="text-foreground">{safeTarget} credits</strong></>
+            ) : (
+              <span className="text-amber-400">Timetable pending compilation by Dept Admin</span>
+            )}
           </p>
 
           {/* Action Gate Conditionals */}
           <div className="w-full mt-5 space-y-2">
-            {isEligibleForSalary ? (
+            {!hasTarget ? (
+              <div className="text-xs text-muted-foreground py-2 text-center">
+                Schedule commitments will appear once timetable is compiled.
+              </div>
+            ) : isEligibleForSalary ? (
               <Button
                 onClick={() => setClaimModalOpen(true)}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-5 shadow-xs flex items-center justify-center gap-2"

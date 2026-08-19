@@ -236,7 +236,7 @@ export async function compileMonthlyScheduleTasks(
         .eq("organization_id", organizationId)
         .eq("scope_type", "ORG_WIDE")
         .maybeSingle()
-      calculatedTarget = Number(policy?.monthly_target_credits || 50.0)
+      calculatedTarget = Number(policy?.monthly_target_credits || 0)
     }
 
     await db
@@ -262,7 +262,7 @@ export async function compileMonthlyScheduleTasks(
       year,
       tasksCreated: 0,
       structuredCredits: 0,
-      targetCredits: 50,
+      targetCredits: 0,
       error: error?.message || "Failed to compile schedule",
     }
   }
@@ -295,7 +295,7 @@ export async function checkSalaryEligibility(
       eligible: Boolean(rpcData.eligible),
       progressPct: Number(rpcData.progress_pct || 0),
       earned: Number(rpcData.earned || 0),
-      target: Number(rpcData.target || 50),
+      target: Number(rpcData.target || 0),
       structuredEarned: Number(rpcData.structured_earned || 0),
       unstructuredEarned: Number(rpcData.unstructured_earned || 0),
       hasVerifiedUnstructured: Boolean(rpcData.has_verified_unstructured),
@@ -309,7 +309,7 @@ export async function checkSalaryEligibility(
     .eq("id", userId)
     .single()
 
-  const target = Number(user?.target_credits || 50.0)
+  const target = user?.target_credits !== null && user?.target_credits !== undefined ? Number(user.target_credits) : 0
 
   const { data: tasks } = await db
     .from("tasks")
@@ -333,7 +333,7 @@ export async function checkSalaryEligibility(
 
   const earned = structuredEarned + unstructuredEarned
   const progressPct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0
-  const eligible = earned >= 0.85 * target && hasVerifiedUnstructured
+  const eligible = target > 0 && earned >= 0.85 * target && hasVerifiedUnstructured
 
   return {
     eligible,

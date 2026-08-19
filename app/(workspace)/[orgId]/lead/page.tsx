@@ -31,7 +31,10 @@ export default async function LeadDashboardPage({ params }: PageProps) {
   const deptId = userProfile?.org_unit_id || user.orgUnitId
   const deptName = (userProfile?.org_units as any)?.name || "Academic Department"
   const personalProgress = Math.round(Number(userProfile?.progress_percentage || 0))
-  const targetTokens = Number(userProfile?.target_credits || 50)
+  const targetTokens =
+    userProfile?.target_credits !== null && userProfile?.target_credits !== undefined
+      ? Number(userProfile.target_credits)
+      : 0
 
   // 2. Fetch personal earned tokens from wallet
   const { data: wallet } = await admin

@@ -20,7 +20,10 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
     .eq("id", user.id)
     .single()
 
-  const targetCredits = Number(userProfile?.target_credits || 50.0)
+  const targetCredits =
+    userProfile?.target_credits !== null && userProfile?.target_credits !== undefined
+      ? Number(userProfile.target_credits)
+      : 0
   const userOrgUnitId = userProfile?.org_unit_id || user.orgUnitId
 
   // 2. Fetch user's earned credits from personal wallet

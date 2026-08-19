@@ -201,6 +201,20 @@ export function CanvasShell({
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
+        {availableRoles.includes("SYSTEM_ADMIN") && currentRole !== "SYSTEM_ADMIN" && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs text-amber-300 flex items-center justify-between font-medium z-20">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>Viewing as <strong>{currentRole}</strong> — Setup Mode (Verification Preview Only)</span>
+            </div>
+            <button
+              onClick={() => handleRoleChange("SYSTEM_ADMIN")}
+              className="text-[11px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded transition-colors"
+            >
+              Exit to Admin Panel
+            </button>
+          </div>
+        )}
         <Header
           title={title}
           unreadNotifications={unreadNotifications}

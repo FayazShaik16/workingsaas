@@ -136,7 +136,8 @@ function DesktopSidebar({ user, organization, currentRole, availableRoles, navig
   const [roleDropOpen, setRoleDropOpen] = useState(false)
   const pathname = usePathname()
   const meta = ROLE_META[currentRole] ?? ROLE_META.MEMBER
-  const switchableRoles = availableRoles.filter((r) => r !== currentRole && ROLE_META[r])
+  const isSysAdmin = availableRoles.includes("SYSTEM_ADMIN")
+  const switchableRoles = isSysAdmin ? availableRoles.filter((r) => r !== currentRole && ROLE_META[r]) : []
 
   return (
     <aside className={cn(
@@ -269,7 +270,8 @@ function MobileSidebar({ user, organization, currentRole, availableRoles, naviga
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const meta = ROLE_META[currentRole] ?? ROLE_META.MEMBER
-  const switchableRoles = availableRoles.filter((r) => r !== currentRole && ROLE_META[r])
+  const isSysAdmin = availableRoles.includes("SYSTEM_ADMIN")
+  const switchableRoles = isSysAdmin ? availableRoles.filter((r) => r !== currentRole && ROLE_META[r]) : []
 
   return (
     <>
