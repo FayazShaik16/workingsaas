@@ -150,8 +150,14 @@ export async function POST(req: Request) {
 
           totalTokensDisbursed += creditReward
 
-          // Recompute progress percentage in DB
-          await db.rpc("recompute_user_progress", { p_user_id: facultyId })
+          // Recompute progress percentage in DB & update users table
+          const { error: rpcErr } = await db.rpc("recompute_user_progress", { p_user_id: facultyId })
+          if (rpcErr) {
+            const { data: userRec } = await db.from("users").select("target_credits").eq("id", facultyId).single()
+            const target = Number(userRec?.target_credits || 0)
+            const progress = target > 0 ? Math.min(100, Math.round((newBalance / target) * 100)) : 0
+            await db.from("users").update({ progress_percentage: progress, updated_at: nowIso }).eq("id", facultyId)
+          }
         }
 
         processedCount++
