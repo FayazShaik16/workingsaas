@@ -51,33 +51,27 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
     setErrorMsg(null)
 
     try {
-      const { data, error } = await db
-        .from("academic_batches")
-        .insert({
-          organization_id: orgId,
-          program_id: programId || null,
-          year_of_study: Number(yearOfStudy),
-          current_semester: Number(semester),
-          section: section.trim().toUpperCase(),
-          student_count: Number(studentCount),
-          academic_year: academicYear,
-          is_active: true,
-        })
-        .select(`
-          id,
-          year_of_study,
-          current_semester,
-          section,
-          student_count,
-          academic_year,
-          program_id,
-          academic_programs (id, name, code)
-        `)
-        .single()
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_BATCH",
+          payload: {
+            orgId,
+            programId: programId || null,
+            yearOfStudy: Number(yearOfStudy),
+            semester: Number(semester),
+            section: section.trim().toUpperCase(),
+            studentCount: Number(studentCount),
+            academicYear,
+          },
+        }),
+      })
 
-      if (error) throw error
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to create batch")
 
-      setBatches((prev) => [data, ...prev])
+      setBatches((prev) => [json.data, ...prev])
       setSection("A")
       setShowAddForm(false)
       router.refresh()

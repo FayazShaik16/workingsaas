@@ -43,20 +43,24 @@ export function ProgrammesClient({ orgId, deptId, initialProgrammes }: Programme
     setErrorMsg(null)
 
     try {
-      const { data, error } = await db
-        .from("academic_programs")
-        .insert({
-          organization_id: orgId,
-          dept_id: deptId || null,
-          name: name.trim(),
-          code: code.trim().toUpperCase(),
-        })
-        .select()
-        .single()
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_PROGRAM",
+          payload: {
+            orgId,
+            deptId: deptId || null,
+            name: name.trim(),
+            code: code.trim().toUpperCase(),
+          },
+        }),
+      })
 
-      if (error) throw error
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to create programme")
 
-      setProgrammes((prev) => [data, ...prev])
+      setProgrammes((prev) => [json.data, ...prev])
       setName("")
       setCode("")
       setShowAddForm(false)

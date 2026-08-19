@@ -30,5 +30,7 @@
 | [2026-08-19] Master Rebuild Phase 3: Total eradication of token_value bug + organization vs org_unit task pool scoping | | |
 | [2026-08-19] Master Rebuild Phase 4: Attendance submission -> HOD verification -> Personal wallet credit -> Live progress recompute | | |
 | [2026-08-19] Master Rebuild Phase 5: Sepolia ERC-20 blockchain integration with ethers.js v6, AES-256 in-memory keys, WalletCard UI, and Etherscan links | | |
-| [2026-08-19] Master Rebuild Phase 6: Live Rehearsal Guide (demo/REHEARSAL_NOTES.md) & 0-error TypeScript validation | | [ ] Rehearse 9:00 AM demo click-path |
+| [2026-08-19] Master Rebuild Phase 6: Live Rehearsal Guide (demo/REHEARSAL_NOTES.md) & 0-error TypeScript validation | | |
+| [2026-08-19] Runtime Hotfix: Fixed role constraint 42P10 bug in ensure-user.ts (safe query-first role & wallet seeding, assigning SYSTEM_ADMIN on fresh signup), fixed [earnings] fetch error on missing wallet, and built /api/dept-admin/curriculum for bulletproof Program/Subject/Batch/Timetable CRUD | | [ ] Rehearse 9:00 AM demo click-path |
+
 

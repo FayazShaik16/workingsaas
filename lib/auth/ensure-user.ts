@@ -114,14 +114,18 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
           .select("id, scope_level")
           .eq("organization_id", existingUser.organization_id)
 
-        let targetRole = orgRoles?.find((r: any) => r.scope_level === "DIRECTOR") || orgRoles?.[0]
+        let targetRole =
+          orgRoles?.find((r: any) => r.scope_level === "SYSTEM_ADMIN") ||
+          orgRoles?.find((r: any) => r.scope_level === "DIRECTOR") ||
+          orgRoles?.[0]
+
         if (!targetRole) {
           const { data: newRole } = await (admin as any)
             .from("roles")
             .insert({
               organization_id: existingUser.organization_id,
-              name: "Director",
-              scope_level: "DIRECTOR",
+              name: "System Administrator",
+              scope_level: "SYSTEM_ADMIN",
               is_system_role: true,
             })
             .select("id, scope_level")
@@ -135,7 +139,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
             { onConflict: "user_id,role_id" }
           )
           roles = [targetRole.id]
-          scopeLevels = [targetRole.scope_level || "DIRECTOR"]
+          scopeLevels = [targetRole.scope_level || "SYSTEM_ADMIN"]
         }
       }
 
@@ -189,7 +193,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       employment_type: "FULL_TIME",
     })
 
-    // 4. Seed standard deduplicated roles for the organization
+    // 4. Seed standard roles for the organization safely
     const standardRoles = [
       { name: "System Administrator", scope_level: "SYSTEM_ADMIN", is_system_role: true },
       { name: "Director", scope_level: "DIRECTOR", is_system_role: true },
@@ -199,18 +203,42 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       { name: "Faculty / Member", scope_level: "MEMBER", is_system_role: true },
     ]
 
-    const { data: seededRoles } = await (admin as any)
+    let { data: existingRoles } = await (admin as any)
       .from("roles")
-      .upsert(
-        standardRoles.map((r) => ({
-          organization_id: orgId,
-          ...r,
-        })),
-        { onConflict: "organization_id,scope_level,name" }
-      )
-      .select("id, scope_level")
+      .select("id, scope_level, name")
+      .eq("organization_id", orgId)
 
-    const sysAdminRole = (seededRoles || []).find((r: any) => r.scope_level === "SYSTEM_ADMIN")
+    if (!existingRoles || existingRoles.length === 0) {
+      const { data: insertedRoles } = await (admin as any)
+        .from("roles")
+        .insert(
+          standardRoles.map((r) => ({
+            organization_id: orgId,
+            ...r,
+          }))
+        )
+        .select("id, scope_level, name")
+
+      existingRoles = insertedRoles || []
+    }
+
+    let sysAdminRole = (existingRoles || []).find((r: any) => r.scope_level === "SYSTEM_ADMIN")
+
+    if (!sysAdminRole) {
+      const { data: newRole } = await (admin as any)
+        .from("roles")
+        .insert({
+          organization_id: orgId,
+          name: "System Administrator",
+          scope_level: "SYSTEM_ADMIN",
+          is_system_role: true,
+        })
+        .select("id, scope_level")
+        .single()
+
+      sysAdminRole = newRole
+    }
+
     const roleId = sysAdminRole?.id || null
     const scopeLevel = "SYSTEM_ADMIN"
 
@@ -221,24 +249,40 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       )
     }
 
-    // 5. Create Org-Level Singleton Wallets (SALARY_POOL & LOAN_POOL)
+    // 5. Create Wallets (PERSONAL for user, plus SALARY_POOL & LOAN_POOL for org)
     await (admin as any).from("wallets").upsert(
-      [
-        {
-          organization_id: orgId,
-          owner_user_id: null,
-          purpose: "SALARY_POOL",
-          balance: 0,
-        },
-        {
-          organization_id: orgId,
-          owner_user_id: null,
-          purpose: "LOAN_POOL",
-          balance: 0,
-        },
-      ],
-      { onConflict: "organization_id,purpose" }
-    )
+      {
+        organization_id: orgId,
+        owner_user_id: authUser.id,
+        purpose: "PERSONAL",
+        balance: 0,
+      },
+      { onConflict: "owner_user_id,purpose" }
+    ).catch(() => {})
+
+    // Check and create org pool wallets safely
+    const { data: existingPools } = await (admin as any)
+      .from("wallets")
+      .select("id, purpose")
+      .eq("organization_id", orgId)
+
+    const poolPurposes = (existingPools || []).map((p: any) => p.purpose)
+    if (!poolPurposes.includes("SALARY_POOL")) {
+      await (admin as any).from("wallets").insert({
+        organization_id: orgId,
+        owner_user_id: null,
+        purpose: "SALARY_POOL",
+        balance: 0,
+      }).catch(() => {})
+    }
+    if (!poolPurposes.includes("LOAN_POOL")) {
+      await (admin as any).from("wallets").insert({
+        organization_id: orgId,
+        owner_user_id: null,
+        purpose: "LOAN_POOL",
+        balance: 0,
+      }).catch(() => {})
+    }
 
     return {
       id: authUser.id,

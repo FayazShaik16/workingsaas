@@ -134,54 +134,29 @@ export function TimetableBuilderClient({
     setStatusMessage(null)
 
     try {
-      let assignmentId = ""
-      const { data: existingAssignment } = await db
-        .from("subject_assignments")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("faculty_id", newFacultyId)
-        .eq("subject_id", newSubjectId)
-        .eq("batch_id", newBatchId)
-        .limit(1)
-        .maybeSingle()
-
-      if (existingAssignment) {
-        assignmentId = existingAssignment.id
-      } else {
-        const { data: newAssignment, error: aError } = await db
-          .from("subject_assignments")
-          .insert({
-            organization_id: orgId,
-            faculty_id: newFacultyId,
-            subject_id: newSubjectId,
-            batch_id: newBatchId,
-            academic_year: "2025-2026",
-            semester: 5,
-            is_active: true,
-          })
-          .select("id")
-          .single()
-
-        if (aError) throw aError
-        assignmentId = newAssignment.id
-      }
-
       const times = periodTimes[newPeriod] || { start: "09:00:00", end: "09:50:00" }
 
-      const { error: slotError } = await db.from("timetable_slots").insert({
-        organization_id: orgId,
-        subject_assignment_id: assignmentId,
-        faculty_id: newFacultyId,
-        day_of_week: newDay,
-        period_number: newPeriod,
-        start_time: times.start,
-        end_time: times.end,
-        room: newRoom,
-        is_active: true,
-        effective_from: new Date().toISOString().split("T")[0],
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_SLOT",
+          payload: {
+            orgId,
+            facultyId: newFacultyId,
+            subjectId: newSubjectId,
+            batchId: newBatchId,
+            dayOfWeek: newDay,
+            periodNumber: newPeriod,
+            startTime: times.start,
+            endTime: times.end,
+            room: newRoom,
+          },
+        }),
       })
 
-      if (slotError) throw slotError
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to save slot")
 
       setStatusMessage("Slot successfully allocated to weekly timetable!")
       router.refresh()

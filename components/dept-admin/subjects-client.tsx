@@ -51,33 +51,27 @@ export function SubjectsClient({ orgId, programmes, initialSubjects }: SubjectsC
     setErrorMsg(null)
 
     try {
-      const { data, error } = await db
-        .from("subjects")
-        .insert({
-          organization_id: orgId,
-          program_id: programId || null,
-          code: code.trim().toUpperCase(),
-          name: name.trim(),
-          credits: Number(credits),
-          subject_type: subjectType,
-          semester: Number(semester),
-          is_active: true,
-        })
-        .select(`
-          id,
-          code,
-          name,
-          credits,
-          subject_type,
-          semester,
-          program_id,
-          academic_programs (id, name, code)
-        `)
-        .single()
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_SUBJECT",
+          payload: {
+            orgId,
+            programId: programId || null,
+            code: code.trim().toUpperCase(),
+            name: name.trim(),
+            credits: Number(credits),
+            subjectType,
+            semester: Number(semester),
+          },
+        }),
+      })
 
-      if (error) throw error
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to create subject")
 
-      setSubjects((prev) => [data, ...prev])
+      setSubjects((prev) => [json.data, ...prev])
       setCode("")
       setName("")
       setCredits(3)

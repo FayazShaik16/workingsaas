@@ -41,27 +41,35 @@ export default function EarningsPage() {
           .select("*")
           .eq("owner_user_id", authData.user.id)
           .eq("purpose", "PERSONAL")
-          .single()
+          .maybeSingle()
 
-        if (walletError && walletError.code !== "PGRST116") throw walletError
+        if (walletError) {
+          console.warn("[earnings] wallet query note:", walletError.message || walletError)
+        }
 
-        setWallet(walletData)
+        setWallet(walletData || { balance: 0, is_locked: false })
 
-        // Get transaction history
-        const { data: txData, error: txError } = await db
-          .from("token_transactions")
-          .select("*")
-          .eq("to_wallet_id", walletData?.id)
-          .order("created_at", { ascending: false })
-          .limit(20)
+        // Get transaction history only if wallet exists
+        if (walletData?.id) {
+          const { data: txData, error: txError } = await db
+            .from("token_transactions")
+            .select("*")
+            .eq("to_wallet_id", walletData.id)
+            .order("created_at", { ascending: false })
+            .limit(20)
 
-        if (txError && txError.code !== "PGRST116") throw txError
+          if (txError) {
+            console.warn("[earnings] tx query note:", txError.message || txError)
+          }
 
-        setTransactions((txData as any) || [])
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to fetch earnings"
+          setTransactions((txData as any) || [])
+        } else {
+          setTransactions([])
+        }
+      } catch (err: any) {
+        const message = err?.message || (typeof err === "string" ? err : "Failed to fetch earnings")
         setError(message)
-        console.error("[earnings] fetch failed:", err)
+        console.error("[earnings] fetch failed:", message)
       } finally {
         setLoading(false)
       }
