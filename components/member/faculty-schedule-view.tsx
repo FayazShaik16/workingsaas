@@ -4,9 +4,6 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +22,10 @@ import {
   AlertCircle,
   Loader2,
   CalendarCheck,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Check,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -79,13 +80,9 @@ export function FacultyScheduleView({
   const [activeDay, setActiveDay] = useState<string>(todayDow)
   const [selectedSlot, setSelectedSlot] = useState<SlotEntry | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [confirmStep, setConfirmStep] = useState<1 | 2>(1)
 
-  // Form State
   const todayDateString = new Date().toISOString().split("T")[0]
-  const [classDate, setClassDate] = useState<string>(todayDateString)
-  const [studentsPresent, setStudentsPresent] = useState<number>(55)
-  const [studentsAbsent, setStudentsAbsent] = useState<number>(5)
-  const [topicsCovered, setTopicsCovered] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
@@ -96,26 +93,14 @@ export function FacultyScheduleView({
     )
   )
 
-  const handleOpenAttendanceModal = (slot: SlotEntry) => {
+  const handleOpenConfirmModal = (slot: SlotEntry) => {
     setSelectedSlot(slot)
-    const defaultTotal = slot.studentCount || 60
-    setStudentsPresent(Math.min(55, defaultTotal))
-    setStudentsAbsent(Math.max(0, defaultTotal - 55))
-    setTopicsCovered("")
-    setClassDate(todayDateString)
+    setConfirmStep(1)
     setFeedbackMessage(null)
     setIsModalOpen(true)
   }
 
-  const handlePresentChange = (val: number) => {
-    const present = Math.max(0, val)
-    setStudentsPresent(present)
-    const total = selectedSlot?.studentCount || 60
-    setStudentsAbsent(Math.max(0, total - present))
-  }
-
-  const handleSubmitAttendance = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleFinalConfirmCompletion = async () => {
     if (!selectedSlot) return
 
     setIsSubmitting(true)
@@ -128,28 +113,25 @@ export function FacultyScheduleView({
         body: JSON.stringify({
           timetableSlotId: selectedSlot.slotId,
           taskId: selectedSlot.taskId,
-          classDate,
-          studentsPresent,
-          studentsAbsent,
-          topicsCovered,
+          classDate: todayDateString,
         }),
       })
 
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.error || "Failed to submit attendance")
+        throw new Error(data.error || "Failed to mark session completion")
       }
 
-      // Mark locally as SUBMITTED
-      const recordKey = `${selectedSlot.slotId}_${classDate}`
+      // Mark locally as VERIFIED / Auto-Approved
+      const recordKey = `${selectedSlot.slotId}_${todayDateString}`
       setLocalRecords((prev) => ({
         ...prev,
-        [recordKey]: { status: "SUBMITTED" },
+        [recordKey]: { status: "VERIFIED" },
       }))
 
       setFeedbackMessage({
         type: "success",
-        text: "Attendance submitted successfully! Sent to HOD Monday approval queue.",
+        text: "Session completed! Auto-approved & credits added to your progress.",
       })
 
       setTimeout(() => {
@@ -165,8 +147,6 @@ export function FacultyScheduleView({
       setIsSubmitting(false)
     }
   }
-
-  const totalSlots = Object.values(schedule).flat().length
 
   return (
     <div className="space-y-6">
@@ -232,9 +212,10 @@ export function FacultyScheduleView({
               const recordKey = `${slot.slotId}_${todayDateString}`
               const attendanceRecord = localRecords[recordKey]
 
-              const isSubmitted = attendanceRecord?.status === "SUBMITTED"
-              const isVerified = attendanceRecord?.status === "VERIFIED"
-              const isRejected = attendanceRecord?.status === "REJECTED"
+              const isCompleted =
+                attendanceRecord?.status === "VERIFIED" ||
+                attendanceRecord?.status === "CONDUCTED" ||
+                slot.attendanceStatus === "VERIFIED"
 
               return (
                 <div
@@ -251,65 +232,44 @@ export function FacultyScheduleView({
 
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-foreground">
-                          {slot.subjectCode} — {slot.subjectName}
-                        </span>
-                        <Badge variant="secondary" className="text-[10px] font-normal rounded-md">
-                          {slot.batch}
+                        <Badge variant="outline" className="font-mono text-[10px] font-bold">
+                          {slot.subjectCode}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px] font-mono">
-                          Sem {slot.semester}
-                        </Badge>
+                        <h4 className="text-sm font-semibold text-foreground/90">
+                          {slot.subjectName}
+                        </h4>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground font-light">
-                        {slot.room && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-primary/70" /> {slot.room}
-                          </span>
-                        )}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap pt-0.5">
                         <span className="flex items-center gap-1">
-                          <BookOpen className="h-3 w-3 text-primary/70" /> {slot.programme}
+                          <Users className="h-3.5 w-3.5 text-primary/70" />
+                          {slot.batch} ({slot.programme})
                         </span>
                         <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3 text-primary/70" /> {slot.studentCount || 60} Enrolled
+                          <MapPin className="h-3.5 w-3.5 text-primary/70" />
+                          {slot.room || "Classroom"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="h-3.5 w-3.5 text-primary/70" />
+                          Semester {slot.semester}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Status / Action */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    {isVerified ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold py-1 px-2.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Verified by HOD (+1.0 Token)
-                      </Badge>
-                    ) : isSubmitted ? (
-                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs font-semibold py-1 px-2.5">
-                        <Clock className="h-3.5 w-3.5 mr-1" /> Pending HOD Approval
-                      </Badge>
-                    ) : isRejected ? (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="destructive" className="text-xs">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1" /> Rejected
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenAttendanceModal(slot)}
-                          className="rounded-xl text-xs h-8"
-                        >
-                          Resubmit
-                        </Button>
-                      </div>
+                  <div className="flex items-center gap-3 self-end md:self-center">
+                    {isCompleted ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle2 className="h-4 w-4" /> Completed & Auto-Approved
+                      </span>
                     ) : (
                       <Button
                         size="sm"
-                        onClick={() => handleOpenAttendanceModal(slot)}
-                        className="rounded-xl text-xs h-9 shadow-xs font-medium"
+                        onClick={() => handleOpenConfirmModal(slot)}
+                        className="rounded-xl text-xs font-semibold shadow-xs"
                       >
-                        <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
-                        Log Attendance Sheet
+                        <Check className="h-3.5 w-3.5 mr-1" />
+                        Mark as Completed
                       </Button>
                     )}
                   </div>
@@ -320,16 +280,22 @@ export function FacultyScheduleView({
         </CardContent>
       </Card>
 
-      {/* One-Click Attendance Sheet Popup Modal */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* TWO-STEP CONFIRMATION MODAL (NO VALIDITY FORM ASKED)          */}
+      {/* ───────────────────────────────────────────────────────────── */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-lg rounded-2xl p-6">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="p-2 rounded-xl bg-primary/10 text-primary">
                 <CalendarCheck className="h-5 w-5" />
               </span>
               <div>
-                <DialogTitle className="text-lg font-bold">Classroom Attendance Sheet</DialogTitle>
+                <DialogTitle className="text-lg font-bold">
+                  {confirmStep === 1
+                    ? "Confirm Task Completion"
+                    : "Final Double Confirmation"}
+                </DialogTitle>
                 <DialogDescription className="text-xs">
                   {selectedSlot?.subjectCode} — {selectedSlot?.subjectName} ({selectedSlot?.batch})
                 </DialogDescription>
@@ -337,133 +303,118 @@ export function FacultyScheduleView({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitAttendance} className="space-y-4 pt-2">
+          <div className="space-y-4 pt-2">
             {feedbackMessage && (
               <div
-                className={`p-3 text-xs rounded-xl border ${
+                className={`p-3 text-xs rounded-xl border flex items-center gap-2 ${
                   feedbackMessage.type === "success"
                     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                     : "bg-destructive/10 text-destructive border-destructive/20"
                 }`}
               >
-                {feedbackMessage.text}
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{feedbackMessage.text}</span>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="classDate" className="text-xs">
-                  Session Date
-                </Label>
-                <Input
-                  id="classDate"
-                  type="date"
-                  value={classDate}
-                  onChange={(e) => setClassDate(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  className="text-xs rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="room" className="text-xs">
-                  Classroom / Lab
-                </Label>
-                <Input
-                  id="room"
-                  value={selectedSlot?.room || "LH-101"}
-                  disabled
-                  className="text-xs rounded-xl bg-muted/40"
-                />
-              </div>
-            </div>
-
-            {/* Attendance Counts */}
-            <div className="p-4 rounded-xl border border-muted/80 bg-muted/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground">Enrolled Students</span>
-                <Badge variant="secondary" className="font-mono text-xs">
-                  {selectedSlot?.studentCount || 60} Total
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="present" className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                    Students Present
-                  </Label>
-                  <Input
-                    id="present"
-                    type="number"
-                    min={0}
-                    max={selectedSlot?.studentCount || 100}
-                    value={studentsPresent}
-                    onChange={(e) => handlePresentChange(Number(e.target.value))}
-                    required
-                    disabled={isSubmitting}
-                    className="text-sm font-mono rounded-xl font-bold"
-                  />
+            {/* STEP 1: First Confirmation Box */}
+            {confirmStep === 1 && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl border border-muted/80 bg-muted/20 space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Did you complete this scheduled teaching session?
+                  </p>
+                  <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border/40">
+                    <div className="flex justify-between">
+                      <span>Subject:</span>
+                      <span className="font-semibold text-foreground">
+                        {selectedSlot?.subjectName} ({selectedSlot?.subjectCode})
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Batch & Time:</span>
+                      <span className="text-foreground">
+                        {selectedSlot?.batch} • {selectedSlot?.startTime} – {selectedSlot?.endTime}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Classroom:</span>
+                      <span className="text-foreground">{selectedSlot?.room || "Classroom"}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="absent" className="text-xs text-muted-foreground">
-                    Students Absent
-                  </Label>
-                  <Input
-                    id="absent"
-                    type="number"
-                    min={0}
-                    value={studentsAbsent}
-                    onChange={(e) => setStudentsAbsent(Number(e.target.value))}
-                    required
-                    disabled={isSubmitting}
-                    className="text-sm font-mono rounded-xl"
-                  />
-                </div>
+                <DialogFooter className="gap-2 pt-2 sm:justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                    className="rounded-xl text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setConfirmStep(2)}
+                    className="rounded-xl text-xs font-semibold shadow-xs"
+                  >
+                    Yes, I Completed This Task <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </DialogFooter>
               </div>
-            </div>
+            )}
 
-            {/* Topics Brief */}
-            <div className="space-y-1.5">
-              <Label htmlFor="topics" className="text-xs">
-                Topic Covered & Pedagogical Brief
-              </Label>
-              <Textarea
-                id="topics"
-                placeholder="e.g. Unit 3: Dynamic Programming algorithms, Knapsack implementation demo, problem set assigned."
-                value={topicsCovered}
-                onChange={(e) => setTopicsCovered(e.target.value)}
-                rows={3}
-                required
-                disabled={isSubmitting}
-                className="text-xs rounded-xl"
-              />
-            </div>
+            {/* STEP 2: Second Double-Check Confirmation */}
+            {confirmStep === 2 && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2.5">
+                  <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                    <ShieldCheck className="h-4 w-4" />
+                    Please Confirm One More Time
+                  </div>
+                  <p className="text-xs text-foreground/90 leading-relaxed">
+                    Confirm that you have fulfilled your scheduled teaching responsibility for{" "}
+                    <span className="font-bold">{selectedSlot?.subjectName}</span> on{" "}
+                    <span className="font-semibold">{dayLabels[activeDay]}</span>.
+                  </p>
+                  <div className="p-2.5 rounded-lg bg-background/60 border border-primary/15 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span>
+                      As a scheduled core responsibility, this task is <strong>auto-approved</strong> and immediately credited to your progress and visible to your HOD.
+                    </span>
+                  </div>
+                </div>
 
-            <DialogFooter className="gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isSubmitting}
-                className="rounded-xl text-xs"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className="rounded-xl text-xs font-semibold shadow-xs">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Submitting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Submit to HOD Queue
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+                <DialogFooter className="gap-2 pt-2 sm:justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setConfirmStep(1)}
+                    disabled={isSubmitting}
+                    className="rounded-xl text-xs"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleFinalConfirmCompletion}
+                    disabled={isSubmitting}
+                    className="rounded-xl text-xs font-semibold shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white min-w-36"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Confirming...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-3.5 w-3.5 mr-1.5" /> Yes, Final Confirm
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

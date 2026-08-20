@@ -1,8 +1,10 @@
 import { requireAuth } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { MemberProgress } from "@/components/member/member-progress"
-import { MemberCommitments } from "@/components/member/member-commitments"
-import { MemberMarketplace } from "@/components/member/member-marketplace"
+import {
+  MinimalFacultyDashboard,
+  ScheduledLectureTask,
+  AssignedUnscheduledTask,
+} from "@/components/member/minimal-faculty-dashboard"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -22,6 +24,7 @@ export default async function MemberDashboardPage({ params }: PageProps) {
     .maybeSingle()
 
   const userName = profile?.name || "Faculty Member"
+  const userDesignation = profile?.designation || "Teaching Staff"
 
   // 2. Fetch monthly target from user record with compensation policy fallback
   const { data: compensation } = await db
@@ -36,7 +39,7 @@ export default async function MemberDashboardPage({ params }: PageProps) {
       ? Number(profile.target_credits)
       : compensation?.monthly_target_credits
       ? Number(compensation.monthly_target_credits)
-      : 0
+      : 60.0
 
   // 3. Fetch user's credit balance from PERSONAL wallet
   const { data: wallet } = await db
@@ -48,119 +51,56 @@ export default async function MemberDashboardPage({ params }: PageProps) {
 
   const earnedTokens = Number(wallet?.balance || 0)
 
-  // 4. Fetch user's active commitments (unstructured tasks assigned to them)
-  const { data: activeTasks } = await db
+  // 4. Fetch scheduled tasks (lectures / sessions) assigned to this faculty
+  const { data: rawScheduleTasks } = await db
     .from("tasks")
-    .select("id, title, credit_value, deadline, status")
-    .eq("organization_id", orgId)
-    .eq("assigned_to_id", user.id)
-    .eq("category", "UNSTRUCTURED")
-    .in("status", ["ASSIGNED", "IN_PROGRESS", "VERIFICATION_PENDING"])
-
-  const commitments = (activeTasks || []).map((t: any) => ({
-    id: t.id,
-    title: t.title,
-    reward: Number(t.credit_value || 0),
-    status: t.status,
-    deadline: t.deadline
-  }))
-
-  // 5. Fetch user's structured tasks (schedule sessions / lectures)
-  const { data: scheduleTasks } = await db
-    .from("tasks")
-    .select("id, title, credit_value, status, deadline, description")
+    .select("id, title, description, credit_value, status, deadline, priority")
     .eq("organization_id", orgId)
     .eq("assigned_to_id", user.id)
     .eq("category", "STRUCTURED")
-    .in("status", ["ASSIGNED", "IN_PROGRESS", "CLOSED"])
+    .order("created_at", { ascending: false })
 
-  const schedule = (scheduleTasks || []).map((t: any) => ({
+  const scheduledTasks: ScheduledLectureTask[] = (rawScheduleTasks || []).map((t: any) => ({
     id: t.id,
     title: t.title,
-    credit_value: Number(t.credit_value || 0),
+    creditValue: Number(t.credit_value || 1.0),
     status: t.status,
     deadline: t.deadline,
-    description: t.description
+    description: t.description,
   }))
 
-  // 6. Fetch outstanding loan details
-  const { data: userLoan } = await db
-    .from("loans")
-    .select("amount, created_at")
-    .eq("user_id", user.id)
-    .eq("status", "ACTIVE")
-    .maybeSingle()
-
-  const activeLoanAmount = userLoan?.amount || 0
-  const loanDueDate = userLoan?.created_at || null
-
-  // 7. Fetch open unstructured tasks from marketplace
-  const { data: openTasks } = await db
+  // 5. Fetch assigned unscheduled / institutional tasks assigned to this faculty
+  const { data: rawAssignedTasks } = await db
     .from("tasks")
-    .select("id, title, credit_value, organization_id")
-    .eq("status", "OPEN")
-    .eq("category", "UNSTRUCTURED")
+    .select("id, title, description, credit_value, status, deadline, priority, category")
     .eq("organization_id", orgId)
-    .limit(6)
+    .eq("assigned_to_id", user.id)
+    .neq("category", "STRUCTURED")
+    .order("created_at", { ascending: false })
 
-  const initialMarketplaceTasks = (openTasks || []).map((t: any) => ({
+  const assignedTasks: AssignedUnscheduledTask[] = (rawAssignedTasks || []).map((t: any) => ({
     id: t.id,
     title: t.title,
-    reward: t.credit_value,
-    volunteers: 3
+    description: t.description,
+    creditValue: Number(t.credit_value || 5.0),
+    priority: t.priority || "MEDIUM",
+    status: t.status,
+    deadline: t.deadline,
+    category: t.category,
   }))
 
-  const progressPercent = Math.min(100, Math.round((earnedTokens / monthlyTarget) * 100))
-
   return (
-    <div className="space-y-8 p-8 min-h-screen bg-linear-to-b from-background to-muted/20">
-      
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl border border-muted/80 bg-background/50 backdrop-blur-xs shadow-2xs gap-4">
-        <div>
-          <h1 className="text-2xl font-light text-foreground/90">Welcome, {userName}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Faculty Work Accountability portal</p>
-        </div>
-        <div className="flex items-center gap-6 text-xs text-muted-foreground font-light">
-          <div>
-            <span className="block font-medium text-foreground/80">Monthly Target</span>
-            <span>{monthlyTarget} tokens</span>
-          </div>
-          <div className="h-8 w-[1px] bg-muted" />
-          <div>
-            <span className="block font-medium text-foreground/80">Earned</span>
-            <span className="text-primary font-semibold">{earnedTokens} tokens</span>
-          </div>
-          <div className="h-8 w-[1px] bg-muted" />
-          <div>
-            <span className="block font-medium text-foreground/80">Progress</span>
-            <span className="text-green-600 font-semibold">{progressPercent}%</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT COLUMN: Week's Schedule & Commitments */}
-        <div className="lg:col-span-2 space-y-6">
-          <MemberCommitments commitments={commitments} schedule={schedule} orgId={orgId} />
-        </div>
-
-        {/* RIGHT COLUMN: Progress Circle, Balance, Loan Alert */}
-        <div className="space-y-6">
-          <MemberProgress
-            earnedTokens={earnedTokens}
-            monthlyTarget={monthlyTarget}
-            activeLoanAmount={activeLoanAmount}
-            loanDueDate={loanDueDate}
-            orgId={orgId}
-            userId={user.id}
-          />
-        </div>
-      </div>
-
-      {/* Open Unstructured Tasks */}
-      <MemberMarketplace initialTasks={initialMarketplaceTasks} userId={user.id} />
-      
+    <div className="p-6 md:p-8 min-h-screen bg-linear-to-b from-background via-background to-muted/20">
+      <MinimalFacultyDashboard
+        orgId={orgId}
+        userId={user.id}
+        userName={userName}
+        userDesignation={userDesignation}
+        earnedTokens={earnedTokens}
+        monthlyTarget={monthlyTarget}
+        scheduledTasks={scheduledTasks}
+        assignedTasks={assignedTasks}
+      />
     </div>
   )
 }

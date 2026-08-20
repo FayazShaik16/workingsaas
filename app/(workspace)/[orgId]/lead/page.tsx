@@ -14,7 +14,7 @@ export default async function LeadDashboardPage({ params }: PageProps) {
 
   const admin = createAdminClient()
 
-  // 1. Fetch current user profile & unit name
+  // 1. Fetch current user profile & unit name + budget metadata
   const { data: userProfile } = await admin
     .from("users")
     .select(`
@@ -23,13 +23,19 @@ export default async function LeadDashboardPage({ params }: PageProps) {
       org_unit_id,
       target_credits,
       progress_percentage,
-      org_units (id, name)
+      org_units (id, name, metadata)
     `)
     .eq("id", user.id)
     .single()
 
   const deptId = userProfile?.org_unit_id || user.orgUnitId
   const deptName = (userProfile?.org_units as any)?.name || "Academic Department"
+  const unitMeta = (userProfile?.org_units as any)?.metadata || {}
+  const allocatedBudget = Number(unitMeta.allocated_budget || 0)
+  const budgetCurrency = unitMeta.budget_currency || "WORK"
+  const budgetPeriod = unitMeta.budget_period || "MONTHLY"
+  const budgetNotes = unitMeta.budget_notes || ""
+
   const personalProgress = Math.round(Number(userProfile?.progress_percentage || 0))
   const targetTokens =
     userProfile?.target_credits !== null && userProfile?.target_credits !== undefined
@@ -119,6 +125,29 @@ export default async function LeadDashboardPage({ params }: PageProps) {
     tokens: walletMap.get(m.id) || 0,
   }))
 
+  // 6. Fetch all department tasks to compute utilized budget
+  let deptTasksQuery = admin
+    .from("tasks")
+    .select("credit_value, status")
+    .eq("organization_id", orgId)
+
+  if (deptId) {
+    deptTasksQuery = deptTasksQuery.eq("org_unit_id", deptId)
+  }
+
+  const { data: deptTasks } = await deptTasksQuery
+  const spentBudget = (deptTasks || [])
+    .filter((t: any) => ["VERIFIED", "CLOSED", "LEAD_SIGNED", "APPROVED"].includes(t.status))
+    .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
+
+  const departmentBudget = {
+    allocatedBudget,
+    spentBudget,
+    budgetCurrency,
+    budgetPeriod,
+    budgetNotes,
+  }
+
   return (
     <div className="p-8 min-h-screen bg-linear-to-b from-background to-muted/20">
       <LeadDashboardContainer
@@ -130,6 +159,7 @@ export default async function LeadDashboardPage({ params }: PageProps) {
         orgId={orgId}
         deptName={deptName}
         schedule={schedule}
+        budget={departmentBudget}
       />
     </div>
   )

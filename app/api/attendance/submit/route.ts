@@ -12,15 +12,12 @@ export async function POST(req: Request) {
     const {
       timetableSlotId,
       taskId,
-      classDate,
-      studentsPresent,
-      studentsAbsent,
-      topicsCovered,
+      classDate = new Date().toISOString().split("T")[0],
     } = await req.json()
 
-    if (!timetableSlotId || !classDate) {
+    if (!timetableSlotId && !taskId) {
       return NextResponse.json(
-        { error: "Timetable slot ID and class date are required." },
+        { error: "Timetable slot ID or task ID is required." },
         { status: 400 }
       )
     }
@@ -28,121 +25,163 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const db = admin as any
 
-    const presentCount = Number(studentsPresent) || 0
-    const absentCount = Number(studentsAbsent) || 0
+    // 1. Fetch timetable slot details if provided
+    let orgId = user.organizationId
+    let slotData = null
 
-    // 1. Fetch timetable slot details to verify organization
-    const { data: slot, error: slotError } = await db
-      .from("timetable_slots")
-      .select(`
-        id,
-        organization_id,
-        subject_assignment_id
-      `)
-      .eq("id", timetableSlotId)
-      .maybeSingle()
+    if (timetableSlotId) {
+      const { data: slot } = await db
+        .from("timetable_slots")
+        .select("id, organization_id, subject_assignment_id")
+        .eq("id", timetableSlotId)
+        .maybeSingle()
 
-    const orgId = slot?.organization_id || user.organizationId
+      if (slot) {
+        slotData = slot
+        orgId = slot.organization_id || orgId
+      }
+    }
 
-    // 2. Insert or update the attendance record (status = 'SUBMITTED')
+    // 2. Insert or update the attendance record (auto-approved status = 'VERIFIED')
     let attendanceRecord = null
-    const { data: existingRecord } = await db
-      .from("attendance_records")
-      .select("id")
-      .eq("timetable_slot_id", timetableSlotId)
-      .eq("faculty_id", user.id)
-      .limit(1)
-      .maybeSingle()
-
-    if (existingRecord) {
-      const { data: updated, error: updateError } = await db
+    if (timetableSlotId) {
+      const { data: existingRecord } = await db
         .from("attendance_records")
-        .update({
-          status: "SUBMITTED",
-          students_present: presentCount,
-          students_absent: absentCount,
-          topics_covered: topicsCovered || null,
-        })
-        .eq("id", existingRecord.id)
-        .select()
-        .single()
+        .select("id")
+        .eq("timetable_slot_id", timetableSlotId)
+        .eq("faculty_id", user.id)
+        .limit(1)
+        .maybeSingle()
 
-      if (updateError) {
-        // Fallback for schema variants
-        await db
+      if (existingRecord) {
+        const { data: updated } = await db
           .from("attendance_records")
           .update({
-            status: "SUBMITTED",
-            topic_covered: topicsCovered || null,
+            status: "VERIFIED",
+            conducted_on: classDate,
+            class_date: classDate,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", existingRecord.id)
-      }
-      attendanceRecord = updated || existingRecord
-    } else {
-      const insertPayload: any = {
-        organization_id: orgId,
-        timetable_slot_id: timetableSlotId,
-        faculty_id: user.id,
-        status: "SUBMITTED",
-        created_at: new Date().toISOString(),
-      }
-
-      // Try inserting with extended attendance fields
-      const { data: inserted, error: insError } = await db
-        .from("attendance_records")
-        .insert({
-          ...insertPayload,
-          class_date: classDate,
-          conducted_on: classDate,
-          students_present: presentCount,
-          students_absent: absentCount,
-          topics_covered: topicsCovered || null,
-        })
-        .select()
-        .single()
-
-      if (insError) {
-        // Fallback if table uses alternative column names
-        const { data: fallbackIns } = await db
-          .from("attendance_records")
-          .insert({
-            ...insertPayload,
-            conducted_on: classDate,
-            topic_covered: topicsCovered || null,
-          })
           .select()
           .single()
-        attendanceRecord = fallbackIns
+
+        attendanceRecord = updated || existingRecord
       } else {
+        const insertPayload: any = {
+          organization_id: orgId,
+          timetable_slot_id: timetableSlotId,
+          faculty_id: user.id,
+          status: "VERIFIED",
+          class_date: classDate,
+          conducted_on: classDate,
+          created_at: new Date().toISOString(),
+        }
+
+        const { data: inserted, error: insError } = await db
+          .from("attendance_records")
+          .insert(insertPayload)
+          .select()
+          .single()
+
         attendanceRecord = inserted
       }
     }
 
-    // 3. Find or update the corresponding structured task
-    if (taskId) {
-      await db
+    // 3. Auto-approve the corresponding structured task (status = 'CLOSED')
+    let targetTaskId = taskId
+    let creditValue = 1.0
+
+    if (targetTaskId) {
+      const { data: currentTask } = await db
         .from("tasks")
-        .update({
-          status: "VERIFICATION_PENDING",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", taskId)
-    } else {
-      // Find task by slot or scheduled date
-      await db
+        .select("id, credit_value, status")
+        .eq("id", targetTaskId)
+        .single()
+
+      if (currentTask) {
+        creditValue = Number(currentTask.credit_value || 1.0)
+        await db
+          .from("tasks")
+          .update({
+            status: "CLOSED",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", targetTaskId)
+      }
+    } else if (timetableSlotId) {
+      // Find task associated with this slot
+      const { data: slotTasks } = await db
         .from("tasks")
-        .update({
-          status: "VERIFICATION_PENDING",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("source_timetable_slot_id", timetableSlotId)
+        .select("id, credit_value")
+        .or(`source_timetable_slot_id.eq.${timetableSlotId},description.ilike.%${timetableSlotId}%`)
         .eq("assigned_to_id", user.id)
+        .limit(1)
+
+      if (slotTasks && slotTasks.length > 0) {
+        targetTaskId = slotTasks[0].id
+        creditValue = Number(slotTasks[0].credit_value || 1.0)
+        await db
+          .from("tasks")
+          .update({
+            status: "CLOSED",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", targetTaskId)
+      }
+    }
+
+    // 4. Update Faculty Wallet & Target Progress (Auto-mint credit)
+    const { data: userWallet } = await db
+      .from("wallets")
+      .select("id, balance")
+      .eq("owner_user_id", user.id)
+      .eq("purpose", "PERSONAL")
+      .maybeSingle()
+
+    if (userWallet) {
+      const newBal = Number(userWallet.balance || 0) + creditValue
+      await db
+        .from("wallets")
+        .update({ balance: newBal, updated_at: new Date().toISOString() })
+        .eq("id", userWallet.id)
+    }
+
+    // 5. Update user progress percentage
+    const { data: userProfile } = await db
+      .from("users")
+      .select("id, target_credits")
+      .eq("id", user.id)
+      .single()
+
+    if (userProfile && Number(userProfile.target_credits) > 0) {
+      const { data: allClosedTasks } = await db
+        .from("tasks")
+        .select("credit_value")
+        .eq("assigned_to_id", user.id)
+        .in("status", ["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"])
+
+      const totalEarned = (allClosedTasks || []).reduce(
+        (sum: number, t: any) => sum + Number(t.credit_value || 0),
+        0
+      )
+      const target = Number(userProfile.target_credits)
+      const newProgress = Math.min(100, Math.round((totalEarned / target) * 100))
+
+      await db
+        .from("users")
+        .update({ progress_percentage: newProgress, updated_at: new Date().toISOString() })
+        .eq("id", user.id)
     }
 
     return NextResponse.json({
       success: true,
+      autoApproved: true,
       attendanceRecordId: attendanceRecord?.id,
-      message: "Attendance recorded successfully. Submitted to HOD verification queue.",
+      taskId: targetTaskId,
+      message: "Scheduled task marked as completed and auto-approved successfully!",
     })
   } catch (error: any) {
     console.error("[attendance/submit] Error:", error)

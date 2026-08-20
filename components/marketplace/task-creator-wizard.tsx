@@ -27,6 +27,7 @@ import {
   Loader2,
   ArrowLeft,
   Tag,
+  AlertCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -68,6 +69,7 @@ export function TaskCreatorWizard({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [tokenValue, setTokenValue] = useState("5.0")
+  const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM")
   const [orgUnitId, setOrgUnitId] = useState(defaultOrgUnitId || orgUnits[0]?.id || "")
   const [deadline, setDeadline] = useState(
     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
@@ -111,6 +113,7 @@ export function TaskCreatorWizard({
           title,
           description,
           tokenValue: parseFloat(tokenValue),
+          priority,
           deadline,
           orgUnitId: orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null),
           skillTags: selectedTags,
@@ -225,6 +228,58 @@ export function TaskCreatorWizard({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Task Priority Selector */}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4 text-primary" /> Task Priority Level
+                </span>
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  Determines urgency and marketplace highlighting
+                </span>
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {[
+                  {
+                    value: "LOW",
+                    label: "Low Priority",
+                    color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    activeRing: "ring-2 ring-emerald-500",
+                  },
+                  {
+                    value: "MEDIUM",
+                    label: "Medium (Standard)",
+                    color: "border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+                    activeRing: "ring-2 ring-sky-500",
+                  },
+                  {
+                    value: "HIGH",
+                    label: "High Priority",
+                    color: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                    activeRing: "ring-2 ring-amber-500",
+                  },
+                  {
+                    value: "URGENT",
+                    label: "Urgent / Critical",
+                    color: "border-destructive/40 bg-destructive/10 text-destructive",
+                    activeRing: "ring-2 ring-destructive",
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setPriority(item.value as any)}
+                    disabled={isSubmitting}
+                    className={`p-3 rounded-xl border text-center font-medium text-xs transition-all ${
+                      item.color
+                    } ${priority === item.value ? `${item.activeRing} shadow-2xs scale-[1.02]` : "opacity-70 hover:opacity-100"}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
