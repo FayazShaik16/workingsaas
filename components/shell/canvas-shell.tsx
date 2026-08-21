@@ -114,10 +114,11 @@ export function getNavItemsForRole(
     ],
     ORG_UNIT_LEAD: [
       { label: "Dept Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
-      { label: "Post Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
-      { label: "Leave Queue", href: `${base}/leaves`, icon: <ClipboardList className="h-4 w-4" />, badge: badges?.leaves },
+      { label: "Task Management", href: `${base}/tasks`, icon: <ClipboardList className="h-4 w-4" /> },
+      { label: "New Task Creation", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
+      { label: "Salary Approvals", href: `${base}/salary`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.salary },
       { label: "Attendance & Verify", href: `${base}/verify`, icon: <CheckSquare className="h-4 w-4" />, badge: badges?.verify },
-      { label: "Salary Approve", href: `${base}/salary`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.salary },
+      { label: "Leave Queue", href: `${base}/leaves`, icon: <Clock className="h-4 w-4" />, badge: badges?.leaves },
       { label: "Dept Schedule", href: `${base}/schedule`, icon: <CalendarDays className="h-4 w-4" /> },
       { label: "Settings", href: `${base}/settings`, icon: <Settings className="h-4 w-4" /> },
     ],
@@ -132,9 +133,7 @@ export function getNavItemsForRole(
     MEMBER: [
       { label: "Dashboard", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "My Schedule", href: `${base}/schedule`, icon: <CalendarDays className="h-4 w-4" /> },
-      { label: "Leave Request", href: `${base}/leave`, icon: <Clock className="h-4 w-4" />, badge: badges?.leave },
       { label: "Task Pool", href: `${base}/marketplace`, icon: <ShoppingBag className="h-4 w-4" /> },
-      { label: "Earnings", href: `${base}/earnings`, icon: <Coins className="h-4 w-4" /> },
       { label: "Settings", href: `${base}/settings`, icon: <Settings className="h-4 w-4" /> },
     ],
   }

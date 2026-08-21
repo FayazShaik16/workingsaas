@@ -1,7 +1,11 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getTeachingStaff } from "@/lib/queries/teaching-staff"
-import { HODSalaryApprovalConsole, FacultySalaryProfile } from "@/components/lead/hod-salary-approval-console"
+import {
+  HODSalaryApprovalConsole,
+  FacultySalaryProfile,
+  TaskSalaryItem,
+} from "@/components/lead/hod-salary-approval-console"
 import { CreditCard } from "lucide-react"
 
 interface PageProps {
@@ -19,11 +23,12 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
   // 1. Fetch current user profile to determine department
   const { data: userProfile } = await db
     .from("users")
-    .select("org_unit_id")
+    .select("org_unit_id, org_units(name)")
     .eq("id", user.id)
     .single()
 
   const deptId = userProfile?.org_unit_id || user.orgUnitId
+  const deptName = (userProfile?.org_units as any)?.name || "Academic Department"
 
   // 2. Fetch canonical teaching staff (scoped to this department if lead)
   const teachingStaff = await getTeachingStaff(admin, orgId, deptId || undefined)
@@ -104,6 +109,52 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
     }
   })
 
+  // 8. Fetch department tasks for TaskWise View
+  let tasksQuery = db
+    .from("tasks")
+    .select(`
+      id,
+      title,
+      description,
+      credit_value,
+      status,
+      category,
+      created_at,
+      completed_at,
+      assigned_to_id,
+      users:assigned_to_id (id, name, email, designation),
+      task_proofs (id, proof_text, proof_url, created_at)
+    `)
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false })
+
+  if (deptId) {
+    tasksQuery = tasksQuery.eq("org_unit_id", deptId)
+  }
+
+  const { data: rawTasks } = await tasksQuery
+
+  const formattedTasks: TaskSalaryItem[] = (rawTasks || []).map((t: any) => {
+    const proof = Array.isArray(t.task_proofs) && t.task_proofs.length > 0 ? t.task_proofs[0] : null
+    const faculty = t.users
+
+    return {
+      id: t.id,
+      title: t.title,
+      description: t.description || undefined,
+      facultyId: t.assigned_to_id || "",
+      facultyName: faculty?.name || "Unassigned / Open",
+      facultyEmail: faculty?.email || undefined,
+      facultyDesignation: faculty?.designation || undefined,
+      category: t.category || "STRUCTURED",
+      creditValue: Number(t.credit_value || 0),
+      completedAt: t.completed_at || proof?.created_at || t.created_at || new Date().toISOString(),
+      status: t.status,
+      proofText: proof?.proof_text || undefined,
+      proofUrl: proof?.proof_url || undefined,
+    }
+  })
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
@@ -120,6 +171,8 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
         orgId={orgId}
         leadUserId={user.id}
         members={formattedMembers}
+        tasks={formattedTasks}
+        deptName={deptName}
       />
     </div>
   )

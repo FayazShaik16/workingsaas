@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { LeadEmployeeView } from "./lead-employee-view"
-import { LeadManagerView } from "./lead-manager-view"
+import { LeadManagerView, DepartmentBudget } from "./lead-manager-view"
 
 interface SalaryApproval {
   id: string
@@ -30,6 +30,7 @@ interface LeadDashboardContainerProps {
   orgId: string
   deptName: string
   schedule: any[]
+  budget?: DepartmentBudget
 }
 
 export function LeadDashboardContainer({
@@ -40,7 +41,8 @@ export function LeadDashboardContainer({
   targetTokens,
   orgId,
   deptName,
-  schedule
+  schedule,
+  budget,
 }: LeadDashboardContainerProps) {
   const [activeContext, setActiveContext] = useState<"employee" | "manager">("manager")
 
@@ -86,6 +88,8 @@ export function LeadDashboardContainer({
           initialApprovals={initialApprovals}
           initialVerifications={initialVerifications}
           orgId={orgId}
+          budget={budget}
+          deptName={deptName}
         />
       )}
     </div>

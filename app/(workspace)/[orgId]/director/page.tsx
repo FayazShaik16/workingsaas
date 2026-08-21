@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { DirectorActions } from "@/components/director/director-actions"
 import { WalletCard } from "@/components/blockchain/wallet-card"
+import { DirectorBudgetAllocator, DepartmentBudgetInfo } from "@/components/director/director-budget-allocator"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -45,7 +46,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   ] = await Promise.all([
     admin.from("wallets").select("id, purpose, balance, owner_user_id").eq("organization_id", orgId),
     getTeachingStaff(admin, orgId),
-    admin.from("org_units").select("id, name, unit_type").eq("organization_id", orgId),
+    admin.from("org_units").select("id, name, unit_type, metadata, lead_user_id, users:lead_user_id(name)").eq("organization_id", orgId),
     admin.from("tasks").select("id, status, credit_value, org_unit_id").eq("organization_id", orgId),
     admin.from("loan_requests").select("id, borrower_user_id, amount, reason, status, created_at").eq("organization_id", orgId),
     admin.from("loans").select("id, user_id, amount, status, created_at, description").eq("organization_id", orgId),
@@ -139,7 +140,29 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
       }
     })
 
-  // 6. Dynamic Pending Loan Approvals mapping (from loan_requests and loans)
+  // 6. Dynamic Department Budget Allocation mapping
+  const departmentsBudgetInfo: DepartmentBudgetInfo[] = allUnits.map((u: any) => {
+    const meta = u.metadata && typeof u.metadata === "object" ? u.metadata : {}
+    const deptTasks = allTasks.filter((t: any) => t.org_unit_id === u.id)
+    const spentBudget = deptTasks
+      .filter((t: any) => ["VERIFIED", "CLOSED", "LEAD_SIGNED", "APPROVED"].includes(t.status))
+      .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
+
+    return {
+      id: u.id,
+      name: u.name,
+      unitType: u.unit_type || "Department",
+      leadName: (u.users as any)?.name || undefined,
+      allocatedBudget: Number(meta.allocated_budget || 0),
+      spentBudget: spentBudget,
+      budgetCurrency: meta.budget_currency || "WORK",
+      budgetPeriod: meta.budget_period || "MONTHLY",
+      budgetNotes: meta.budget_notes || undefined,
+      lastUpdated: meta.budget_updated_at || undefined,
+    }
+  })
+
+  // 7. Dynamic Pending Loan Approvals mapping (from loan_requests and loans)
   const parsedPendingLoans: any[] = []
   
   allLoanRequests
@@ -555,6 +578,13 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Department Budget Allocation Console */}
+      <DirectorBudgetAllocator
+        orgId={orgId}
+        departments={departmentsBudgetInfo}
+        salaryPoolBalance={salaryPool}
+      />
     </div>
   )
 }

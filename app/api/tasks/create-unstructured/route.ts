@@ -14,6 +14,7 @@ export async function POST(req: Request) {
       description,
       tokenValue,
       deadline,
+      priority = "MEDIUM",
       orgUnitId,
       skillTags,
       validationMode,
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
     const orgId = user.organizationId
 
     const credits = parseFloat(tokenValue) || 1.0
+    const validPriority = ["LOW", "MEDIUM", "HIGH", "URGENT"].includes(priority) ? priority : "MEDIUM"
 
     // 1. Find or create task type definition if validationMode specified
     let taskTypeId: string | null = null
@@ -58,19 +60,20 @@ export async function POST(req: Request) {
     const visibilityScope = isDirectorOrAdmin ? "ORGANIZATION" : "ORG_UNIT"
     const targetOrgUnitId = isDirectorOrAdmin ? (orgUnitId || null) : (user.orgUnitId || orgUnitId || null)
 
-    // 2. Insert the unstructured open pool task (standardized on credit_value)
+    // 2. Insert the unstructured open pool task (standardized on credit_value & priority)
     const taskPayload: any = {
       organization_id: orgId,
       org_unit_id: targetOrgUnitId,
       task_type_id: taskTypeId,
       category: "UNSTRUCTURED",
+      priority: validPriority,
       title: title.trim(),
       description: enrichedDescription,
       credit_value: credits,
       creator_id: user.id,
       assigned_to_id: null, // Open pool
       status: "OPEN",
-      custom_fields: { visibility_scope: visibilityScope, skillTags, validationMode },
+      custom_fields: { visibility_scope: visibilityScope, skillTags, validationMode, priority: validPriority },
       deadline: deadline ? new Date(deadline).toISOString() : null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

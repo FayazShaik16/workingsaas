@@ -29,6 +29,7 @@ import {
   Wallet,
   ScrollText,
   Sparkles,
+  Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SignOutButton } from "@/components/auth/sign-out-button"
@@ -44,7 +45,7 @@ export interface NavItem {
 }
 
 interface SidebarProps {
-  user: { id: string; name: string; email: string; avatar_url?: string }
+  user: { name?: string | null; email?: string | null; role?: string | null; orgId?: string | null }
   organization: { id: string; name: string }
   /** scope_level strings: SYSTEM_ADMIN | DIRECTOR | FINANCE_ADMIN | ORG_UNIT_LEAD | DEPT_ADMIN | MEMBER */
   currentRole: string
@@ -101,10 +102,11 @@ export function getNavItemsForRole(
     ],
     ORG_UNIT_LEAD: [
       { label: "Dept Overview",    href: base,                  icon: <LayoutDashboard size={16} /> },
-      { label: "Post Task",        href: `${base}/tasks/new`,   icon: <Sparkles size={16} /> },
-      { label: "Leave Queue",      href: `${base}/leaves`,      icon: <ClipboardList size={16} />, badge: badges?.leaves },
+      { label: "Task Management",  href: `${base}/tasks`,       icon: <ClipboardList size={16} /> },
+      { label: "New Task Creation",href: `${base}/tasks/new`,   icon: <Sparkles size={16} /> },
+      { label: "Salary Approvals", href: `${base}/salary`,      icon: <CreditCard size={16} />, badge: badges?.salary },
       { label: "Attendance & Verify", href: `${base}/verify`,   icon: <CheckSquare size={16} />, badge: badges?.verify },
-      { label: "Salary Approve",   href: `${base}/salary`,      icon: <CreditCard size={16} />, badge: badges?.salary },
+      { label: "Leave Queue",      href: `${base}/leaves`,      icon: <Clock size={16} />, badge: badges?.leaves },
       { label: "Dept Schedule",    href: `${base}/schedule`,    icon: <CalendarDays size={16} /> },
       { label: "Settings",         href: `${base}/settings`,    icon: <Settings size={16} /> },
     ],

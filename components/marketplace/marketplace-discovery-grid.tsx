@@ -49,6 +49,7 @@ export interface MarketplaceTask {
   description: string | null
   credit_value: number
   category: string
+  priority?: string
   status: string
   visibility_scope?: string
   deadline: string | null
@@ -324,6 +325,19 @@ export function MarketplaceDiscoveryGrid({
                     </Badge>
 
                     <div className="flex items-center gap-1.5 shrink-0">
+                      {task.priority && task.priority !== "MEDIUM" && (
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                            task.priority === "URGENT"
+                              ? "bg-destructive/10 text-destructive border-destructive/30"
+                              : task.priority === "HIGH"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          }`}
+                        >
+                          {task.priority === "URGENT" ? "🔴 Urgent" : task.priority === "HIGH" ? "🟠 High" : "🟢 Low"}
+                        </span>
+                      )}
                       <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
                         +{taskCredits.toFixed(1)} WORK
                       </span>
