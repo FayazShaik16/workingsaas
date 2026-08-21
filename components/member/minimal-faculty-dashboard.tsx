@@ -5,549 +5,405 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
   Calendar,
   Clock,
-  Coins,
   CheckCircle2,
   AlertCircle,
-  Loader2,
-  CalendarCheck,
   Sparkles,
   ArrowRight,
-  ShieldCheck,
-  Check,
-  Layers,
-  FileCheck,
-  ChevronRight,
   TrendingUp,
   Award,
+  Layers,
+  FileCheck,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { ScheduledCompletionModal, ScheduledInstanceItem } from "./scheduled-completion-modal"
 import Link from "next/link"
 
-export interface ScheduledLectureTask {
+export interface ScheduledInstanceRow {
   id: string
   title: string
+  workDate: string
+  startTime: string
+  endTime: string
   creditValue: number
   status: string
-  deadline?: string | null
-  description?: string | null
-  period?: number
-  room?: string | null
-  subjectCode?: string
 }
 
-export interface AssignedUnscheduledTask {
+export interface AssignedAdHocTask {
   id: string
   title: string
   description?: string | null
   creditValue: number
-  priority?: string
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
   status: string
   deadline?: string | null
-  category?: string
+  verificationMode: "MANUAL_REPORT" | "FILE_SUBMISSION"
 }
 
 interface MinimalFacultyDashboardProps {
   orgId: string
   userId: string
   userName: string
-  userDesignation?: string
-  earnedTokens: number
-  monthlyTarget: number
-  scheduledTasks: ScheduledLectureTask[]
-  assignedTasks: AssignedUnscheduledTask[]
+  userDesignation: string
+  workCycleName: string | null
+  rawEarnedCredits: number
+  totalTargetCredits: number
+  displayPercentage: number
+  isSalaryEligible: boolean
+  scheduledInstances: ScheduledInstanceRow[]
+  assignedTasks: AssignedAdHocTask[]
 }
 
 export function MinimalFacultyDashboard({
   orgId,
   userId,
   userName,
-  userDesignation = "Faculty Member",
-  earnedTokens,
-  monthlyTarget,
-  scheduledTasks: initialScheduled,
+  userDesignation,
+  workCycleName,
+  rawEarnedCredits,
+  totalTargetCredits,
+  displayPercentage,
+  isSalaryEligible,
+  scheduledInstances: initialInstances,
   assignedTasks: initialAssigned,
 }: MinimalFacultyDashboardProps) {
-  const router = useRouter()
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledLectureTask[]>(initialScheduled)
-  const [assignedTasks, setAssignedTasks] = useState<AssignedUnscheduledTask[]>(initialAssigned)
+  const [instances, setInstances] = useState<ScheduledInstanceRow[]>(initialInstances)
+  const [assigned, setAssigned] = useState<AssignedAdHocTask[]>(initialAssigned)
 
-  // 2-Step Confirmation Modal State for Scheduled Tasks
-  const [selectedScheduleTask, setSelectedScheduleTask] = useState<ScheduledLectureTask | null>(null)
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
-  const [confirmStep, setConfirmStep] = useState<1 | 2>(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  // 2-Step Completion Modal
+  const [selectedInstance, setSelectedInstance] = useState<ScheduledInstanceItem | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Progress Calculations
-  const progressPercent = monthlyTarget > 0 ? Math.min(100, Math.round((earnedTokens / monthlyTarget) * 100)) : 0
-  const remainingTokens = Math.max(0, monthlyTarget - earnedTokens)
-  const isTargetAchieved = progressPercent >= 85
+  // Formatted date
+  const todayFormatted = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date())
 
-  const handleOpenConfirm = (task: ScheduledLectureTask) => {
-    setSelectedScheduleTask(task)
-    setConfirmStep(1)
-    setFeedback(null)
-    setIsConfirmModalOpen(true)
+  const isConfigured = totalTargetCredits > 0
+  const extraCredits = rawEarnedCredits > totalTargetCredits ? rawEarnedCredits - totalTargetCredits : 0
+
+  const handleOpenCompletion = (inst: ScheduledInstanceRow) => {
+    setSelectedInstance({
+      id: inst.id,
+      title: inst.title,
+      workDate: inst.workDate,
+      startTime: inst.startTime,
+      endTime: inst.endTime,
+      creditValue: inst.creditValue,
+      status: inst.status,
+    })
+    setIsModalOpen(true)
   }
 
-  const handleFinalConfirm = async () => {
-    if (!selectedScheduleTask) return
-
-    setIsSubmitting(true)
-    setFeedback(null)
-
-    try {
-      const res = await fetch("/api/attendance/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskId: selectedScheduleTask.id,
-          classDate: new Date().toISOString().split("T")[0],
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to mark session completion.")
-      }
-
-      setScheduledTasks((prev) =>
-        prev.map((t) => (t.id === selectedScheduleTask.id ? { ...t, status: "CLOSED" } : t))
+  const handleCompletionSuccess = (creditAwarded: number) => {
+    if (selectedInstance) {
+      setInstances((prev) =>
+        prev.map((i) => (i.id === selectedInstance.id ? { ...i, status: "SELF_COMPLETED" } : i))
       )
-
-      setFeedback({
-        type: "success",
-        text: `Session completed! +${selectedScheduleTask.creditValue} WORK auto-approved & credited.`,
-      })
-
-      setTimeout(() => {
-        setIsConfirmModalOpen(false)
-        router.refresh()
-      }, 1200)
-    } catch (err: any) {
-      setFeedback({
-        type: "error",
-        text: err.message || "Failed to complete task.",
-      })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
-  const renderPriorityBadge = (p?: string) => {
+  const renderPriorityBadge = (p: string) => {
     const val = (p || "MEDIUM").toUpperCase()
     if (val === "URGENT") {
-      return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive border border-destructive/20 animate-pulse">
-          🔴 Urgent
-        </span>
-      )
+      return <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/30 text-[10px]">Urgent</Badge>
     }
     if (val === "HIGH") {
-      return (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-          🟠 High
-        </span>
-      )
+      return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px]">High</Badge>
     }
-    return null
+    return <Badge className="bg-slate-800 text-slate-300 border-white/10 text-[10px]">Standard</Badge>
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 1. MINIMAL HEADER & PROGRESS HERO                             */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <div className="p-6 md:p-8 rounded-3xl border border-muted/80 bg-background/60 backdrop-blur-md shadow-sm space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                Faculty Workspace
-              </span>
-              <span className="text-xs text-muted-foreground">{userDesignation}</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mt-1.5">
-              Welcome back, {userName}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Track your scheduled lectures, assigned responsibilities, and monthly earned token rewards.
-            </p>
-          </div>
-
-          {/* Quick Action */}
-          <Link href={`/${orgId}/member/schedule`}>
-            <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-primary" /> Full Weekly Timetable
-            </Button>
-          </Link>
+    <div className="space-y-8 max-w-6xl mx-auto">
+      {/* 1. Header + Date + Concise Greeting */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
+        <div>
+          <p className="text-xs font-mono text-violet-400 uppercase tracking-wider">
+            {todayFormatted}
+          </p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white mt-1">
+            Welcome, {userName}
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {userDesignation} · {workCycleName || "Active Work Cycle"}
+          </p>
         </div>
 
-        {/* 3 Minimal Progress Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          {/* Monthly Progress */}
-          <div className="p-4 rounded-2xl bg-secondary/30 border border-secondary space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
-              <span>Monthly Progress</span>
-              <span className={isTargetAchieved ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-primary font-bold"}>
-                {progressPercent}%
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isTargetAchieved ? "bg-emerald-500" : "bg-primary"
-                }`}
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {isTargetAchieved
-                ? "✓ 85% Salary release threshold unlocked"
-                : `${remainingTokens.toFixed(1)} WORK needed for full endorsement`}
-            </p>
-          </div>
-
-          {/* Tokens Earned Till Now */}
-          <div className="p-4 rounded-2xl bg-secondary/30 border border-secondary space-y-1">
-            <span className="text-xs text-muted-foreground font-medium block">Tokens Earned Till Now</span>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono flex items-baseline gap-1.5">
-              +{earnedTokens.toFixed(1)}
-              <span className="text-xs font-normal text-muted-foreground">WORK</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Credited directly to personal wallet</p>
-          </div>
-
-          {/* Monthly Target */}
-          <div className="p-4 rounded-2xl bg-secondary/30 border border-secondary space-y-1">
-            <span className="text-xs text-muted-foreground font-medium block">Monthly Target Requirement</span>
-            <div className="text-2xl font-bold text-foreground font-mono flex items-baseline gap-1.5">
-              {monthlyTarget.toFixed(1)}
-              <span className="text-xs font-normal text-muted-foreground">WORK</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Institutional teaching & duty quota</p>
-          </div>
-        </div>
+        <Link
+          href={`/${orgId}/member/schedule`}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 transition-colors shrink-0"
+        >
+          <Calendar size={14} className="text-violet-400" />
+          <span>My Full Weekly Schedule</span>
+          <ArrowRight size={12} className="text-slate-400" />
+        </Link>
       </div>
 
-      {/* Feedback Banner */}
-      {feedback && (
-        <div
-          className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-sm ${
-            feedback.type === "success"
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-              : "bg-destructive/10 text-destructive border border-destructive/30"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span className="font-medium">{feedback.text}</span>
+      {/* 2. Monthly Work Progress Card */}
+      <Card className="rounded-2xl border-white/[0.08] bg-slate-900/60 backdrop-blur-md shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-emerald-500" />
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <TrendingUp size={18} className="text-violet-400" />
+                Monthly Work Progress
+              </CardTitle>
+              <CardDescription className="text-slate-400 text-xs mt-0.5">
+                Calculated from verified structured and unstructured work ledger entries.
+              </CardDescription>
+            </div>
+            {isConfigured ? (
+              <Badge
+                variant="outline"
+                className={`font-mono text-xs px-3 py-1 ${
+                  isSalaryEligible
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                    : "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                }`}
+              >
+                {isSalaryEligible ? "85% Salary Threshold Met" : "In Progress (85% Target)"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="font-mono text-xs bg-slate-800 text-slate-400 border-white/10">
+                Target Not Configured
+              </Badge>
+            )}
           </div>
-          <button onClick={() => setFeedback(null)} className="text-muted-foreground hover:text-foreground">
-            ✕
-          </button>
+        </CardHeader>
+
+        <CardContent className="space-y-5">
+          {isConfigured ? (
+            <>
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <span className="text-3xl font-extrabold text-white font-mono">
+                    {rawEarnedCredits.toFixed(1)}
+                  </span>
+                  <span className="text-sm font-mono text-slate-400 ml-1.5">
+                    / {totalTargetCredits.toFixed(1)} Target Credits
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold font-mono text-violet-300">
+                    {displayPercentage}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar with 85% Threshold Marker */}
+              <div className="relative pt-2 pb-1">
+                <div className="h-3 w-full bg-slate-950 rounded-full overflow-hidden border border-white/10 p-0.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      isSalaryEligible
+                        ? "bg-gradient-to-r from-violet-500 to-emerald-400"
+                        : "bg-gradient-to-r from-violet-600 to-indigo-500"
+                    }`}
+                    style={{ width: `${Math.min(100, displayPercentage)}%` }}
+                  />
+                </div>
+                {/* 85% Marker Line */}
+                <div
+                  className="absolute top-1 bottom-0 flex flex-col items-center pointer-events-none"
+                  style={{ left: "85%" }}
+                >
+                  <div className="w-0.5 h-full bg-amber-400 shadow-sm" />
+                  <span className="text-[10px] font-mono text-amber-300 mt-1">85% Req</span>
+                </div>
+              </div>
+
+              {extraCredits > 0 && (
+                <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 pt-1">
+                  <Sparkles size={13} />
+                  <span>You are +{extraCredits.toFixed(1)} credits above this month's target!</span>
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="py-6 text-center text-slate-400 text-xs">
+              <p>No active work cycle or scheduled targets configured for your account.</p>
+              <p className="text-slate-500 mt-1">Contact your Department Administrator to allocate your weekly timetable.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 3. Scheduled Tasks Due Today */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Clock size={16} className="text-violet-400" />
+            Today's Scheduled Sessions
+          </h2>
+          <span className="text-xs text-slate-400 font-mono">
+            {instances.length} session{instances.length === 1 ? "" : "s"} scheduled
+          </span>
         </div>
-      )}
 
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 2. SCHEDULED TASKS & LECTURES (WITH TOKEN AMOUNTS)           */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <Card className="rounded-3xl border-muted/70 bg-background/60 backdrop-blur-md shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-muted/40">
-          <div>
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-              <CalendarCheck className="h-5 w-5 text-primary" />
-              Scheduled Teaching Tasks
-            </CardTitle>
-            <CardDescription className="text-xs font-light mt-0.5">
-              Timetable lectures with verified WORK token rewards. Marking completed auto-approves immediately.
-            </CardDescription>
-          </div>
-          <Badge variant="outline" className="font-mono text-xs">
-            {scheduledTasks.length} Scheduled
-          </Badge>
-        </CardHeader>
-
-        <CardContent className="p-0 divide-y divide-muted/30">
-          {scheduledTasks.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-xs font-light space-y-1">
-              <Calendar className="h-6 w-6 mx-auto opacity-40 mb-1" />
-              <p className="font-medium text-foreground">No scheduled sessions for this cycle</p>
-              <p>Check your timetable or contact your HOD for slot assignments.</p>
-            </div>
-          ) : (
-            scheduledTasks.map((task) => {
-              const isCompleted = ["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"].includes(task.status)
+        {instances.length === 0 ? (
+          <Card className="rounded-2xl border-white/[0.06] bg-white/[0.02] p-8 text-center">
+            <Calendar size={28} className="mx-auto text-slate-500 mb-2 opacity-50" />
+            <p className="text-sm font-medium text-slate-300">No scheduled sessions today</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Your weekly recurring sessions will appear here on their scheduled days.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {instances.map((inst) => {
+              const isCompleted = inst.status === "SELF_COMPLETED"
 
               return (
-                <div
-                  key={task.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:bg-muted/20 transition-colors"
+                <Card
+                  key={inst.id}
+                  className={`rounded-2xl border transition-all ${
+                    isCompleted
+                      ? "border-emerald-500/20 bg-emerald-950/10"
+                      : "border-white/[0.08] bg-slate-900/40 hover:border-violet-500/30"
+                  }`}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-semibold text-foreground/90">{task.title}</h4>
-                      {task.subjectCode && (
-                        <Badge variant="secondary" className="text-[10px] font-mono font-bold">
-                          {task.subjectCode}
-                        </Badge>
-                      )}
-                      {/* REWARD TOKEN AMOUNT HIGHLIGHT */}
-                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg">
-                        +{task.creditValue.toFixed(1)} WORK
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground font-light">
-                      {task.description || "Classroom Lecture Session"}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
-                    {isCompleted ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Auto-Approved & Credited
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenConfirm(task)}
-                        className="rounded-xl text-xs font-semibold shadow-xs bg-primary hover:bg-primary/90"
-                      >
-                        <Check className="h-3.5 w-3.5 mr-1" />
-                        Mark as Completed
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 3. ASSIGNED UNSCHEDULED TASKS (WITH TOKEN AMOUNTS)           */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <Card className="rounded-3xl border-muted/70 bg-background/60 backdrop-blur-md shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-muted/40">
-          <div>
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-              <Layers className="h-5 w-5 text-amber-500" />
-              Assigned Unscheduled Tasks
-            </CardTitle>
-            <CardDescription className="text-xs font-light mt-0.5">
-              Accreditation, committee, and institutional duties assigned to you.
-            </CardDescription>
-          </div>
-          <Badge variant="outline" className="font-mono text-xs">
-            {assignedTasks.length} Assigned
-          </Badge>
-        </CardHeader>
-
-        <CardContent className="p-0 divide-y divide-muted/30">
-          {assignedTasks.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-xs font-light space-y-1">
-              <Sparkles className="h-6 w-6 mx-auto opacity-40 mb-1" />
-              <p className="font-medium text-foreground">No active unscheduled assignments</p>
-              <p>You can discover and self-nominate for extra tasks in the Open Task Pool.</p>
-              <div className="pt-2">
-                <Button asChild size="sm" variant="outline" className="rounded-xl text-xs">
-                  <Link href={`/${orgId}/member/marketplace`}>Explore Task Pool</Link>
-                </Button>
-              </div>
-            </div>
-          ) : (
-            assignedTasks.map((task) => {
-              const isCompleted = ["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"].includes(task.status)
-              const isAwaitingReview = ["VERIFICATION_PENDING", "PENDING_VERIFICATION", "SUBMITTED"].includes(task.status)
-
-              return (
-                <div
-                  key={task.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:bg-muted/20 transition-colors"
-                >
-                  <div className="space-y-1 max-w-xl">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-semibold text-foreground/90">{task.title}</h4>
-                      {renderPriorityBadge(task.priority)}
-                      {/* REWARD TOKEN AMOUNT HIGHLIGHT */}
-                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg">
-                        +{task.creditValue.toFixed(1)} WORK
-                      </span>
-                    </div>
-
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground font-light line-clamp-1">
-                        {task.description}
-                      </p>
-                    )}
-
-                    {task.deadline && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-0.5">
-                        <Clock className="h-3 w-3 text-primary/70" />
-                        Due by:{" "}
-                        <span className="font-medium text-foreground">
-                          {new Date(task.deadline).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                  <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
+                          <Clock size={12} className="text-violet-400" />
+                          {inst.startTime} – {inst.endTime}
                         </span>
-                      </p>
-                    )}
-                  </div>
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-[10px] bg-violet-500/10 text-violet-300 border-violet-500/30"
+                        >
+                          +{inst.creditValue.toFixed(1)} Credits
+                        </Badge>
+                      </div>
+                      <h3 className="text-base font-semibold text-white">{inst.title}</h3>
+                    </div>
 
-                  <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                    {isCompleted ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-                      </span>
-                    ) : isAwaitingReview ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                        <Clock className="h-3.5 w-3.5" /> Submitted (HOD Review)
-                      </span>
-                    ) : (
-                      <Link href={`/${orgId}/member/tasks`}>
-                        <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 shadow-xs">
-                          <FileCheck className="h-3.5 w-3.5 text-primary" />
-                          Submit Proof
+                    <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
+                      {isCompleted ? (
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                          <CheckCircle2 size={14} />
+                          <span>Self-Confirmed Completed</span>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenCompletion(inst)}
+                          className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium text-xs rounded-xl shadow-md shadow-violet-600/20"
+                        >
+                          Mark Completed
                         </Button>
-                      </Link>
-                    )}
-                  </div>
-                </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               )
-            })
-          )}
-        </CardContent>
-      </Card>
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 4. TWO-STEP CONFIRMATION MODAL (NO VALIDITY ASKED)            */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <span className="p-2 rounded-xl bg-primary/10 text-primary">
-                <CalendarCheck className="h-5 w-5" />
-              </span>
-              <div>
-                <DialogTitle className="text-lg font-bold">
-                  {confirmStep === 1 ? "Confirm Lecture Completion" : "Final Double Confirmation"}
-                </DialogTitle>
-                <DialogDescription className="text-xs">
-                  {selectedScheduleTask?.title}
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
+      {/* 4. Assigned Unscheduled / Ad-Hoc Tasks */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Sparkles size={16} className="text-indigo-400" />
+            Assigned Ad-Hoc Work
+          </h2>
+          <span className="text-xs text-slate-400 font-mono">
+            {assigned.length} assigned task{assigned.length === 1 ? "" : "s"}
+          </span>
+        </div>
 
-          <div className="space-y-4 pt-2">
-            {/* Step 1: Initial Prompt */}
-            {confirmStep === 1 && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl border border-muted/80 bg-muted/20 space-y-2.5">
-                  <p className="text-sm font-medium text-foreground">
-                    Did you complete this scheduled lecture/task?
-                  </p>
-                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/40">
-                    <div className="flex justify-between">
-                      <span>Reward Value:</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        +{selectedScheduleTask?.creditValue.toFixed(1)} WORK
+        {assigned.length === 0 ? (
+          <Card className="rounded-2xl border-white/[0.06] bg-white/[0.02] p-8 text-center">
+            <Layers size={28} className="mx-auto text-slate-500 mb-2 opacity-50" />
+            <p className="text-sm font-medium text-slate-300">No ad-hoc tasks currently assigned</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Explore the departmental task pool to nominate yourself for additional institutional tasks.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {assigned.map((task) => (
+              <Card
+                key={task.id}
+                className="rounded-2xl border-white/[0.08] bg-slate-900/40 hover:border-indigo-500/30 transition-all"
+              >
+                <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      {renderPriorityBadge(task.priority)}
+                      <span className="text-xs font-mono text-slate-400">
+                        Evidence: {task.verificationMode === "FILE_SUBMISSION" ? "File Upload" : "Written Report"}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Details:</span>
-                      <span className="text-foreground">{selectedScheduleTask?.description || "Scheduled Class"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <DialogFooter className="gap-2 pt-2 sm:justify-between">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsConfirmModalOpen(false)}
-                    className="rounded-xl text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setConfirmStep(2)}
-                    className="rounded-xl text-xs font-semibold shadow-xs"
-                  >
-                    Yes, I Completed This Task <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                  </Button>
-                </DialogFooter>
-              </div>
-            )}
-
-            {/* Step 2: Final Double Confirmation */}
-            {confirmStep === 2 && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2.5">
-                  <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-                    <ShieldCheck className="h-4 w-4" />
-                    Please Confirm One More Time
-                  </div>
-                  <p className="text-xs text-foreground/90 leading-relaxed">
-                    Confirm that you have fulfilled your scheduled teaching responsibility for{" "}
-                    <span className="font-bold">{selectedScheduleTask?.title}</span>.
-                  </p>
-                  <div className="p-2.5 rounded-lg bg-background/60 border border-primary/15 text-[11px] text-muted-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span>
-                      This task is <strong>auto-approved</strong> immediately. +{selectedScheduleTask?.creditValue} WORK will be credited to your monthly progress.
-                    </span>
-                  </div>
-                </div>
-
-                <DialogFooter className="gap-2 pt-2 sm:justify-between">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setConfirmStep(1)}
-                    disabled={isSubmitting}
-                    className="rounded-xl text-xs"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleFinalConfirm}
-                    disabled={isSubmitting}
-                    className="rounded-xl text-xs font-semibold shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white min-w-36"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Confirming...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-3.5 w-3.5 mr-1.5" /> Yes, Final Confirm
-                      </>
+                    <h3 className="text-base font-semibold text-white">{task.title}</h3>
+                    {task.description && (
+                      <p className="text-xs text-slate-400 line-clamp-1">{task.description}</p>
                     )}
-                  </Button>
-                </DialogFooter>
-              </div>
-            )}
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <span className="text-xs font-mono text-indigo-300 font-bold block">
+                        +{task.creditValue.toFixed(1)} Credits
+                      </span>
+                      {task.deadline && (
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          Due: {task.deadline.slice(0, 10)}
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      href={`/${orgId}/member/marketplace`}
+                      className="px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <span>Submit Proof</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
+
+      {/* 5. Compact Task Pool Link */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/40 to-indigo-950/40 border border-violet-500/20 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30">
+            <ShoppingBag size={18} />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white">Department Task Pool</h4>
+            <p className="text-xs text-slate-400">Nominate yourself for institutional initiatives and committee tasks.</p>
+          </div>
+        </div>
+        <Link
+          href={`/${orgId}/member/marketplace`}
+          className="px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/20 transition-colors inline-flex items-center gap-1.5 shrink-0"
+        >
+          <span>Explore Pool</span>
+          <ArrowRight size={13} />
+        </Link>
+      </div>
+
+      {/* 2-Step Completion Modal */}
+      <ScheduledCompletionModal
+        instance={selectedInstance}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleCompletionSuccess}
+      />
     </div>
   )
 }

@@ -1,0 +1,575 @@
+[
+  {
+    "id": "d6d1a4a7-35ab-4280-a537-9b2bb4188a2d",
+    "email": "hod@demo.com",
+    "created_at": "2026-08-19T03:43:26.782044Z",
+    "user_metadata": {
+      "email": "hod@demo.com",
+      "email_verified": true,
+      "name": "hod",
+      "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+      "phone_verified": false,
+      "sub": "d6d1a4a7-35ab-4280-a537-9b2bb4188a2d"
+    }
+  },
+  {
+    "id": "4554b243-6309-4cd3-ae4c-1ab002932ae2",
+    "email": "deptadmin@demo.com",
+    "created_at": "2026-08-19T01:30:25.885039Z",
+    "user_metadata": {
+      "email": "deptadmin@demo.com",
+      "email_verified": true,
+      "name": "deptadmin",
+      "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+      "phone_verified": false,
+      "sub": "4554b243-6309-4cd3-ae4c-1ab002932ae2"
+    }
+  },
+  {
+    "id": "df5d6b09-a8f8-4579-b2bc-214e1fc84510",
+    "email": "teacher@demo.com",
+    "created_at": "2026-08-19T01:28:29.407378Z",
+    "user_metadata": {
+      "email": "teacher@demo.com",
+      "email_verified": true,
+      "name": "metheleshteacher",
+      "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+      "phone_verified": false,
+      "sub": "df5d6b09-a8f8-4579-b2bc-214e1fc84510"
+    }
+  },
+  {
+    "id": "485324b3-51a3-4c97-b4c8-32394c985117",
+    "email": "sandhyarattu@gmail.com",
+    "created_at": "2026-08-19T01:25:55.601055Z",
+    "user_metadata": {
+      "email": "sandhyarattu@gmail.com",
+      "email_verified": true,
+      "name": "methelesh",
+      "phone_verified": false,
+      "sub": "485324b3-51a3-4c97-b4c8-32394c985117"
+    }
+  },
+  {
+    "id": "ca75d935-5740-430d-b93f-1e6afc1bf471",
+    "email": "test@gmail.com",
+    "created_at": "2026-08-19T01:09:28.510393Z",
+    "user_metadata": {
+      "email": "test@gmail.com",
+      "email_verified": true,
+      "name": "test@mrng",
+      "phone_verified": false,
+      "sub": "ca75d935-5740-430d-b93f-1e6afc1bf471"
+    }
+  },
+  {
+    "id": "909610c5-5e95-410e-8591-aff2f9f2b9ae",
+    "email": "terminatortheboss65@gmail.com",
+    "created_at": "2026-08-19T01:07:06.915407Z",
+    "user_metadata": {
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocJdmGdP4l5dfRdGP6pVN_3q3g5YBJWFoOfUOYS7O65ZyncPRU8=s96-c",
+      "email": "terminatortheboss65@gmail.com",
+      "email_verified": true,
+      "full_name": "Inevitable Spiderman",
+      "iss": "https://accounts.google.com",
+      "name": "Inevitable Spiderman",
+      "phone_verified": false,
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJdmGdP4l5dfRdGP6pVN_3q3g5YBJWFoOfUOYS7O65ZyncPRU8=s96-c",
+      "provider_id": "112997424632722303288",
+      "sub": "112997424632722303288"
+    }
+  },
+  {
+    "id": "8a51ede3-832c-429d-84dc-9b9fa57b8bdc",
+    "email": "metheleshrattu@gmail.com",
+    "created_at": "2026-08-19T01:06:38.337627Z",
+    "user_metadata": {
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocIWOOh8c-3_l4idWDG0gaLL13CIf0AbyxEEcI-EGmuAjY-Gyg=s96-c",
+      "email": "metheleshrattu@gmail.com",
+      "email_verified": true,
+      "full_name": "methelesh rattu",
+      "iss": "https://accounts.google.com",
+      "name": "methelesh rattu",
+      "phone_verified": false,
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocIWOOh8c-3_l4idWDG0gaLL13CIf0AbyxEEcI-EGmuAjY-Gyg=s96-c",
+      "provider_id": "116899800032492532162",
+      "sub": "116899800032492532162"
+    }
+  },
+  {
+    "id": "573daf43-8119-4a24-b7a8-16ba92302a04",
+    "email": "kumarmethelesh94@gmail.com",
+    "created_at": "2026-08-19T00:04:54.501629Z",
+    "user_metadata": {
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocINDSsgC8mTbWBBWRctkqr7HgzR6atzYnn19DI9zYekCez6hg=s96-c",
+      "email": "kumarmethelesh94@gmail.com",
+      "email_verified": true,
+      "full_name": "MithileshKumar",
+      "iss": "https://accounts.google.com",
+      "name": "MithileshKumar",
+      "phone_verified": false,
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocINDSsgC8mTbWBBWRctkqr7HgzR6atzYnn19DI9zYekCez6hg=s96-c",
+      "provider_id": "108037628816013997555",
+      "sub": "108037628816013997555"
+    }
+  },
+  {
+    "id": "a2581f58-a69d-4a65-9a97-942006433b09",
+    "email": "deptadmin.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:21.312721Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. K. Admin Officer",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "fc39ed1b-892c-42c2-a95f-81280e0e1ede",
+    "email": "finance@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:20.910999Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Mr. B. Accounts Officer",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "f2771c84-187e-43de-9d6e-5c0156366218",
+    "email": "faculty.ece2.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:20.497392Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. S. Madhavi",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "9bc0535d-4606-47ad-b018-e47599b37962",
+    "email": "faculty.ece1.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:20.065015Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. G. Anantha Rao",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "025dcdd2-8f7b-44ae-bf1b-df83f03578f0",
+    "email": "hod.ece.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:19.633994Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. V. Rajesh",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "d78dbcb4-865c-45cc-a539-d4406d81b124",
+    "email": "faculty.cse3.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:19.217529Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. Ch. Venkata Rao",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "1be0c880-e167-46a8-a95c-8bbf8a7e1fe7",
+    "email": "faculty.cse2.0937@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:18.808428Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. K. Srilakshmi",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "158c1547-5934-4699-97a3-540fa9beece0",
+    "email": "faculty.cse1@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:18.402407Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. P. Satyanarayana",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "5764498c-4b83-46f8-ab35-15c81a7bd231",
+    "email": "hod.cse@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:17.985869Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. R. Ravikanth",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "04ef5a04-fed6-4f68-b4b2-0047773a8261",
+    "email": "director@mvgr.edu.in",
+    "created_at": "2026-08-18T19:26:16.884566Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. K. V. L. Raju (Director)",
+      "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904"
+    }
+  },
+  {
+    "id": "8b2efa42-89bb-41f7-bc79-29b0f49727a4",
+    "email": "deptadmin.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:44.382075Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. K. Admin Officer",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "76dc6f59-f3b4-4c7a-adca-df696ca4ec84",
+    "email": "finance.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:43.951149Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. B. Accounts Officer",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "7c76747d-1669-4131-8932-1a7d5d036225",
+    "email": "faculty.ece2.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:43.525772Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. S. Madhavi",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "c9342c27-b838-40da-ac1a-07c9382bacf8",
+    "email": "faculty.ece1.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:43.096183Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. G. Anantha Rao",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "a899c896-8ece-4eb7-bd70-1675702f1dc1",
+    "email": "hod.ece.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:42.664087Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. V. Rajesh",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "55a78766-46f0-4564-a486-af928cb524eb",
+    "email": "faculty.cse3.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:42.237844Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. Ch. Venkata Rao",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "be761062-4f06-47da-a9b0-fcb3b81763d3",
+    "email": "faculty.cse2.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:41.80265Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. K. Srilakshmi",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "76c2b34e-7c86-4e74-81bf-6456c59d180a",
+    "email": "faculty.cse1.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:41.376827Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. P. Satyanarayana",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "2e341e8c-f16f-4a64-bf70-749144e0fe69",
+    "email": "hod.cse.3859@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:40.948738Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. R. Ravikanth",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "154568d6-1fa4-4583-b557-1aaf5f8e86f0",
+    "email": "director.3328@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:39.78865Z",
+    "user_metadata": {
+      "email_verified": true,
+      "name": "Dr. K. V. L. Raju (Director)",
+      "organization_id": "3592d9a6-5503-4417-a258-c558014206ef"
+    }
+  },
+  {
+    "id": "73ee66c3-c704-456a-817c-9b86defd4477",
+    "email": "deptadmin.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:07.280903Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. K. Admin Officer",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "28e50457-60b9-4b05-8900-83e7b3e8e4fd",
+    "email": "finance.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:06.756312Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. B. Accounts Officer",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "e7b3269b-e737-4d84-9591-df4a2ba609a9",
+    "email": "faculty.ece2.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:06.243268Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. S. Madhavi",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "6d883fd8-bd5a-4458-bf43-81f353fc41ee",
+    "email": "faculty.ece1.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:05.732742Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. G. Anantha Rao",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "07fd579b-1c21-45a1-86a3-b52da39f8104",
+    "email": "hod.ece.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:05.207102Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. V. Rajesh",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "5d8f9fe3-d1a6-4843-bb0b-5c596abbb016",
+    "email": "faculty.cse3.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:04.686676Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. Ch. Venkata Rao",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "200583b8-50a5-426d-9306-275816f5a685",
+    "email": "faculty.cse2.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:04.184753Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. K. Srilakshmi",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "5a4f3df5-9b5d-443f-9aea-92d839b6ba47",
+    "email": "faculty.cse1.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:03.683373Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. P. Satyanarayana",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "7dc1e47d-5533-41f3-9ec0-3627afbac011",
+    "email": "hod.cse.5920@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:03.168851Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. R. Ravikanth",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "aaa23be8-5556-461a-ba48-b591cadae2d2",
+    "email": "director.5202@mvgr.edu.in",
+    "created_at": "2026-08-18T19:25:01.667719Z",
+    "user_metadata": {
+      "email_verified": true,
+      "name": "Dr. K. V. L. Raju (Director)",
+      "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17"
+    }
+  },
+  {
+    "id": "bc938b85-7f8b-450c-980b-aece6b72fd89",
+    "email": "deptadmin.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:39.190571Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. K. Admin Officer",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "0c1a14a8-d565-4b61-abd8-d0e8a7895c90",
+    "email": "finance.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:38.68658Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. B. Accounts Officer",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "851bca38-e06a-4537-9274-0171de1853dc",
+    "email": "faculty.ece2.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:38.177857Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. S. Madhavi",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "8ccb121b-01fd-404c-b1e1-0e889be5de0a",
+    "email": "faculty.ece1.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:37.67254Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. G. Anantha Rao",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "c3a0ba4a-53b6-4a1d-af8f-9ee269187f71",
+    "email": "hod.ece.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:37.168661Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. V. Rajesh",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "5c653267-422a-4ee0-8460-7d81d89cc2d6",
+    "email": "faculty.cse3.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:36.670893Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. Ch. Venkata Rao",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "a77f75ac-4c2c-474a-b7ab-80d834be3eb4",
+    "email": "faculty.cse2.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:36.168325Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mrs. K. Srilakshmi",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "a81b38e8-aa1f-43f5-9214-35ff2ab7c796",
+    "email": "faculty.cse1.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:35.610222Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": false,
+      "name": "Dr. P. Satyanarayana",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "ee9def1e-cc9e-44c9-9167-86c5ec5badcc",
+    "email": "hod.cse.7868@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:35.104769Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Dr. R. Ravikanth",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "3224126c-5d5a-448a-bd0a-404e3e1411c3",
+    "email": "director.7188@mvgr.edu.in",
+    "created_at": "2026-08-18T19:24:33.653651Z",
+    "user_metadata": {
+      "email_verified": true,
+      "name": "Dr. K. V. L. Raju (Director)",
+      "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9"
+    }
+  },
+  {
+    "id": "b3c384b3-7d49-46b7-8825-73b723b08dc6",
+    "email": "deptadmin.8881@mvgr.edu.in",
+    "created_at": "2026-08-18T19:23:39.245853Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. K. Admin Officer",
+      "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3"
+    }
+  },
+  {
+    "id": "567a4489-6b85-4eec-9c35-796793520d70",
+    "email": "finance.8881@mvgr.edu.in",
+    "created_at": "2026-08-18T19:23:38.84243Z",
+    "user_metadata": {
+      "email_verified": true,
+      "must_change_password": true,
+      "name": "Mr. B. Accounts Officer",
+      "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3"
+    }
+  }
+]

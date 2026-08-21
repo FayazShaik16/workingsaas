@@ -34,6 +34,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   await requireScope("DIRECTOR", "SYSTEM_ADMIN")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch all organizational core data in parallel
   const [
@@ -44,12 +45,12 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
     { data: loanRequests },
     { data: activeLoansData },
   ] = await Promise.all([
-    admin.from("wallets").select("id, purpose, balance, owner_user_id").eq("organization_id", orgId),
+    db.from("wallets").select("id, purpose, balance, owner_user_id").eq("organization_id", orgId),
     getTeachingStaff(admin, orgId),
-    admin.from("org_units").select("id, name, unit_type, metadata, lead_user_id, users:lead_user_id(name)").eq("organization_id", orgId),
-    admin.from("tasks").select("id, status, credit_value, org_unit_id").eq("organization_id", orgId),
-    admin.from("loan_requests").select("id, borrower_user_id, amount, reason, status, created_at").eq("organization_id", orgId),
-    admin.from("loans").select("id, user_id, amount, status, created_at, description").eq("organization_id", orgId),
+    db.from("org_units").select("id, name, unit_type, metadata, lead_user_id, users:lead_user_id(name)").eq("organization_id", orgId),
+    db.from("tasks").select("id, status, credit_value, org_unit_id").eq("organization_id", orgId),
+    db.from("loan_requests").select("id, borrower_user_id, amount, reason, status, created_at").eq("organization_id", orgId),
+    db.from("loans").select("id, user_id, amount, status, created_at, description").eq("organization_id", orgId),
   ])
 
   const allWallets = wallets || []
@@ -426,7 +427,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
                 No academic departments configured yet.
               </div>
             ) : (
-              heatmap.map((dept) => (
+              heatmap.map((dept: any) => (
                 <div
                   key={dept.id}
                   className="p-3 rounded-xl border bg-card hover:bg-muted/30 transition flex items-center justify-between gap-3"

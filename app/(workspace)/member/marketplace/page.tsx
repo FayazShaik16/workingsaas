@@ -23,7 +23,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        let query = supabase
+        let query: any = supabase
           .from("tasks")
           .select(
             `

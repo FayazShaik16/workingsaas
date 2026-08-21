@@ -1,0 +1,152 @@
+[
+  {
+    "id": "ea2acf7d-5dab-4b9f-a951-69b744021ef4",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "dept_id": "c3e27f39-4812-401f-9520-e290acbc7f5c",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:18:00.031984+00:00"
+  },
+  {
+    "id": "247054bf-4ab7-4ea9-bbd2-0a15f9347a1b",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "dept_id": "ce4036e7-a208-4921-9b02-8febb1ae3786",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:18:35.396362+00:00"
+  },
+  {
+    "id": "6eac2173-76f9-4486-b5ea-a3fb9e5b68ef",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "dept_id": "66e5833e-0694-4df2-a639-de90b3d40076",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:18:52.844252+00:00"
+  },
+  {
+    "id": "55256f1e-2fa5-479f-9b83-e70b4dd8c14a",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "dept_id": "36e9fe44-6d01-4042-85ad-d95fe5953f7c",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:19:32.801656+00:00"
+  },
+  {
+    "id": "72168f36-41be-493a-94f6-afa1a6ef3d32",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "dept_id": "e1c5cb66-1771-4c74-b3aa-1c9a56de27fa",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:20:03.527651+00:00"
+  },
+  {
+    "id": "59ec2d39-86b9-458d-b602-f10a96a9b64f",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "dept_id": "753be680-c3a6-4b85-9c2e-83996e95842f",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:20:41.687435+00:00"
+  },
+  {
+    "id": "0052f18e-46bd-4e38-9613-9e43e652b3d2",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "dept_id": "f508c52b-b4da-4a60-aee5-ba437ebc2ada",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:21:09.084811+00:00"
+  },
+  {
+    "id": "3a0eb79c-b628-4c8f-b267-03ca9af3d154",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "dept_id": "a672845e-62e3-442e-aad3-0ee11ba52748",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:22:21.679118+00:00"
+  },
+  {
+    "id": "6452e6a0-3664-48e1-ab36-315fce09e05a",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "dept_id": "f685fa4b-f1f6-421a-91a0-8085a68de786",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:22:52.152368+00:00"
+  },
+  {
+    "id": "f3dfe5d8-3fe4-41bd-89c8-05bc14cc98d7",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "dept_id": "4fc4ecd7-da35-46a6-83b1-a70f52508182",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:23:39.883665+00:00"
+  },
+  {
+    "id": "9362adaa-7ae4-4de7-be11-e5adb735e1b8",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "dept_id": "71cd2563-a6a7-44cb-95c7-995dc952d6de",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:24:39.97593+00:00"
+  },
+  {
+    "id": "51c1a987-6e02-45ee-981d-fa6ef3b12575",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "dept_id": "9690ae73-42d6-4871-a0c8-41362a9f0bb0",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:25:08.099798+00:00"
+  },
+  {
+    "id": "c6842f0a-de96-41d0-80b9-be4f20458dbe",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "dept_id": "67d97213-e80e-4bdf-9e01-d3c259730786",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:25:45.053076+00:00"
+  },
+  {
+    "id": "f321cce3-af4c-421f-b02e-22e51d4ed911",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "dept_id": "b40a5557-4cb3-4451-b8db-62fe2a5e075c",
+    "code": "BTECH-CSE",
+    "name": "Bachelor of Technology in Computer Science",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-18T19:26:21.959236+00:00"
+  },
+  {
+    "id": "40cc63bb-f130-4c07-a2bf-4d42eea0ecb5",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "dept_id": "c8515d69-58fa-4588-82a5-26afb75ca6c9",
+    "code": "CSE",
+    "name": "btech",
+    "total_years": 4,
+    "is_active": true,
+    "created_at": "2026-08-19T01:30:44.93478+00:00"
+  }
+]

@@ -17,7 +17,7 @@ export default async function ProofReviewPage({ params }: PageProps) {
   const supabase = await createClient()
 
   // Get task with proof and assignment details
-  const { data: task, error: taskError } = await supabase
+  const { data: task, error: taskError } = await (supabase as any)
     .from("tasks")
     .select(`
       id,
@@ -27,10 +27,9 @@ export default async function ProofReviewPage({ params }: PageProps) {
       assigned_to_id,
       status,
       deadline,
-      requires_peer_review,
+      verification_mode,
       users!tasks_assigned_to_id_fkey(id, name, email),
-      task_proofs(id, file_url, description, submitted_at),
-      task_peer_reviews(id, reviewer_id, decision, comment)
+      task_proofs(id, file_url, description, submitted_at)
     `)
     .eq("id", taskId)
     .eq("organization_id", orgId)
@@ -110,26 +109,24 @@ export default async function ProofReviewPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {task.requires_peer_review && (
+      {task.verification_mode === "FILE_SUBMISSION" && (
         <Card>
           <CardHeader>
-            <CardTitle>Peer Review Status</CardTitle>
-            <CardDescription>Feedback from team members who reviewed this submission</CardDescription>
+            <CardTitle>Submission Evidence</CardTitle>
+            <CardDescription>File proof submitted by faculty member</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {peerReviews.length > 0 ? (
-              peerReviews.map((review: any) => (
-                <div key={review.id} className="border-l-2 border-muted-foreground/20 pl-4 py-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={review.decision === "APPROVED" ? "default" : "destructive"}>
-                      {review.decision}
-                    </Badge>
-                  </div>
-                  {review.comment && <p className="text-sm text-muted-foreground">{review.comment}</p>}
-                </div>
-              ))
+            {proofUrl ? (
+              <a
+                href={proofUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-violet-400 underline font-mono"
+              >
+                View Uploaded File Proof
+              </a>
             ) : (
-              <p className="text-muted-foreground">No peer reviews yet</p>
+              <p className="text-muted-foreground text-xs">No file attachment provided.</p>
             )}
           </CardContent>
         </Card>

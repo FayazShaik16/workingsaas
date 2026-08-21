@@ -51,15 +51,15 @@ export default function RecurringScheduleGenerator() {
         }
 
         // Fetch members in this org unit
-        const { data: members } = await supabase
+        const { data: members } = await (supabase as any)
           .from("users")
           .select("id, name, email")
           .eq("organization_id", orgId)
-          .eq("org_unit_id", userDetails?.org_unit_id)
+          .eq("org_unit_id", userDetails?.org_unit_id || "")
         setUsers(members || [])
 
         // Fetch structured task types
-        const { data: types } = await supabase
+        const { data: types } = await (supabase as any)
           .from("task_type_definitions")
           .select("id, label")
           .eq("organization_id", orgId)

@@ -1,0 +1,1334 @@
+[
+  {
+    "id": "a19ef2fa-0a80-4848-928b-b2820d8e4653",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "owner_user_id": "548a6bf8-3879-4929-863e-00ac87febdb4",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-02T09:38:55.861848+00:00"
+  },
+  {
+    "id": "ece3b969-2c33-4d19-ae12-c0fcaeafb81f",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "owner_user_id": "af513131-0868-4e13-8ffe-8743e5bbae5c",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-11T10:52:56.42931+00:00"
+  },
+  {
+    "id": "01619608-82a4-4b97-88cb-c5f9b74104c7",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "owner_user_id": "49833fcc-3ebd-4744-9e3b-0f2ecb336eb2",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-11T11:24:39.566259+00:00"
+  },
+  {
+    "id": "34f0b220-100d-4a4b-861e-efe70a569426",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "owner_user_id": "e0960334-fdfc-40b3-a6d2-46e5cc48e30f",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-14T16:42:49.674949+00:00"
+  },
+  {
+    "id": "9df55375-cd3d-44ed-8e55-fba3c5759a2b",
+    "organization_id": "b157fed7-f5f5-4e06-8d49-d08e89d7e94f",
+    "owner_user_id": "9614e109-330a-41fa-b8be-269a0da48bf7",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-14T17:08:18.704955+00:00"
+  },
+  {
+    "id": "3ec0aef3-b57b-4141-8590-068c5ac39643",
+    "organization_id": "b0081821-0689-48c8-b663-3fdadc512f27",
+    "owner_user_id": "7843b5aa-7847-48ab-a42d-dfd473654a97",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-17T16:32:19.35934+00:00"
+  },
+  {
+    "id": "8644a54b-c97d-446c-973f-f211c15db616",
+    "organization_id": "4f6c1bb5-1de2-405c-8c77-a76c7601f5ae",
+    "owner_user_id": "5a2217ba-95ae-4577-a461-45d06c367f98",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T17:34:28.386733+00:00"
+  },
+  {
+    "id": "6b612488-f1e1-412e-b2aa-48e35dd8c7de",
+    "organization_id": "4f6c1bb5-1de2-405c-8c77-a76c7601f5ae",
+    "owner_user_id": "b0c6211b-4c28-4950-bbbc-0465e0efe2e6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T17:37:12.841837+00:00"
+  },
+  {
+    "id": "4c292d31-deaa-4533-860c-70ca8d454c21",
+    "organization_id": "16916ef6-74fc-4bf0-9607-051ae0dcbb57",
+    "owner_user_id": "4b361b10-8f34-4a9f-b3c3-291ddcf401d3",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T17:38:31.321452+00:00"
+  },
+  {
+    "id": "5469e8b1-6b72-4d00-8a3b-05572cca897c",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "1c53dc2b-6f59-4118-b5a9-9b82beeb3f19",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:55.98882+00:00"
+  },
+  {
+    "id": "09fa06c5-a6dc-4ed5-8f66-7a1f38d13ea5",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "1034cddc-6ca9-40bd-9f7e-0022b85624df",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:56.420703+00:00"
+  },
+  {
+    "id": "32aaed86-71a6-419c-9fbd-3e0601bd1d2f",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "ace522ac-c6de-4494-829b-56b39c299c8d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:56.834988+00:00"
+  },
+  {
+    "id": "fceb2aac-5bbc-4955-98e1-1aed6a5646e0",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "6f58c746-eb76-475f-9542-81db3b0756fe",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:57.519977+00:00"
+  },
+  {
+    "id": "56c6ed70-9c27-4177-b337-83c98b52629c",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "992dd5b8-082d-4984-8773-2035e028dbd8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:57.93612+00:00"
+  },
+  {
+    "id": "5a99a5ed-b5ce-4cf9-a846-48e99c1d1638",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "da5e9f69-4def-4b5b-b8e8-5ef7a57e6091",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:58.349963+00:00"
+  },
+  {
+    "id": "cc6ca3e9-6c1c-441d-9e76-6cb3371ee156",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "d2a93d06-268b-4018-aca9-6d2e875d4199",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:58.766172+00:00"
+  },
+  {
+    "id": "c75c414f-4090-436b-ba96-df472cef4f22",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "bc31c2f6-e0aa-425c-8044-38881c00aae3",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:59.199173+00:00"
+  },
+  {
+    "id": "af3429b0-b13e-43f8-a21d-2500d17cd1e4",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "owner_user_id": "d470f601-04c2-4042-ab83-32407cb5cba4",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:17:59.632095+00:00"
+  },
+  {
+    "id": "0dc0fa54-c5bb-4f7f-8fe2-f2f3c7a9d7e9",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "dc8def2c-cfbe-491d-9738-005c8d993109",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:31.459183+00:00"
+  },
+  {
+    "id": "402ddfa6-7f6b-4c21-ba8b-50e4debdd8bb",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "2638b05f-123b-445a-a612-0db06563cc27",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:31.88876+00:00"
+  },
+  {
+    "id": "fec6ffd5-27fa-489e-ba8c-c8d27d5a502a",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "9458d3fe-2315-4667-8b5e-213fae88169e",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:32.312682+00:00"
+  },
+  {
+    "id": "401d9325-0b9e-4acc-9d67-d5b5e550029b",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "2f178451-5816-4455-9a7e-a200b82c4801",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:32.738609+00:00"
+  },
+  {
+    "id": "e907a457-1094-448d-bf68-9066a0c27406",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "a396429a-dd85-4eb2-8e5b-085f8c92060d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:33.158167+00:00"
+  },
+  {
+    "id": "4fd16b2f-ab2b-4a4d-aca4-0b0fcc185177",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "38fce8c3-51b5-48c6-aa12-303b58272e24",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:33.578565+00:00"
+  },
+  {
+    "id": "cc0098ad-e023-47bd-9263-5feffb44f49b",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "ecae1ced-f947-4335-b960-2a73df908ccd",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:33.993294+00:00"
+  },
+  {
+    "id": "dc7404ef-3d79-4f0e-8b99-9338b756adc1",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "3a975c00-45aa-4bfb-a2d6-ca400d28565f",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:34.415116+00:00"
+  },
+  {
+    "id": "d97ed2a9-e0c6-4505-932a-a935831bd6ab",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "owner_user_id": "98b0273b-ee83-46af-881f-d2ca6b96a1be",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:35.009352+00:00"
+  },
+  {
+    "id": "b8214059-f9ad-4761-9fa7-7104571060d1",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "713edf8c-6355-410c-ab28-6eca0b07c43b",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:49.235806+00:00"
+  },
+  {
+    "id": "db3747ea-833c-4208-8f27-31ef680e32bc",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "e028cde6-2ab7-4029-ab33-af137fa5e802",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:49.643239+00:00"
+  },
+  {
+    "id": "3914ebbd-f2d0-4dfa-bc83-e0f5b27b21c3",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "71d20273-e65f-48bf-a44c-e2d5d1f43aee",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:50.049535+00:00"
+  },
+  {
+    "id": "cefef4a3-8e7c-4b3f-8b34-e83d6c13f4ca",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "fbcf4d16-7c0f-4704-b4b2-491ce1f53821",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:50.450192+00:00"
+  },
+  {
+    "id": "adef3520-4694-4ecd-a08d-ed15f02194d8",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "97f638bf-a686-4e5c-b4ea-798c9f69d0f6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:50.847956+00:00"
+  },
+  {
+    "id": "5ff14786-e187-4412-b8a0-ddcfe159650b",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "156a9eae-cf61-4055-96e8-cabc28bbe230",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:51.255284+00:00"
+  },
+  {
+    "id": "67f0154d-365a-4387-a59e-dd7e2c8a158d",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "f9a17a51-2444-46f1-a175-6f096579e796",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:51.657239+00:00"
+  },
+  {
+    "id": "cea70bd4-1cb3-474e-873a-e9b707694109",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "73f65777-f11a-48e2-8794-a6628a9417c1",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:52.059845+00:00"
+  },
+  {
+    "id": "7c472ab5-c9ed-4a2a-a667-ee10a336cd39",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "owner_user_id": "6dfcd558-c3ae-40ae-b9ab-44ceaa078e44",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:18:52.466534+00:00"
+  },
+  {
+    "id": "83416587-fbd6-4906-b659-cba31bb5f793",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "c588dc5e-d216-4e8f-9f21-c9a0f7f995b1",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:29.276468+00:00"
+  },
+  {
+    "id": "15e9de8d-4a83-4464-a97d-e9a344be487f",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "6211ccf0-20f5-480c-a92d-1fad37a4b4cc",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:29.681384+00:00"
+  },
+  {
+    "id": "657b2579-dcf3-4842-a6d3-67b526438545",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "4bd208d3-c69b-4d3f-b3a6-ae7461a57850",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:30.068557+00:00"
+  },
+  {
+    "id": "77e56018-41e5-46c7-8dfe-ceb11523b2cd",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "233f2ddd-543b-4d06-adc1-63f2a840489f",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:30.458097+00:00"
+  },
+  {
+    "id": "d586beb3-c6d1-407d-8534-f6de68971fd2",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "f94d81d4-bf5c-4222-b7de-f39c2f1d1d1b",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:30.851113+00:00"
+  },
+  {
+    "id": "2e2ec5b9-fd3c-4078-a326-0826bb1d8bd7",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "16682b5d-56f6-4d4a-819c-72c5315cfad8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:31.239255+00:00"
+  },
+  {
+    "id": "a6c3ea60-99f8-417d-a9a2-376978d2d866",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "b398875b-bd7e-47db-b223-5e66817160be",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:31.634902+00:00"
+  },
+  {
+    "id": "664846cd-8e00-47d7-8463-f386ebe08dd5",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "35540cec-f9ff-43ee-942a-3db578fd8794",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:32.035066+00:00"
+  },
+  {
+    "id": "b34bae0e-6f5d-48cc-8119-251e1502083d",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "owner_user_id": "3a975050-4e03-4256-be92-d8f53f54463c",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:32.427637+00:00"
+  },
+  {
+    "id": "297c0183-1fa8-41ed-a666-979755050c7a",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "6dd42c4e-d2e8-46b5-9408-bef74b87e273",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:19:59.981612+00:00"
+  },
+  {
+    "id": "72fe5557-6ac1-41a0-a66e-e0a0fedaaedd",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "363756ca-60d9-4771-a043-5d8a6d0933b6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:00.382955+00:00"
+  },
+  {
+    "id": "5543afb3-5ce6-437f-bf21-bf272a014917",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "2ea4a260-e1f8-4c90-a493-171d9a139f77",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:00.774339+00:00"
+  },
+  {
+    "id": "f50601da-9a59-4dfb-bc8a-1a4cc8f43a9f",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "3dac9b27-316a-43b8-8c8a-d7b88439b95a",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:01.16904+00:00"
+  },
+  {
+    "id": "0ce3842e-0c72-4008-8546-2df19f7347bf",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "6f560fc9-d97e-4d83-94cb-1d231456d831",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:01.566588+00:00"
+  },
+  {
+    "id": "eea0e660-0b69-4874-9079-cfadea198ff4",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "6fd600d3-9b9d-4185-8010-6a88432dfd95",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:01.962638+00:00"
+  },
+  {
+    "id": "baa2804a-4c94-492b-9188-87dc5b17c663",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "b725cf96-af6c-4d22-8566-1a2b322afcea",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:02.362126+00:00"
+  },
+  {
+    "id": "8979ae1b-fbd3-4e28-9371-6be0d3bade77",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "3c0e8cdd-b74c-4faf-ae88-794818199893",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:02.763305+00:00"
+  },
+  {
+    "id": "fb5d0e2e-d32b-48a6-a613-6d383d6c64a6",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "owner_user_id": "93a340c7-d0c2-4a27-b82f-017b9552b2d8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:03.162412+00:00"
+  },
+  {
+    "id": "759264f7-5b9b-4727-ba00-2de61e9755a0",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "46f96038-a221-461b-965a-800ee22d98c6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:37.436203+00:00"
+  },
+  {
+    "id": "f5db6380-2c94-4641-ae3c-113474ae8f21",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "87deee37-e455-4d65-800f-fe64141385a8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:37.920729+00:00"
+  },
+  {
+    "id": "3c1c5291-14e4-4146-b1ff-5eaf58ae6248",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "12f7de11-fe5c-46a6-9a83-b1289dfbeecc",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:38.392906+00:00"
+  },
+  {
+    "id": "279ca053-ed0f-4cd3-acf9-cfbd013bac4b",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "9a783379-45b5-4624-ae21-80391a247cb8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:38.882025+00:00"
+  },
+  {
+    "id": "33704597-703f-46c5-a107-da3625342ff3",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "3a821e13-1809-4c62-b86e-8e55da13be2d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:39.362284+00:00"
+  },
+  {
+    "id": "a904f722-8472-4ddd-a18f-2c0ff088b7c1",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "28763170-834b-4a20-98f9-fcf0963813f8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:39.829181+00:00"
+  },
+  {
+    "id": "fa25286c-a14e-4551-b32e-3c57a29a3ad6",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "e0a31680-5fc6-453f-af6c-1880391bb421",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:40.304009+00:00"
+  },
+  {
+    "id": "381ea859-c337-4360-a72e-35d4e3b17992",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "04fcf053-28e1-45fa-924d-9125b2da5652",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:40.781923+00:00"
+  },
+  {
+    "id": "e32b1cdc-5a68-428f-b80c-cb7103a35f1a",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "owner_user_id": "e5aa3b0a-3a61-49a6-b717-5b0b19ec2b1b",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:20:41.247627+00:00"
+  },
+  {
+    "id": "b43a2d52-6970-4c8c-af5b-5f994548f7d8",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "3d561694-0ad6-4a16-91d6-c69aa9f96b9d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:05.461005+00:00"
+  },
+  {
+    "id": "3150e0fd-7afb-4dce-a877-4dc952777f1c",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "976d1d4b-c572-4927-b508-a0bc04f27994",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:06.283862+00:00"
+  },
+  {
+    "id": "08c0c3a8-aec3-4a39-87e2-0129826a477e",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "490b5b95-2f4a-47a5-830a-e8944dd3bc8c",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:06.683297+00:00"
+  },
+  {
+    "id": "505be7a8-bc0b-41b4-aeb6-5cbf1e4a5f0c",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "cb46e075-abf0-4d95-b5c6-bd54eececa7e",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:07.072563+00:00"
+  },
+  {
+    "id": "6366bedb-d4a6-4b0f-9ef5-8fab319d4548",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "26bb9010-25ae-46cd-9b7e-89190694e2cc",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:07.471784+00:00"
+  },
+  {
+    "id": "a0515ece-47b5-4058-96cb-ddf2e7d9203b",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "ab3df0b9-40e5-4cfe-965a-c1befc896c94",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:07.872324+00:00"
+  },
+  {
+    "id": "cd18afb5-2995-41fc-b6fb-098f66d05ca5",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "262f36bc-c518-4d24-bf1b-4c5a04326434",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:08.295805+00:00"
+  },
+  {
+    "id": "6a8f75a4-021f-419a-b97c-30f6c31b9726",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "be6bde4e-0772-4a4a-945f-e6ff04f83bf6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:08.692434+00:00"
+  },
+  {
+    "id": "6dd7995f-692e-46d8-9ba6-35e1be3552f6",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "owner_user_id": "21b870c1-b1a8-47c2-a24e-6742c786737a",
+    "purpose": "PERSONAL",
+    "balance": 1,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:21:05.863588+00:00"
+  },
+  {
+    "id": "b87b7506-6f02-4d5c-b0eb-0b3a65c160c6",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "b57a6f98-a490-4361-91e2-8e5c48679ccd",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:17.367809+00:00"
+  },
+  {
+    "id": "c5703916-2b04-4af0-8927-c5bfb5cba280",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "6cfa29c5-171e-45eb-b717-072a22fc844c",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:18.377857+00:00"
+  },
+  {
+    "id": "d890b77a-8ec0-4dd1-957f-fd3fbf74f88a",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "075191c3-88ec-49f0-8ae4-acc5d5b37c02",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:18.851155+00:00"
+  },
+  {
+    "id": "d64dd931-1d43-4bdc-91cd-f61e93cb6592",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "6a0d3449-6e48-41f4-91b9-896cf76ba356",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:19.318457+00:00"
+  },
+  {
+    "id": "3f011761-7330-4f5b-8162-b87d4b0a9fb0",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "cf2efc19-6012-499f-81fb-1dc6ffa39b5e",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:19.819505+00:00"
+  },
+  {
+    "id": "940e5f13-f991-49e7-ab7e-cf8840349515",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "08a2482d-05ad-4aed-a726-70bb662a82f6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:20.293277+00:00"
+  },
+  {
+    "id": "27a022f5-cd3a-4ee8-840a-d2372abcd11b",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "227f0a12-e0af-4358-bcae-d338e20d5fd8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:20.768764+00:00"
+  },
+  {
+    "id": "5a7f62d1-b4a2-40d6-8491-25a1224b4e5e",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "5d0f29ab-58a7-4e23-99b0-8b9c4f13e4db",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:21.230207+00:00"
+  },
+  {
+    "id": "40bec4ec-b243-4e92-982c-a4b93d9ea272",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "ba820d0b-8a74-4525-b448-9414af645c8b",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:48.435573+00:00"
+  },
+  {
+    "id": "fc6e2290-d114-4216-b528-122646b56a21",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "owner_user_id": "457c3cbc-8482-4c8c-be96-56796931a76d",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:17.87097+00:00"
+  },
+  {
+    "id": "03ca7e2e-e247-4e60-b066-8e97e835ddd2",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "ee461441-c984-490b-8b8b-d95d264301e8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:49.273316+00:00"
+  },
+  {
+    "id": "b08f858e-5a0f-4629-ae3e-55c5c1fa342b",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "1b05fed0-38dc-456f-b26d-3a5d114ad4fd",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:49.705788+00:00"
+  },
+  {
+    "id": "2fede2b3-f32e-49e1-b8db-86b8c9e4caf3",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "bd3b6de8-8f6a-4cad-a96a-2a3049ed629d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:50.115164+00:00"
+  },
+  {
+    "id": "ce44fc4d-7501-425e-aae7-bd03883b12b5",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "9d657fd9-a138-4bc1-99eb-904abf01baef",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:50.536098+00:00"
+  },
+  {
+    "id": "f640b505-c833-4717-92d4-83db8cd66d49",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "01e63bac-c2ad-4b45-b7f3-d028469da6f5",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:50.948586+00:00"
+  },
+  {
+    "id": "45f61083-4315-4e51-927d-2f1c6e1bc9a4",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "27cb0d65-fb95-4cb6-9a3a-50bcd398037e",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:51.77711+00:00"
+  },
+  {
+    "id": "934a6763-2ee7-4f17-b10b-af4907eab4ce",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "5fdd4086-24f9-41ae-99a6-c1d961539401",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:51.361226+00:00"
+  },
+  {
+    "id": "b6fe4697-72b1-40e7-b3c1-75b2ff68119f",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "owner_user_id": "809e6580-2020-4f80-9046-4994259429ee",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:22:48.857947+00:00"
+  },
+  {
+    "id": "b6198695-4965-4b8e-afb5-f79556842c0c",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "6709ac85-b9df-4309-b227-92673f82936b",
+    "purpose": "SALARY_POOL",
+    "balance": 50000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:34.987689+00:00"
+  },
+  {
+    "id": "3f0803a1-1fe3-4149-8de6-2a48e3529ec5",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "6709ac85-b9df-4309-b227-92673f82936b",
+    "purpose": "LOAN_POOL",
+    "balance": 25000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:34.987964+00:00"
+  },
+  {
+    "id": "3949c86b-cd67-4bc5-9061-c0eee8305714",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "48f351a2-846e-40a1-a0d9-e79ea8b926c0",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:36.225712+00:00"
+  },
+  {
+    "id": "65d48ac0-7260-47e9-a503-afc98e1ca49f",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "2afacc15-5a57-45e7-aac3-85d11d9adfbb",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:37.062953+00:00"
+  },
+  {
+    "id": "324f1f8e-f944-4ea4-99a3-dd5c9e772cf2",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "9bfe005a-4440-4b76-a1b3-2072b5100ceb",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:37.468777+00:00"
+  },
+  {
+    "id": "0478abe2-98be-40b0-b776-913fc238c391",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "9feef8be-0e50-44ac-9978-c5c6ded04239",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:37.872213+00:00"
+  },
+  {
+    "id": "01cf11ef-9330-4fee-bb6b-df88846edc80",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "8025e5ad-0c9d-4ce5-9437-16c0467a2256",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:38.277697+00:00"
+  },
+  {
+    "id": "3a72de51-18de-4022-91b6-10e3b1b34c1f",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "a5c3d07c-1abd-48dd-9d4a-843a467709a1",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:38.696082+00:00"
+  },
+  {
+    "id": "cf8c50cb-a6ed-4cb4-85da-825ae6007eef",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "567a4489-6b85-4eec-9c35-796793520d70",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:39.099834+00:00"
+  },
+  {
+    "id": "3dc8ae6b-a613-4505-925e-e9c20c48ed2a",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "b3c384b3-7d49-46b7-8825-73b723b08dc6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:39.519071+00:00"
+  },
+  {
+    "id": "fa804c02-1ac9-4488-80e6-48df98d74777",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "owner_user_id": "2be04060-a334-4a92-aea1-aba0e8e1d0ce",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:23:36.6348+00:00"
+  },
+  {
+    "id": "7893a991-03f3-4558-93b7-fcc7acbda9a6",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "3224126c-5d5a-448a-bd0a-404e3e1411c3",
+    "purpose": "SALARY_POOL",
+    "balance": 50000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:33.919853+00:00"
+  },
+  {
+    "id": "c72e8846-1d84-41a4-9629-d35205cb8a5c",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "3224126c-5d5a-448a-bd0a-404e3e1411c3",
+    "purpose": "LOAN_POOL",
+    "balance": 25000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:33.920199+00:00"
+  },
+  {
+    "id": "6b3e5e38-ff48-4745-bda4-915c407245b9",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "ee9def1e-cc9e-44c9-9167-86c5ec5badcc",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:35.4423+00:00"
+  },
+  {
+    "id": "79d38f87-3328-45b7-ac5d-5549c5c9769b",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "a77f75ac-4c2c-474a-b7ab-80d834be3eb4",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:36.497267+00:00"
+  },
+  {
+    "id": "b6ae8325-0208-43b5-8a50-96851476298d",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "5c653267-422a-4ee0-8460-7d81d89cc2d6",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:36.998246+00:00"
+  },
+  {
+    "id": "7d40c702-13bb-4632-aa92-b6fc6dabaad7",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "c3a0ba4a-53b6-4a1d-af8f-9ee269187f71",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:37.506154+00:00"
+  },
+  {
+    "id": "20d0eec6-ca90-4cc9-b3af-da6341d1bbe9",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "8ccb121b-01fd-404c-b1e1-0e889be5de0a",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:38.00117+00:00"
+  },
+  {
+    "id": "4b39efe9-d6e0-44cc-ad1a-eb9b7d472831",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "851bca38-e06a-4537-9274-0171de1853dc",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:38.513161+00:00"
+  },
+  {
+    "id": "d4f1511e-f1dc-4d76-9e1f-eb966bfa4621",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "0c1a14a8-d565-4b61-abd8-d0e8a7895c90",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:39.021863+00:00"
+  },
+  {
+    "id": "9dd93fe8-482f-498c-919e-ba8b69d92070",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "bc938b85-7f8b-450c-980b-aece6b72fd89",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:39.518159+00:00"
+  },
+  {
+    "id": "c4770133-e8f4-48ef-948f-217cf5d33584",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "owner_user_id": "a81b38e8-aa1f-43f5-9214-35ff2ab7c796",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:24:35.992134+00:00"
+  },
+  {
+    "id": "0e6ebaf8-1780-491c-896c-eda0502d5bcc",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "aaa23be8-5556-461a-ba48-b591cadae2d2",
+    "purpose": "SALARY_POOL",
+    "balance": 50000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:01.942625+00:00"
+  },
+  {
+    "id": "06ce0122-ec81-4ca7-ad7a-05a481e32245",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "aaa23be8-5556-461a-ba48-b591cadae2d2",
+    "purpose": "LOAN_POOL",
+    "balance": 25000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:01.942829+00:00"
+  },
+  {
+    "id": "c987ed5f-328b-4e82-afc8-bc14f93812cf",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "7dc1e47d-5533-41f3-9ec0-3627afbac011",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:03.510781+00:00"
+  },
+  {
+    "id": "17b90163-8e1f-41f7-ba07-c1614635737a",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "200583b8-50a5-426d-9306-275816f5a685",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:04.516984+00:00"
+  },
+  {
+    "id": "04850b31-18ab-4f4c-aebd-7a8b82902aeb",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "5d8f9fe3-d1a6-4843-bb0b-5c596abbb016",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:05.03275+00:00"
+  },
+  {
+    "id": "99287a39-cc05-426b-b13d-a17160c41328",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "07fd579b-1c21-45a1-86a3-b52da39f8104",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:05.561804+00:00"
+  },
+  {
+    "id": "d0891b0c-1538-403e-a358-cbb3088b7e01",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "6d883fd8-bd5a-4458-bf43-81f353fc41ee",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:06.064759+00:00"
+  },
+  {
+    "id": "250bf814-7457-45b9-8be4-2d0436e38783",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "e7b3269b-e737-4d84-9591-df4a2ba609a9",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:06.578886+00:00"
+  },
+  {
+    "id": "52fe99fb-639c-4834-9024-712d09bb67b6",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "28e50457-60b9-4b05-8900-83e7b3e8e4fd",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:07.093295+00:00"
+  },
+  {
+    "id": "ecce5ff3-bbcc-4cf4-9c22-70aa2a1f5e9f",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "73ee66c3-c704-456a-817c-9b86defd4477",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:07.629443+00:00"
+  },
+  {
+    "id": "b22fedaa-feb7-414f-a277-b3e752b2a6a7",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "owner_user_id": "5a4f3df5-9b5d-443f-9aea-92d839b6ba47",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:04.016011+00:00"
+  },
+  {
+    "id": "a9830767-6029-45e0-b81c-4d691506c50b",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "154568d6-1fa4-4583-b557-1aaf5f8e86f0",
+    "purpose": "SALARY_POOL",
+    "balance": 50000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:39.980265+00:00"
+  },
+  {
+    "id": "6e16bf11-b724-4316-b98a-1a1b2e5d5244",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "154568d6-1fa4-4583-b557-1aaf5f8e86f0",
+    "purpose": "LOAN_POOL",
+    "balance": 25000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:39.980436+00:00"
+  },
+  {
+    "id": "aa266a2c-0c9e-4ce5-91b9-b58c3f681082",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "2e341e8c-f16f-4a64-bf70-749144e0fe69",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:41.225303+00:00"
+  },
+  {
+    "id": "75b1456e-7409-493e-b9d1-3cc55df31805",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "be761062-4f06-47da-a9b0-fcb3b81763d3",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:42.084537+00:00"
+  },
+  {
+    "id": "5ed9a37d-7b4d-4fbd-9d18-2b33bddce952",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "55a78766-46f0-4564-a486-af928cb524eb",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:42.514302+00:00"
+  },
+  {
+    "id": "422ea046-1c87-459c-8df3-673b9764835e",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "a899c896-8ece-4eb7-bd70-1675702f1dc1",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:42.939091+00:00"
+  },
+  {
+    "id": "324d14db-3b6f-4dba-ae15-af326cd5fc21",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "c9342c27-b838-40da-ac1a-07c9382bacf8",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:43.367774+00:00"
+  },
+  {
+    "id": "fe33c026-9a3d-41c0-ab77-c5b8f96972e0",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "7c76747d-1669-4131-8932-1a7d5d036225",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:43.801938+00:00"
+  },
+  {
+    "id": "98d5612c-0471-4b10-9370-a4fc8233d2fa",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "76dc6f59-f3b4-4c7a-adca-df696ca4ec84",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:44.233461+00:00"
+  },
+  {
+    "id": "8b64cad1-63cf-4f83-b14d-2551902d2990",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "8b2efa42-89bb-41f7-bc79-29b0f49727a4",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:44.669277+00:00"
+  },
+  {
+    "id": "f60bd6fd-6a26-4921-a240-e4589b1a6df6",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "owner_user_id": "76c2b34e-7c86-4e74-81bf-6456c59d180a",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:25:41.653111+00:00"
+  },
+  {
+    "id": "d759ffc1-27e9-435a-8ee9-53f1447b0adf",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "04ef5a04-fed6-4f68-b4b2-0047773a8261",
+    "purpose": "SALARY_POOL",
+    "balance": 50000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:17.078905+00:00"
+  },
+  {
+    "id": "603a04bb-0e5a-46f4-80f2-f0e5f431c62b",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "04ef5a04-fed6-4f68-b4b2-0047773a8261",
+    "purpose": "LOAN_POOL",
+    "balance": 25000,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:17.079048+00:00"
+  },
+  {
+    "id": "c49e860e-6410-4f37-8eff-b1ee2d45a24b",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "5764498c-4b83-46f8-ab35-15c81a7bd231",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:18.25814+00:00"
+  },
+  {
+    "id": "93f290a3-a34c-4bc4-a6ca-cec9948f47ce",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "1be0c880-e167-46a8-a95c-8bbf8a7e1fe7",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:19.067623+00:00"
+  },
+  {
+    "id": "416f7285-633a-4e7f-a6d5-bf45b7deeddb",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "d78dbcb4-865c-45cc-a539-d4406d81b124",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:19.483967+00:00"
+  },
+  {
+    "id": "d890409b-34b9-4fae-92d0-663de2894b46",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "025dcdd2-8f7b-44ae-bf1b-df83f03578f0",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:19.917404+00:00"
+  },
+  {
+    "id": "a6dcfa5a-c27b-4b33-9891-cc0204211d19",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "9bc0535d-4606-47ad-b018-e47599b37962",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:20.345896+00:00"
+  },
+  {
+    "id": "c1ff0a22-1627-4afd-ac5c-e9ac87277635",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "f2771c84-187e-43de-9d6e-5c0156366218",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:20.763805+00:00"
+  },
+  {
+    "id": "dc501d71-1bf8-48b3-bcb2-7fb0c81a7502",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "fc39ed1b-892c-42c2-a95f-81280e0e1ede",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:21.16805+00:00"
+  },
+  {
+    "id": "047f523d-0f5a-4782-9be6-0b0629e3a617",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "a2581f58-a69d-4a65-9a97-942006433b09",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:21.58009+00:00"
+  },
+  {
+    "id": "6fc77b9d-5b68-47e0-9f59-18e7af832126",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "owner_user_id": "158c1547-5934-4699-97a3-540fa9beece0",
+    "purpose": "PERSONAL",
+    "balance": 2,
+    "is_locked": false,
+    "created_at": "2026-08-18T19:26:18.661423+00:00"
+  },
+  {
+    "id": "f7fea378-e494-4eb0-827f-a79fac50a975",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "owner_user_id": "df5d6b09-a8f8-4579-b2bc-214e1fc84510",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-19T01:28:30.662502+00:00"
+  },
+  {
+    "id": "30d83b5c-b139-47e8-818b-4608f3a64487",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "owner_user_id": "4554b243-6309-4cd3-ae4c-1ab002932ae2",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-19T01:30:26.654793+00:00"
+  },
+  {
+    "id": "5a27cbe4-9148-4995-85b6-c64b7e61e3ca",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "owner_user_id": "d6d1a4a7-35ab-4280-a537-9b2bb4188a2d",
+    "purpose": "PERSONAL",
+    "balance": 0,
+    "is_locked": false,
+    "created_at": "2026-08-19T03:43:29.898109+00:00"
+  }
+]

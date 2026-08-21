@@ -12,9 +12,10 @@ export default async function DeptAdminTimetablePage({ params }: PageProps) {
   await requireScope("DEPT_ADMIN", "ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch user department & resolve fallback if unassigned
-  const { data: userData } = await admin
+  const { data: userData } = await db
     .from("users")
     .select("org_unit_id, org_units(id, name, display_name)")
     .eq("id", user.id)
@@ -27,16 +28,16 @@ export default async function DeptAdminTimetablePage({ params }: PageProps) {
     ""
 
   if (!deptId) {
-    const { data: firstUnit } = await admin
+    const { data: firstUnit } = await db
       .from("org_units")
-      .select("id, name, display_name")
+      .select("id, name")
       .eq("organization_id", orgId)
       .limit(1)
       .maybeSingle()
 
     if (firstUnit) {
       deptId = firstUnit.id
-      deptName = firstUnit.display_name || firstUnit.name
+      deptName = firstUnit.name
     } else {
       deptName = "Academic Department"
     }

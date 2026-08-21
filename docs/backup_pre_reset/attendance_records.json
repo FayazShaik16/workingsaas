@@ -1,0 +1,90 @@
+[
+  {
+    "id": "0c7e527e-8dd1-4424-b620-d16911e082b6",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "timetable_slot_id": "84bad8c5-fb2e-45d3-948a-5b0dd6075ee8",
+    "faculty_id": "21b870c1-b1a8-47c2-a24e-6742c786737a",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "b91e1664-8131-475a-a568-cf2aac9cc919",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "timetable_slot_id": "3d1b70a9-11d7-4778-bf0c-6d4b5de18722",
+    "faculty_id": "457c3cbc-8482-4c8c-be96-56796931a76d",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "119c81c5-25b5-44fb-9b1b-cbf7dac173e1",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "timetable_slot_id": "76780e79-5491-4ba4-b0ea-0addca7e4bc4",
+    "faculty_id": "809e6580-2020-4f80-9046-4994259429ee",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "640b8e43-3f57-479d-888f-66ce3731995d",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "timetable_slot_id": "ffe30c55-9b23-4ced-82bd-c86fd0f8f1f8",
+    "faculty_id": "2be04060-a334-4a92-aea1-aba0e8e1d0ce",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "fa1cc3dd-c006-4ce0-89a3-ad04ebae2a9c",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "timetable_slot_id": "69690d25-3112-4244-8f9a-2835457ce67c",
+    "faculty_id": "a81b38e8-aa1f-43f5-9214-35ff2ab7c796",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "b23e587a-9cdb-4d44-92e1-038570c62560",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "timetable_slot_id": "21d63d8b-b44a-4266-aabd-bc349e296895",
+    "faculty_id": "5a4f3df5-9b5d-443f-9aea-92d839b6ba47",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "a8d8ff71-d5e8-47a3-838c-50c52267a8dd",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "timetable_slot_id": "79769109-2460-4ec9-baf4-04cb63ce3906",
+    "faculty_id": "76c2b34e-7c86-4e74-81bf-6456c59d180a",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  },
+  {
+    "id": "567c668a-cb0b-4a37-92b0-38b8c6f95a9e",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "timetable_slot_id": "2e698ef7-be0a-4c70-af24-d1b9b112af44",
+    "faculty_id": "158c1547-5934-4699-97a3-540fa9beece0",
+    "conducted_on": "2026-08-03",
+    "status": "CONDUCTED",
+    "substitute_faculty_id": null,
+    "topic_covered": "B-Tree Indexing & Performance Optimizations",
+    "marked_at": null
+  }
+]

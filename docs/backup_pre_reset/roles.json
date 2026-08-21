@@ -1,0 +1,690 @@
+[
+  {
+    "id": "d801a46b-0849-40ac-aeb8-d59b0ab43e42",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-03T13:50:31.292638+00:00"
+  },
+  {
+    "id": "f1597403-174f-41ef-a161-20e090677df7",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "name": "System Administrator",
+    "scope_level": "SYSTEM_ADMIN",
+    "is_system_role": true,
+    "created_at": "2026-08-03T13:50:31.300825+00:00"
+  },
+  {
+    "id": "ca7e959f-077f-4c40-ab47-6e1362a232dc",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "name": "Finance Administrator",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": true,
+    "created_at": "2026-08-03T13:50:31.301788+00:00"
+  },
+  {
+    "id": "a88b3f63-b71a-4578-9cf4-a4dbd48b5f50",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "name": "Department Lead",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": true,
+    "created_at": "2026-08-03T13:50:31.302153+00:00"
+  },
+  {
+    "id": "322f1d1b-20c5-4af3-9f22-1001db606e39",
+    "organization_id": "b157fed7-f5f5-4e06-8d49-d08e89d7e94f",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-14T17:08:18.379972+00:00"
+  },
+  {
+    "id": "3e783b3b-b4d7-43f6-ad9a-3e8b265a6862",
+    "organization_id": "b0081821-0689-48c8-b663-3fdadc512f27",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-17T16:32:19.210394+00:00"
+  },
+  {
+    "id": "911eff8e-92e6-49ad-b3ee-b61f89b569f0",
+    "organization_id": "4f6c1bb5-1de2-405c-8c77-a76c7601f5ae",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-18T17:34:28.019152+00:00"
+  },
+  {
+    "id": "d4ee1dc2-7b9a-4795-9f98-6982fdb67270",
+    "organization_id": "16916ef6-74fc-4bf0-9607-051ae0dcbb57",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-18T17:38:31.164445+00:00"
+  },
+  {
+    "id": "8e08338b-2fab-4b6d-83a1-30bbcc9dba17",
+    "organization_id": "e2d12c74-8ddf-4060-bacf-bd59f6bf3596",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-18T17:39:08.341963+00:00"
+  },
+  {
+    "id": "3e02612d-3ddc-4e83-b6e8-c4bccf3e98c4",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:17:54.714562+00:00"
+  },
+  {
+    "id": "ae855784-9b50-440b-a3c2-0bcc73fa9929",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:17:55.28172+00:00"
+  },
+  {
+    "id": "7c7c1cbc-b618-40f1-9a62-3474be3a73a6",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:17:55.372672+00:00"
+  },
+  {
+    "id": "d575addf-8f08-4b7c-8274-3217b37beb15",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:17:55.460747+00:00"
+  },
+  {
+    "id": "95153eba-3692-466c-ad12-fa77f7c7d7cc",
+    "organization_id": "9cd2da62-6b8d-4ee7-a436-e19aee208de4",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:17:55.554008+00:00"
+  },
+  {
+    "id": "d1d528ae-8b64-43a0-996c-3c14c8fbf127",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:30.265554+00:00"
+  },
+  {
+    "id": "dec91282-28b8-42b2-a44b-8c176f5beb3e",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:30.759665+00:00"
+  },
+  {
+    "id": "789b1536-82e1-490f-9c62-79dcfda9df45",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:30.845528+00:00"
+  },
+  {
+    "id": "483c49ec-d233-44fa-8ce9-f24e4e1a09e8",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:30.948778+00:00"
+  },
+  {
+    "id": "b79521de-44d0-49dd-81e4-7adf045ce1ca",
+    "organization_id": "1f63fe46-a604-42c0-a076-3bb14402879e",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:31.037522+00:00"
+  },
+  {
+    "id": "b37bc007-f705-47c2-bf1f-265216eebe23",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:48.156048+00:00"
+  },
+  {
+    "id": "9dbaa985-fc53-4158-bd47-d07ca5cb1ce0",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:48.579897+00:00"
+  },
+  {
+    "id": "ae356628-aa81-4d9e-ad77-5c9d4c3434b5",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:48.66394+00:00"
+  },
+  {
+    "id": "06fe8c54-792d-4d18-87b2-b52a91f6adb3",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:48.745972+00:00"
+  },
+  {
+    "id": "0d3e31df-2591-422a-9053-114803993c58",
+    "organization_id": "b2c34d58-d952-4f40-897f-5ed4a3d2ef6c",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:18:48.828216+00:00"
+  },
+  {
+    "id": "4371fb93-f28d-4603-89cf-7c961d0d2c14",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:28.183993+00:00"
+  },
+  {
+    "id": "f65a2c09-4f6c-4eb0-b9c4-65fac0f88245",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:28.634491+00:00"
+  },
+  {
+    "id": "a389fccc-1c12-4f7a-86d9-4c2284a5053c",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:28.715225+00:00"
+  },
+  {
+    "id": "7b030b70-3403-4117-a342-90ad3ba53ad0",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:28.796689+00:00"
+  },
+  {
+    "id": "e1e6bb66-439a-4a24-b971-0c4b904a118f",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:28.877268+00:00"
+  },
+  {
+    "id": "e8045278-3ec5-449c-94b1-ae1d1f738367",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:58.924218+00:00"
+  },
+  {
+    "id": "799e5ed1-b50d-4b2d-8cee-ad3b7d22b01e",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:59.341799+00:00"
+  },
+  {
+    "id": "3091e82a-a949-479b-827f-03f60df9630b",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:59.424405+00:00"
+  },
+  {
+    "id": "bcba0088-f261-4619-b30d-2354b0d980f7",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:59.506427+00:00"
+  },
+  {
+    "id": "e18beeb3-5a91-4be6-934c-a29ae74478d0",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:19:59.585611+00:00"
+  },
+  {
+    "id": "1a66e008-1396-4fbc-8414-388a3d012a53",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:20:36.11974+00:00"
+  },
+  {
+    "id": "52a19617-a18f-4a25-ab27-0d219c97b7df",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:20:36.649183+00:00"
+  },
+  {
+    "id": "60cdf0e7-25da-4bc5-952b-bd794cd98610",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:20:36.752936+00:00"
+  },
+  {
+    "id": "94059dd9-4b36-4b17-9183-51098abc44ba",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:20:36.851969+00:00"
+  },
+  {
+    "id": "0a48e064-8f3e-41fe-9c1c-48f3348eebef",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:20:36.955183+00:00"
+  },
+  {
+    "id": "0aa6d21c-2b0f-4fc8-aebb-1de57f2d0703",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:21:04.246248+00:00"
+  },
+  {
+    "id": "4d249c25-adbd-4be5-860c-54c41722479d",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:21:04.789083+00:00"
+  },
+  {
+    "id": "b0e5c818-da09-40fb-8df3-4d3a0b7027cf",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:21:04.877666+00:00"
+  },
+  {
+    "id": "691682be-8354-4646-8b69-a5b6869107d5",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:21:04.978732+00:00"
+  },
+  {
+    "id": "836e8075-0068-4ea8-b805-2982751177b9",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:21:05.063246+00:00"
+  },
+  {
+    "id": "5111afe7-b0e2-4377-825c-a64f484327e2",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:15.752073+00:00"
+  },
+  {
+    "id": "c8488a89-dc4d-4ecc-9502-f349e73a0768",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:16.54872+00:00"
+  },
+  {
+    "id": "87ee0443-f25a-4cbe-a075-816b69572a3a",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:16.651987+00:00"
+  },
+  {
+    "id": "0a4cbffd-c02c-4deb-a68f-99f975f637f4",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:16.758167+00:00"
+  },
+  {
+    "id": "5456ffba-71b4-4627-b98d-2a63e08ac152",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:16.860784+00:00"
+  },
+  {
+    "id": "384c387a-203a-4f0c-b0cc-7dbb7e351629",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:47.07945+00:00"
+  },
+  {
+    "id": "035e6498-b4f1-4b94-b4d8-88abc3202b3f",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:47.604427+00:00"
+  },
+  {
+    "id": "eeae4c10-a208-4ea5-8756-7f186eda1779",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:47.690249+00:00"
+  },
+  {
+    "id": "4e839964-21f9-4170-9fcb-e6233fc28069",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:47.779513+00:00"
+  },
+  {
+    "id": "14477211-bed9-40f4-83c4-76a9cf5bb5f0",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:22:48.012823+00:00"
+  },
+  {
+    "id": "6a585187-4376-49f1-bf33-93de477f49d9",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:23:35.088277+00:00"
+  },
+  {
+    "id": "18e9a74a-63d5-4892-a553-cdf0a88e0656",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:23:35.56763+00:00"
+  },
+  {
+    "id": "5cb76127-3340-435f-9fb1-dc4366c78d4d",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:23:35.65153+00:00"
+  },
+  {
+    "id": "c4bfc429-c922-4548-af17-b5f262735195",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:23:35.735074+00:00"
+  },
+  {
+    "id": "b24b48fd-378a-4582-a325-bcd7a9c03280",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:23:35.819278+00:00"
+  },
+  {
+    "id": "1d4bc017-a33d-42d2-89af-f694279108c2",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:24:34.04292+00:00"
+  },
+  {
+    "id": "74b50c77-d4e1-4fc5-8886-f731628b559f",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:24:34.606213+00:00"
+  },
+  {
+    "id": "253a5558-93bb-4cff-a98a-c903690f2fdb",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:24:34.712545+00:00"
+  },
+  {
+    "id": "7f76d432-d78c-43b8-8849-6fec49604f5a",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:24:34.821388+00:00"
+  },
+  {
+    "id": "e95a85f6-4854-478a-b625-03382be52e01",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:24:34.928654+00:00"
+  },
+  {
+    "id": "561377bc-0f3f-47b9-a015-fe622e92f357",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:02.060071+00:00"
+  },
+  {
+    "id": "c7b01de6-9e74-4412-8bb5-8a8443068259",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:02.662666+00:00"
+  },
+  {
+    "id": "5dfa32f9-7693-4ea5-9353-214e9efbfa32",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:02.771129+00:00"
+  },
+  {
+    "id": "cd536f56-0aad-4340-b5e3-b7cada522b2f",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:02.878605+00:00"
+  },
+  {
+    "id": "3dfcf07c-308a-46f0-bbf4-8535f1dfd85f",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:02.990833+00:00"
+  },
+  {
+    "id": "0977e5b3-7561-41ac-a313-f1b272169614",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:40.070816+00:00"
+  },
+  {
+    "id": "85512ba5-f775-4bdb-8742-506e98132f7b",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:40.533565+00:00"
+  },
+  {
+    "id": "a230e2ea-e2c0-428e-bd26-57a5ff8ad841",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:40.620665+00:00"
+  },
+  {
+    "id": "e61568fa-f5a3-4e77-8c24-fff5689189bd",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:40.712805+00:00"
+  },
+  {
+    "id": "90645098-ad58-45f4-a78d-e3a70e8a35ec",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:25:40.799967+00:00"
+  },
+  {
+    "id": "7c6cca61-5698-47f2-95f6-53aaf4df9643",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "name": "DIRECTOR",
+    "scope_level": "DIRECTOR",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:26:17.163893+00:00"
+  },
+  {
+    "id": "73a7bac1-00b7-4070-9fc4-61a2edc91bed",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "name": "MEMBER",
+    "scope_level": "MEMBER",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:26:17.592868+00:00"
+  },
+  {
+    "id": "5800e23c-ddb6-449e-ba3c-4b0dc4c29aa5",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "name": "ORG_UNIT_LEAD",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:26:17.674269+00:00"
+  },
+  {
+    "id": "a95f20c3-e7c4-44b0-9282-f45a7d52d381",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "name": "FINANCE_ADMIN",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:26:17.756717+00:00"
+  },
+  {
+    "id": "2efcb8b0-4608-427a-91c1-ba15b3edae9a",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "name": "DEPT_ADMIN",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": false,
+    "created_at": "2026-08-18T19:26:17.838509+00:00"
+  },
+  {
+    "id": "c67ef520-3acf-4275-bfdc-6c6919d81b4b",
+    "organization_id": "0610cbd4-571b-4f10-9258-128df37a235f",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-19T00:04:56.297453+00:00"
+  },
+  {
+    "id": "c15179cd-04da-42d9-a807-274b11ca7428",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "System Administrator",
+    "scope_level": "SYSTEM_ADMIN",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.893901+00:00"
+  },
+  {
+    "id": "9407fee1-15f8-46bb-af53-79915ba7b25b",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "Director",
+    "scope_level": "DIRECTOR",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.895282+00:00"
+  },
+  {
+    "id": "17b4132b-e82e-44f5-99da-b0b87dae1a7a",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "Head of Department",
+    "scope_level": "ORG_UNIT_LEAD",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.895336+00:00"
+  },
+  {
+    "id": "a554eb79-53c4-497a-9cc2-accc7227cd89",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "Department Administrator",
+    "scope_level": "DEPT_ADMIN",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.895353+00:00"
+  },
+  {
+    "id": "fe02b2c3-9d9c-46f8-891d-6ea5ce64a230",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "Finance Administrator",
+    "scope_level": "FINANCE_ADMIN",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.895371+00:00"
+  },
+  {
+    "id": "a9880430-a496-467d-8edf-3093f2b2a8e9",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "name": "Faculty / Member",
+    "scope_level": "MEMBER",
+    "is_system_role": true,
+    "created_at": "2026-08-19T01:25:56.895387+00:00"
+  }
+]

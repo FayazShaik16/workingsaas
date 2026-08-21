@@ -1,11 +1,15 @@
-# Active Context
-
-## Current Sprint Execution
-- Completed end-to-end transformation pass across Phase 0 (Role Model & Actor Separation), Phase 1 (Bulk Import & Password Rotation), Phase 2 (Dept Admin Modules & 75/25 Compiler), Phase 3 (Eradication of token_value bug & Task Visibility Scoping), Phase 4 (Attendance -> HOD Verification -> Personal Wallet Credit Pipeline), Phase 5 (Real Sepolia ERC-20 Wallet Integration with AES-256 in-memory decryption & Etherscan explorer links), and Phase 6 (Demo Rehearsal Guide & Repo Cleanup).
-- All numbers across all screens are 100% database-driven with honest zero states.
-- Clean TypeScript verification (`npx tsc --noEmit`) passing with 0 errors.
+## Current Sprint Execution (Trusted Work Rebuild)
+- Rebuilt system from ground up with `20260822_workledger_trusted_work.sql`: pure trust-based work organization model replacing legacy surveillance.
+- Eradicated DIRECTOR fallback; enforced SYSTEM_ADMIN-only self-signups with org_unit_id = null.
+- Built live Data Reset preview & typed-phrase execution at `/config/reset` and `/api/admin/reset-data`.
+- Built Timetable Import Center (`/dept-admin/import`) and Schedule Matrix (`/dept-admin/schedules`) with canonical XLSX headers (`faculty_id,faculty_name,faculty_email,day,start_time,end_time,task_name,credits,description`).
+- Built idempotent monthly instance generator (`lib/engine/schedule-generator.ts`) and 2-step faculty self-completion modal (`ScheduledCompletionModal` + `/api/member/complete-scheduled`).
+- Implemented immutable `credit_ledger_entries` source of truth and dynamic monthly progress calculator (`min(100, round((raw_earned / total_target) * 100))`).
+- Built real Sepolia ERC-20 integration (`lib/blockchain/work-token.ts`) using ethers v6 with AES-256-GCM key security and readiness check (`/api/admin/blockchain/readiness`).
+- Complete `npx tsc --noEmit` and `npm run build` verified passing with 0 errors.
 
 ## Next Operational Action
-- Ready for live demo presentation at 9:00 AM using the walkthrough flow documented in `demo/REHEARSAL_NOTES.md`.
+- Ready for live end-to-end presentation and acceptance testing according to `TESTING.md`.
+
 
 

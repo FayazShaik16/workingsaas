@@ -49,7 +49,7 @@ export default function ChangePasswordPage() {
       // Fetch user profile and redirect to role workspace
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from("users")
           .select("organization_id, user_roles(roles(scope_level))")
           .eq("id", user.id)
@@ -57,7 +57,7 @@ export default function ChangePasswordPage() {
 
         if (profile?.organization_id) {
           const orgId = profile.organization_id
-          const roles = ((profile.user_roles as any[]) || []).map((ur) => ur.roles?.scope_level).filter(Boolean)
+          const roles = ((profile.user_roles as any) || []).map((ur: any) => ur.roles?.scope_level).filter(Boolean)
           
           if (roles.includes("DIRECTOR")) router.push(`/${orgId}/director`)
           else if (roles.includes("ORG_UNIT_LEAD")) router.push(`/${orgId}/lead`)

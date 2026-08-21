@@ -35,7 +35,7 @@ export default async function LeaveRequestPage() {
   }
 
   // Fetch existing leave requests
-  const { data: leaveHistory } = await supabase
+  const { data: leaveHistory } = await (supabase as any)
     .from("leave_requests")
     .select("id, leave_date, leave_type, reason, status, hod_note, created_at, decided_at")
     .eq("faculty_id", user.id)
@@ -76,7 +76,7 @@ export default async function LeaveRequestPage() {
               const reason = fd.get("reason") as string
               const hId = fd.get("hod_id") as string
               if (!leaveDate || !reason || !hId) return
-              await supabase.from("leave_requests").insert({
+              await (supabase as any).from("leave_requests").insert({
                 faculty_id: u.id,
                 hod_id: hId,
                 organization_id: u.organizationId,
@@ -139,7 +139,7 @@ export default async function LeaveRequestPage() {
             <h2 className="text-[13px] font-semibold text-white">Request History</h2>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {leaveHistory!.map((lr) => (
+            {(leaveHistory as any[])?.map((lr: any) => (
               <div key={lr.id} className="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[13px] font-medium text-white">

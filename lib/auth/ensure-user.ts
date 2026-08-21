@@ -3,11 +3,26 @@ import { SessionUser } from "./session"
 import type { User as AuthUser } from "@supabase/supabase-js"
 
 /**
- * Ensures a user record exists in public.users, organizations, and user_roles
- * even if the Postgres database trigger did not execute (e.g. for Google OAuth or direct signups).
+ * Standard system roles seeded on organization creation
+ */
+export const STANDARD_ROLES = [
+  { name: "System Administrator", scope_level: "SYSTEM_ADMIN", is_system_role: true },
+  { name: "Director", scope_level: "DIRECTOR", is_system_role: true },
+  { name: "Head of Department", scope_level: "ORG_UNIT_LEAD", is_system_role: true },
+  { name: "Department Administrator", scope_level: "DEPT_ADMIN", is_system_role: true },
+  { name: "Finance Administrator", scope_level: "FINANCE_ADMIN", is_system_role: true },
+  { name: "Faculty / Member", scope_level: "MEMBER", is_system_role: true },
+]
+
+/**
+ * Ensures a user record exists in public.users, organizations, and user_roles.
+ * Fresh signups receive ONLY the SYSTEM_ADMIN role with org_unit_id = null.
+ * Invited users receive their exact designated invitation role.
+ * NO silent promotion to DIRECTOR for role-less users.
  */
 export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser | null> {
   const admin = createAdminClient()
+  const db = admin as any
   const email = authUser.email || ""
   const name =
     authUser.user_metadata?.name ||
@@ -17,7 +32,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
 
   try {
     // 1. Check for an active pending invitation first (Priority)
-    const { data: invite } = await (admin as any)
+    const { data: invite } = await db
       .from("invitations")
       .select("*, roles(id, name, scope_level)")
       .eq("email", email)
@@ -28,7 +43,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       .maybeSingle()
 
     // 2. Fetch existing public.users record
-    const { data: existingUser } = await (admin as any)
+    const { data: existingUser } = await db
       .from("users")
       .select(`
         id,
@@ -48,15 +63,15 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       .eq("id", authUser.id)
       .maybeSingle()
 
-    // If there is an active pending invitation for this user, fulfill it immediately
+    // If there is an active pending invitation for this user, fulfill it
     if (invite) {
       const orgId = invite.organization_id
       const unitId = invite.org_unit_id || null
       const roleId = invite.intended_role_id || null
-      let scopeLevel = invite.roles?.scope_level || "MEMBER"
+      const scopeLevel = invite.roles?.scope_level || "MEMBER"
 
       // Upsert user into the invited organization
-      await (admin as any).from("users").upsert({
+      await db.from("users").upsert({
         id: authUser.id,
         organization_id: orgId,
         org_unit_id: unitId,
@@ -67,29 +82,13 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       })
 
       if (roleId) {
-        await (admin as any).from("user_roles").upsert(
+        await db.from("user_roles").upsert(
           { user_id: authUser.id, role_id: roleId },
           { onConflict: "user_id,role_id" }
         )
-        const { data: roleData } = await (admin as any)
-          .from("roles")
-          .select("scope_level")
-          .eq("id", roleId)
-          .single()
-        if (roleData?.scope_level) scopeLevel = roleData.scope_level
       }
 
-      await (admin as any).from("wallets").upsert(
-        {
-          organization_id: orgId,
-          owner_user_id: authUser.id,
-          purpose: "PERSONAL",
-          balance: 0,
-        },
-        { onConflict: "owner_user_id,purpose" }
-      )
-
-      await (admin as any).from("invitations").update({ status: "ACCEPTED" }).eq("id", invite.id)
+      await db.from("invitations").update({ status: "ACCEPTED" }).eq("id", invite.id)
 
       return {
         id: authUser.id,
@@ -104,42 +103,24 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
 
     // If existing user already has organization and roles, return them
     if (existingUser && existingUser.organization_id) {
-      let roles = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
-      let scopeLevels = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
+      const roles = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
+      const scopeLevels = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
 
-      // If user is in an org but has no roles in user_roles, auto-assign their role
+      // If user exists in org but has no user_roles record, assign ONLY MEMBER role (never DIRECTOR fallback)
       if (scopeLevels.length === 0) {
-        const { data: orgRoles } = await (admin as any)
+        const { data: orgRoles } = await db
           .from("roles")
           .select("id, scope_level")
           .eq("organization_id", existingUser.organization_id)
 
-        let targetRole =
-          orgRoles?.find((r: any) => r.scope_level === "SYSTEM_ADMIN") ||
-          orgRoles?.find((r: any) => r.scope_level === "DIRECTOR") ||
-          orgRoles?.[0]
-
-        if (!targetRole) {
-          const { data: newRole } = await (admin as any)
-            .from("roles")
-            .insert({
-              organization_id: existingUser.organization_id,
-              name: "System Administrator",
-              scope_level: "SYSTEM_ADMIN",
-              is_system_role: true,
-            })
-            .select("id, scope_level")
-            .single()
-          targetRole = newRole
-        }
-
-        if (targetRole) {
-          await (admin as any).from("user_roles").upsert(
-            { user_id: authUser.id, role_id: targetRole.id },
+        const memberRole = (orgRoles || []).find((r: any) => r.scope_level === "MEMBER") || orgRoles?.[0]
+        if (memberRole) {
+          await db.from("user_roles").upsert(
+            { user_id: authUser.id, role_id: memberRole.id },
             { onConflict: "user_id,role_id" }
           )
-          roles = [targetRole.id]
-          scopeLevels = [targetRole.scope_level || "SYSTEM_ADMIN"]
+          roles.push(memberRole.id)
+          scopeLevels.push(memberRole.scope_level || "MEMBER")
         }
       }
 
@@ -154,11 +135,9 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       }
     }
 
-    // New self-signup / Direct signup (No prior invitation and no existing user)
-    let orgId: string
-
-    // 1. Create organization
-    const { data: newOrg, error: orgErr } = await (admin as any)
+    // 3. New Self-Signup / Fresh Direct Signup (No prior invitation and no existing user)
+    // Create organization
+    const { data: newOrg, error: orgErr } = await db
       .from("organizations")
       .insert({
         name: `${name}'s Organization`,
@@ -171,19 +150,17 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       console.error("[ensureUserRecord] Failed to create organization:", orgErr)
       return null
     }
-    orgId = newOrg.id
+    const orgId = newOrg.id
 
-    // 2. Create root organization unit
-    await (admin as any)
-      .from("org_units")
-      .insert({
-        organization_id: orgId,
-        name: "Main",
-        unit_type: "DEPARTMENT",
-      })
+    // Create root organization unit
+    await db.from("org_units").insert({
+      organization_id: orgId,
+      name: "Main",
+      unit_type: "DEPARTMENT",
+    })
 
-    // 3. Upsert user into public.users with org_unit_id = null (Operator identity)
-    await (admin as any).from("users").upsert({
+    // Upsert user into public.users with org_unit_id = null (pure operator identity)
+    await db.from("users").upsert({
       id: authUser.id,
       organization_id: orgId,
       org_unit_id: null,
@@ -193,96 +170,44 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       employment_type: "FULL_TIME",
     })
 
-    // 4. Seed standard roles for the organization safely
-    const standardRoles = [
-      { name: "System Administrator", scope_level: "SYSTEM_ADMIN", is_system_role: true },
-      { name: "Director", scope_level: "DIRECTOR", is_system_role: true },
-      { name: "Head of Department", scope_level: "ORG_UNIT_LEAD", is_system_role: true },
-      { name: "Department Administrator", scope_level: "DEPT_ADMIN", is_system_role: true },
-      { name: "Finance Administrator", scope_level: "FINANCE_ADMIN", is_system_role: true },
-      { name: "Faculty / Member", scope_level: "MEMBER", is_system_role: true },
-    ]
-
-    let { data: existingRoles } = await (admin as any)
+    // Seed standard roles for the organization
+    const { data: insertedRoles } = await db
       .from("roles")
-      .select("id, scope_level, name")
-      .eq("organization_id", orgId)
-
-    if (!existingRoles || existingRoles.length === 0) {
-      const { data: insertedRoles } = await (admin as any)
-        .from("roles")
-        .insert(
-          standardRoles.map((r) => ({
-            organization_id: orgId,
-            ...r,
-          }))
-        )
-        .select("id, scope_level, name")
-
-      existingRoles = insertedRoles || []
-    }
-
-    let sysAdminRole = (existingRoles || []).find((r: any) => r.scope_level === "SYSTEM_ADMIN")
-
-    if (!sysAdminRole) {
-      const { data: newRole } = await (admin as any)
-        .from("roles")
-        .insert({
+      .insert(
+        STANDARD_ROLES.map((r) => ({
           organization_id: orgId,
-          name: "System Administrator",
-          scope_level: "SYSTEM_ADMIN",
-          is_system_role: true,
-        })
-        .select("id, scope_level")
-        .single()
+          ...r,
+        }))
+      )
+      .select("id, scope_level, name")
 
-      sysAdminRole = newRole
-    }
+    const rolesList = insertedRoles || []
+    const sysAdminRole = rolesList.find((r: any) => r.scope_level === "SYSTEM_ADMIN")
 
-    const roleId = sysAdminRole?.id || null
-    const scopeLevel = "SYSTEM_ADMIN"
-
-    if (roleId) {
-      await (admin as any).from("user_roles").upsert(
-        { user_id: authUser.id, role_id: roleId },
+    if (sysAdminRole) {
+      // Assign ONLY SYSTEM_ADMIN role
+      await db.from("user_roles").upsert(
+        { user_id: authUser.id, role_id: sysAdminRole.id },
         { onConflict: "user_id,role_id" }
       )
     }
 
-    // 5. Create Wallets (PERSONAL for user, plus SALARY_POOL & LOAN_POOL for org)
-    await (admin as any).from("wallets").upsert(
-      {
-        organization_id: orgId,
-        owner_user_id: authUser.id,
-        purpose: "PERSONAL",
-        balance: 0,
-      },
-      { onConflict: "owner_user_id,purpose" }
-    ).catch(() => {})
+    // Create default active work cycle (75% scheduled weight / 85% salary threshold / 26th day opens)
+    const now = new Date()
+    const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]
+    const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().split("T")[0]
 
-    // Check and create org pool wallets safely
-    const { data: existingPools } = await (admin as any)
-      .from("wallets")
-      .select("id, purpose")
-      .eq("organization_id", orgId)
-
-    const poolPurposes = (existingPools || []).map((p: any) => p.purpose)
-    if (!poolPurposes.includes("SALARY_POOL")) {
-      await (admin as any).from("wallets").insert({
-        organization_id: orgId,
-        owner_user_id: null,
-        purpose: "SALARY_POOL",
-        balance: 0,
-      }).catch(() => {})
-    }
-    if (!poolPurposes.includes("LOAN_POOL")) {
-      await (admin as any).from("wallets").insert({
-        organization_id: orgId,
-        owner_user_id: null,
-        purpose: "LOAN_POOL",
-        balance: 0,
-      }).catch(() => {})
-    }
+    await db.from("work_cycles").insert({
+      organization_id: orgId,
+      name: "Current Work Cycle",
+      starts_on: cycleStart,
+      ends_on: cycleEnd,
+      scheduled_weight_percentage: 75,
+      salary_threshold_percentage: 85,
+      salary_request_opens_day: 26,
+      status: "ACTIVE",
+      created_by: authUser.id,
+    }).catch(() => {})
 
     return {
       id: authUser.id,
@@ -290,11 +215,11 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       name,
       organizationId: orgId,
       orgUnitId: undefined,
-      roles: roleId ? [roleId] : [],
-      scopeLevels: [scopeLevel],
+      roles: sysAdminRole ? [sysAdminRole.id] : [],
+      scopeLevels: ["SYSTEM_ADMIN"],
     }
   } catch (error) {
-    console.error("[ensureUserRecord] Failed to ensure user record:", error)
+    console.error("[ensureUserRecord] Error in user provisioning:", error)
     return null
   }
 }

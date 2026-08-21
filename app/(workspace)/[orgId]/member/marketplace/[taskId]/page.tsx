@@ -90,7 +90,7 @@ export default function TaskDetailPage() {
       if (!authData?.user) throw new Error("Not authenticated")
 
       // Create nomination
-      const { error: nomError } = await supabase.from("nominations").insert({
+      const { error: nomError } = await (supabase as any).from("nominations").insert({
         task_id: taskId,
         user_id: authData.user.id,
         message: nominationMessage,

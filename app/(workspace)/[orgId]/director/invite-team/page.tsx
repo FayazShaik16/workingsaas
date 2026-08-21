@@ -62,17 +62,17 @@ export default function InviteTeamPage() {
       setRoles(loadedRoles)
 
       // Fetch org units in the organization
-      const { data: unitsData } = await supabase
+      const { data: unitsData } = await (supabase as any)
         .from("org_units")
         .select("id, name")
-        .eq("organization_id", orgId)
+        .eq("organization_id", String(orgId))
       setOrgUnits(unitsData || [])
 
       // Fetch pending invitations
-      const { data: inviteData } = await supabase
+      const { data: inviteData } = await (supabase as any)
         .from("invitations")
         .select("*, roles(name, scope_level)")
-        .eq("organization_id", orgId)
+        .eq("organization_id", String(orgId))
         .order("created_at", { ascending: false })
       setInvitationsList(inviteData || [])
     } catch (err) {
@@ -93,10 +93,10 @@ export default function InviteTeamPage() {
       }
 
       const token = crypto.randomUUID()
-      const { data, error: inviteError } = await supabase
+      const { data, error: inviteError } = await (supabase as any)
         .from("invitations")
         .insert({
-          organization_id: orgId,
+          organization_id: String(orgId),
           email: email.trim(),
           intended_role_id: roleId,
           org_unit_id: orgUnitId || null,

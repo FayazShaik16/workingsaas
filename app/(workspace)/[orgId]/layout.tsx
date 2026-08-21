@@ -27,9 +27,9 @@ import { cache } from "react"
 
 const getCachedOrg = cache(async (orgId: string) => {
   const supabase = await createClient()
-  const { data: org } = await supabase
+  const { data: org } = await (supabase as any)
     .from("organizations")
-    .select("id, name, template_key")
+    .select("id, name")
     .eq("id", orgId)
     .single()
   return org

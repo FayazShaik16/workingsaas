@@ -1,0 +1,62 @@
+[
+  {
+    "id": "e084ed81-0875-4f6a-bf4f-cf6147446255",
+    "organization_id": "12e24437-12cc-4dca-85c5-4fdbef37d9a4",
+    "org_unit_id": null,
+    "email": "biriyani3859@gmail.com",
+    "intended_role_id": "f1597403-174f-41ef-a161-20e090677df7",
+    "invited_by": null,
+    "token": "c4ad81d1-f241-428d-9b32-a4ed4a5e3a1c",
+    "status": "ACCEPTED",
+    "expires_at": "2026-08-21T16:41:21.33125+00:00",
+    "created_at": "2026-08-14T16:41:21.331262+00:00"
+  },
+  {
+    "id": "9a005d45-64cb-4e26-9b5b-a32f43d451a7",
+    "organization_id": "4f6c1bb5-1de2-405c-8c77-a76c7601f5ae",
+    "org_unit_id": "e7072eb3-621c-4298-98a9-0645a9e0bde3",
+    "email": "faculty@example.com",
+    "intended_role_id": "a88b3f63-b71a-4578-9cf4-a4dbd48b5f50",
+    "invited_by": null,
+    "token": "cf31597d-75a4-4758-bb52-f5cee4d064d3",
+    "status": "ACCEPTED",
+    "expires_at": "2026-08-25T17:36:03.932145+00:00",
+    "created_at": "2026-08-18T17:36:03.932157+00:00"
+  },
+  {
+    "id": "74958ac6-62d6-4cf2-b3e4-cd706bf91b87",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "org_unit_id": "c8515d69-58fa-4588-82a5-26afb75ca6c9",
+    "email": "teacher@demo.com",
+    "intended_role_id": "ae855784-9b50-440b-a3c2-0bcc73fa9929",
+    "invited_by": null,
+    "token": "651755e1-df85-456d-ba36-637814e9c667",
+    "status": "ACCEPTED",
+    "expires_at": "2026-08-26T01:28:01.406201+00:00",
+    "created_at": "2026-08-19T01:28:01.406214+00:00"
+  },
+  {
+    "id": "3ec8942a-57a5-4c35-8848-82806c003953",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "org_unit_id": "c8515d69-58fa-4588-82a5-26afb75ca6c9",
+    "email": "deptadmin@demo.com",
+    "intended_role_id": "95153eba-3692-466c-ad12-fa77f7c7d7cc",
+    "invited_by": null,
+    "token": "e285a888-b0b4-43ad-96d3-eec06cb1f9d2",
+    "status": "ACCEPTED",
+    "expires_at": "2026-08-26T01:29:34.792539+00:00",
+    "created_at": "2026-08-19T01:29:34.792543+00:00"
+  },
+  {
+    "id": "8b79c189-d9cb-435f-8de7-530b4d221de6",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "org_unit_id": "c8515d69-58fa-4588-82a5-26afb75ca6c9",
+    "email": "hod@demo.com",
+    "intended_role_id": "7c7c1cbc-b618-40f1-9a62-3474be3a73a6",
+    "invited_by": null,
+    "token": "e7b7e046-9b8b-4929-a78b-21f26913ecc1",
+    "status": "ACCEPTED",
+    "expires_at": "2026-08-26T03:42:59.117864+00:00",
+    "created_at": "2026-08-19T03:42:59.117867+00:00"
+  }
+]

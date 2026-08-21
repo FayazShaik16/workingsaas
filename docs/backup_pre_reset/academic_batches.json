@@ -1,0 +1,122 @@
+[
+  {
+    "id": "a6cc0ed0-117a-4b64-9468-96654d96384b",
+    "organization_id": "660045aa-5994-414f-831b-43d1f8327f3d",
+    "program_id": "55256f1e-2fa5-479f-9b83-e70b4dd8c14a",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "877c5b3d-85be-49da-8e74-45511437517b",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "program_id": "72168f36-41be-493a-94f6-afa1a6ef3d32",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "04f6c80e-faa9-438c-b90b-0c83a500b506",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "program_id": "59ec2d39-86b9-458d-b602-f10a96a9b64f",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "27e24b2b-c568-4a29-9b41-fdba3ed23b56",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "program_id": "0052f18e-46bd-4e38-9613-9e43e652b3d2",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "421c3186-1e3f-4f0c-a591-a97c4e818bfd",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "program_id": "3a0eb79c-b628-4c8f-b267-03ca9af3d154",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "a7c974fc-632a-48b9-9f42-ff123eeb9a9e",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "program_id": "6452e6a0-3664-48e1-ab36-315fce09e05a",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "ed40ec14-acb1-44fb-8412-0531e17870a0",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "program_id": "f3dfe5d8-3fe4-41bd-89c8-05bc14cc98d7",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "fd14c4d7-ad57-4f40-817f-63708f323ad0",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "program_id": "9362adaa-7ae4-4de7-be11-e5adb735e1b8",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "8bf166e3-a61b-4258-8dcf-ac2c9911008f",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "program_id": "51c1a987-6e02-45ee-981d-fa6ef3b12575",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "024926bc-eef5-44e7-a908-fb33216b9883",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "program_id": "c6842f0a-de96-41d0-80b9-be4f20458dbe",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "3bd2407c-a8b3-495b-b9ba-3784df1da2eb",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "program_id": "f321cce3-af4c-421f-b02e-22e51d4ed911",
+    "year_of_study": 3,
+    "section": "3rd Yr CSE-A",
+    "academic_year": "2025-2026",
+    "current_semester": 5,
+    "is_active": true
+  },
+  {
+    "id": "27f632fe-ba65-4b13-81c8-08f096081a20",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "program_id": "40cc63bb-f130-4c07-a2bf-4d42eea0ecb5",
+    "year_of_study": 1,
+    "section": "A",
+    "academic_year": "2025-2026",
+    "current_semester": 1,
+    "is_active": true
+  }
+]

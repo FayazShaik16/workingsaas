@@ -22,29 +22,32 @@ export default async function DirectorDashboardPage() {
   const supabase = await createClient()
 
   // Get organization details
-  const { data: org } = await supabase
+  const { data: org } = await (supabase as any)
     .from("organizations")
     .select("name, type, compensation_policies(monthly_target_credits)")
     .eq("id", user.organizationId)
     .single()
 
   // Get all team members in organization
-  const { data: teamMembers } = await supabase
+  const { data: teamMembers } = await (supabase as any)
     .from("users")
-    .select("id, name, email, scope_levels, org_unit_id")
+    .select("id, name, email, org_unit_id, user_roles(roles(scope_level))")
     .eq("organization_id", user.organizationId)
     .order("name", { ascending: true })
 
   // Get org-wide statistics
-  const { data: tasks } = await supabase
+  const { data: tasks } = await (supabase as any)
     .from("tasks")
     .select("status, assigned_to_id")
     .eq("organization_id", user.organizationId)
 
   const totalUsers = teamMembers?.length || 0
-  const leads = teamMembers?.filter((m) => m.scope_levels?.includes("ORG_UNIT_LEAD")).length || 0
-  const tasksAssigned = tasks?.filter((t) => t.assigned_to_id).length || 0
-  const tasksCompleted = tasks?.filter((t) => t.status === "CLOSED").length || 0
+  const leads =
+    teamMembers?.filter((m: any) =>
+      m.user_roles?.some((ur: any) => ur.roles?.scope_level === "ORG_UNIT_LEAD")
+    ).length || 0
+  const tasksAssigned = tasks?.filter((t: any) => t.assigned_to_id).length || 0
+  const tasksCompleted = tasks?.filter((t: any) => t.status === "CLOSED").length || 0
 
   const columns: ColumnDef<TeamMember>[] = [
     {

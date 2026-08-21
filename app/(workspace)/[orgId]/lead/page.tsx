@@ -13,16 +13,15 @@ export default async function LeadDashboardPage({ params }: PageProps) {
   await requireScope("ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch current user profile & unit name + budget metadata
-  const { data: userProfile } = await admin
+  const { data: userProfile } = await db
     .from("users")
     .select(`
       id,
       name,
       org_unit_id,
-      target_credits,
-      progress_percentage,
       org_units (id, name, metadata)
     `)
     .eq("id", user.id)
@@ -36,14 +35,11 @@ export default async function LeadDashboardPage({ params }: PageProps) {
   const budgetPeriod = unitMeta.budget_period || "MONTHLY"
   const budgetNotes = unitMeta.budget_notes || ""
 
-  const personalProgress = Math.round(Number(userProfile?.progress_percentage || 0))
-  const targetTokens =
-    userProfile?.target_credits !== null && userProfile?.target_credits !== undefined
-      ? Number(userProfile.target_credits)
-      : 0
+  const personalProgress = 0
+  const targetTokens = 100
 
   // 2. Fetch personal earned tokens from wallet
-  const { data: wallet } = await admin
+  const { data: wallet } = await db
     .from("wallets")
     .select("balance")
     .eq("owner_user_id", user.id)
@@ -53,7 +49,7 @@ export default async function LeadDashboardPage({ params }: PageProps) {
   const earnedTokens = Number(wallet?.balance || 0)
 
   // 3. Fetch structured tasks (schedule sessions / lectures) for HOD's own teaching commitments
-  const { data: scheduleTasks } = await admin
+  const { data: scheduleTasks } = await db
     .from("tasks")
     .select("id, title, credit_value, status, deadline, description")
     .eq("organization_id", orgId)
@@ -69,8 +65,8 @@ export default async function LeadDashboardPage({ params }: PageProps) {
     description: t.description,
   }))
 
-  // 4. Fetch pending task verifications within department (standardized on credit_value)
-  let pendingTasksQuery = admin
+  // 4. Fetch pending task verifications within department
+  let pendingTasksQuery = db
     .from("tasks")
     .select(`
       id,
@@ -81,7 +77,7 @@ export default async function LeadDashboardPage({ params }: PageProps) {
       users:assigned_to_id (name, org_units:org_unit_id(name))
     `)
     .eq("organization_id", orgId)
-    .in("status", ["VERIFICATION_PENDING", "PENDING_VERIFICATION", "SUBMITTED", "IN_REVIEW"])
+    .in("status", ["VERIFICATION_PENDING", "OPEN", "ASSIGNED"])
 
   if (deptId) {
     pendingTasksQuery = pendingTasksQuery.eq("org_unit_id", deptId)

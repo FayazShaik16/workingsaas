@@ -27,16 +27,17 @@ export default async function FinanceDashboardPage({ params }: PageProps) {
   await requireScope("FINANCE_ADMIN", "DIRECTOR", "SYSTEM_ADMIN")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Fetch organization wallets
-  const { data: wallets } = await admin
+  const { data: wallets } = await db
     .from("wallets")
     .select("id, owner_user_id, purpose, balance, is_locked")
     .eq("organization_id", orgId)
     .order("purpose", { ascending: true })
 
   // 2. Fetch total verified transaction volume
-  const { data: transactions } = await admin
+  const { data: transactions } = await db
     .from("token_transactions")
     .select("amount, type")
     .eq("organization_id", orgId)
@@ -44,11 +45,11 @@ export default async function FinanceDashboardPage({ params }: PageProps) {
   const allWallets = wallets || []
   const allTx = transactions || []
 
-  const totalTokensDistributed = allTx.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+  const totalTokensDistributed = allTx.reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0)
 
-  const salaryPool = allWallets.find((w) => w.purpose === "SALARY_POOL")
-  const loanPool = allWallets.find((w) => w.purpose === "LOAN_POOL")
-  const treasuryWallet = allWallets.find((w) => w.purpose === "TREASURY" || w.purpose === "ORGANIZATION")
+  const salaryPool = allWallets.find((w: any) => w.purpose === "SALARY_POOL")
+  const loanPool = allWallets.find((w: any) => w.purpose === "LOAN_POOL")
+  const treasuryWallet = allWallets.find((w: any) => w.purpose === "TREASURY" || w.purpose === "ORGANIZATION")
 
   // 3. Fetch count of staff eligible for payroll release
   const { data: eligibleUsers } = await admin
@@ -242,7 +243,7 @@ export default async function FinanceDashboardPage({ params }: PageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allWallets.map((w) => (
+                  {allWallets.map((w: any) => (
                     <TableRow key={w.id} className="hover:bg-muted/30 transition">
                       <TableCell className="font-mono text-xs text-muted-foreground font-semibold">
                         {w.id}

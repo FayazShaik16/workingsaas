@@ -1,0 +1,110 @@
+[
+  {
+    "id": "dab9ab07-a3a9-4bb5-aaa1-fd19df3dcc9f",
+    "organization_id": "0241608c-1073-4a84-b6cd-5e7d1973e2f0",
+    "batch_id": "877c5b3d-85be-49da-8e74-45511437517b",
+    "subject_id": "86d00924-f692-49a9-96e1-24b029c24d95",
+    "faculty_id": "363756ca-60d9-4771-a043-5d8a6d0933b6",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "c887b9b6-5eaf-4f8d-82a5-f4eea701c04d",
+    "organization_id": "071506ee-2a23-45d1-97c3-0e5c370d8bd9",
+    "batch_id": "04f6c80e-faa9-438c-b90b-0c83a500b506",
+    "subject_id": "108fced3-c5d3-4fa5-8792-5fac5facd185",
+    "faculty_id": "87deee37-e455-4d65-800f-fe64141385a8",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "deffae46-6644-4327-a7ec-1ce2bcca903e",
+    "organization_id": "dc09235f-e7a5-461a-b575-f0fa12864e4a",
+    "batch_id": "27e24b2b-c568-4a29-9b41-fdba3ed23b56",
+    "subject_id": "e1f3b904-b1c9-4cb9-85ed-140c16cda477",
+    "faculty_id": "21b870c1-b1a8-47c2-a24e-6742c786737a",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "9a4d3a2c-acf0-4e6b-9927-3d60a30bfdb3",
+    "organization_id": "08f96303-635c-40b4-bb78-aaaeba5d0614",
+    "batch_id": "421c3186-1e3f-4f0c-a591-a97c4e818bfd",
+    "subject_id": "aff9e3c5-f948-4260-8ce0-b04708242cf1",
+    "faculty_id": "457c3cbc-8482-4c8c-be96-56796931a76d",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "fa288e72-7c5f-43d0-b9c2-07fb6eaae190",
+    "organization_id": "19b1307f-518e-43ad-9e2b-81dee96d22a6",
+    "batch_id": "a7c974fc-632a-48b9-9f42-ff123eeb9a9e",
+    "subject_id": "b3cba1f0-034f-4bc6-9962-d02c5dcafe11",
+    "faculty_id": "809e6580-2020-4f80-9046-4994259429ee",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "61d802ab-7a4b-47b0-a770-68d40db8426f",
+    "organization_id": "00dd9dfc-5f5a-461c-8cd9-9da9b12014c3",
+    "batch_id": "ed40ec14-acb1-44fb-8412-0531e17870a0",
+    "subject_id": "83a8bcba-dec9-468b-a4da-8b3a8d31cc93",
+    "faculty_id": "2be04060-a334-4a92-aea1-aba0e8e1d0ce",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "93dd6270-1b3c-4b03-bae5-7270a457135e",
+    "organization_id": "bab871ce-5c2f-4322-8547-ad65f59016d9",
+    "batch_id": "fd14c4d7-ad57-4f40-817f-63708f323ad0",
+    "subject_id": "ff89f806-e3b1-49da-826c-6dad46267de3",
+    "faculty_id": "a81b38e8-aa1f-43f5-9214-35ff2ab7c796",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "5d03c8c3-ce97-418b-b1b0-8b58a7d1d47a",
+    "organization_id": "47b3b9b4-3324-4afb-a6a8-76f0808ebb17",
+    "batch_id": "8bf166e3-a61b-4258-8dcf-ac2c9911008f",
+    "subject_id": "7f37b1f5-dcec-43da-94b8-e5400b107240",
+    "faculty_id": "5a4f3df5-9b5d-443f-9aea-92d839b6ba47",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "a4925d4f-887a-44ae-86b6-4181e342256f",
+    "organization_id": "3592d9a6-5503-4417-a258-c558014206ef",
+    "batch_id": "024926bc-eef5-44e7-a908-fb33216b9883",
+    "subject_id": "2baeda59-aa48-4c8b-865b-cd80b672a71c",
+    "faculty_id": "76c2b34e-7c86-4e74-81bf-6456c59d180a",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "67179f85-4269-4fad-8ed0-8a07edc944ac",
+    "organization_id": "60ef512e-7346-4af7-8c70-3d7299854904",
+    "batch_id": "3bd2407c-a8b3-495b-b9ba-3784df1da2eb",
+    "subject_id": "2b6eeabe-f535-4f8b-b49f-3c4f4fe9a763",
+    "faculty_id": "158c1547-5934-4699-97a3-540fa9beece0",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "634ad31a-c558-4506-8985-b708dc520e08",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "batch_id": "27f632fe-ba65-4b13-81c8-08f096081a20",
+    "subject_id": "fb8d78bc-af9e-4b20-958b-88a8d5213ba2",
+    "faculty_id": "4554b243-6309-4cd3-ae4c-1ab002932ae2",
+    "academic_year": "2025-2026",
+    "is_active": true
+  },
+  {
+    "id": "30d25229-315d-4002-a9e9-ff4150605eb8",
+    "organization_id": "602c2647-6ae3-46db-91c7-42cd307536ef",
+    "batch_id": "27f632fe-ba65-4b13-81c8-08f096081a20",
+    "subject_id": "fb8d78bc-af9e-4b20-958b-88a8d5213ba2",
+    "faculty_id": "df5d6b09-a8f8-4579-b2bc-214e1fc84510",
+    "academic_year": "2025-2026",
+    "is_active": true
+  }
+]

@@ -18,6 +18,7 @@ export default async function AdminUsersPage({ params }: PageProps) {
   await requireScope("SYSTEM_ADMIN", "DIRECTOR")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // Fetch users, user roles, and departments in parallel
   const [
@@ -25,15 +26,15 @@ export default async function AdminUsersPage({ params }: PageProps) {
     { data: userRoles },
     { data: units },
   ] = await Promise.all([
-    admin
+    db
       .from("users")
       .select("*")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false }),
-    admin
+    db
       .from("user_roles")
       .select("user_id, role_id, roles(id, name, scope_level)"),
-    admin
+    db
       .from("org_units")
       .select("id, name, unit_type")
       .eq("organization_id", orgId),
@@ -118,7 +119,7 @@ export default async function AdminUsersPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-foreground">
-              {formattedUsers.filter((u) => u.department !== "Unassigned / Root").length}
+              {formattedUsers.filter((u: any) => u.department !== "Unassigned / Root").length}
             </div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">In active academic units</p>
           </CardContent>
@@ -135,7 +136,7 @@ export default async function AdminUsersPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-foreground">
-              {formattedUsers.filter((u) => u.progress >= 85).length}
+              {formattedUsers.filter((u: any) => u.progress >= 85).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">&ge;85% milestone progress</p>
           </CardContent>
@@ -181,7 +182,7 @@ export default async function AdminUsersPage({ params }: PageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {formattedUsers.map((u) => (
+                  {formattedUsers.map((u: any) => (
                     <TableRow key={u.id} className="hover:bg-muted/30 transition">
                       <TableCell>
                         <div className="font-bold text-sm text-foreground">{u.name}</div>

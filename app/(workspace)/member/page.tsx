@@ -9,7 +9,7 @@ export default async function MemberDashboardPage() {
   const supabase = await createClient()
 
   // Get progress towards monthly target
-  const { data: compensation } = await supabase
+  const { data: compensation } = await (supabase as any)
     .from("compensation_policies")
     .select("monthly_target_credits")
     .eq("organization_id", user.organizationId)
@@ -17,7 +17,7 @@ export default async function MemberDashboardPage() {
     .single()
 
   // Get user's current credit balance from PERSONAL wallet
-  const { data: wallet } = await supabase
+  const { data: wallet } = await (supabase as any)
     .from("wallets")
     .select("balance")
     .eq("owner_user_id", user.id)
@@ -25,7 +25,7 @@ export default async function MemberDashboardPage() {
     .single()
 
   // Get open tasks
-  const { data: openTasks } = await supabase
+  const { data: openTasks } = await (supabase as any)
     .from("tasks")
     .select("id, title, credit_value, deadline")
     .eq("status", "OPEN")
@@ -33,7 +33,7 @@ export default async function MemberDashboardPage() {
     .limit(5)
 
   // Get user's active nominations
-  const { data: nominations } = await supabase
+  const { data: nominations } = await (supabase as any)
     .from("nominations")
     .select("id, tasks(id, title, credit_value), status")
     .eq("user_id", user.id)

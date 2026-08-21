@@ -23,7 +23,7 @@ export default async function FinanceDashboardPage() {
   const supabase = await createClient()
 
   // Get organization salary pool and loan pool
-  const { data: wallets } = await supabase
+  const { data: wallets } = await (supabase as any)
     .from("wallets")
     .select("id, owner_user_id, purpose, balance, is_locked, users(name, email)")
     .eq("organization_id", user.organizationId)
@@ -31,22 +31,22 @@ export default async function FinanceDashboardPage() {
     .order("purpose", { ascending: true })
 
   // Get total transaction volume
-  const { data: transactions } = await supabase
+  const { data: transactions } = await (supabase as any)
     .from("token_transactions")
     .select("amount, type, status")
     .eq("organization_id", user.organizationId)
     .eq("status", "CONFIRMED")
 
-  const totalSalaryReleased = transactions
-    ?.filter((t) => t.type === "SALARY_RELEASE")
-    ?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0
+  const totalSalaryReleased = (transactions as any[])
+    ?.filter((t: any) => t.type === "SALARY_RELEASE")
+    ?.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0) || 0
 
-  const totalLoansIssued = transactions
-    ?.filter((t) => t.type === "LOAN_DISBURSE")
-    ?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0
+  const totalLoansIssued = (transactions as any[])
+    ?.filter((t: any) => t.type === "LOAN_DISBURSE")
+    ?.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0) || 0
 
-  const salaryPool = wallets?.find((w) => w.purpose === "SALARY_POOL")
-  const loanPool = wallets?.find((w) => w.purpose === "LOAN_POOL")
+  const salaryPool = (wallets as any[])?.find((w: any) => w.purpose === "SALARY_POOL")
+  const loanPool = (wallets as any[])?.find((w: any) => w.purpose === "LOAN_POOL")
 
   const columns: ColumnDef<Wallet>[] = [
     {

@@ -35,6 +35,16 @@
 | [2026-08-19] Timetable & Batch Schema Fix: Removed nonexistent student_count column queries across batches/schedule/API routes, and updated dept-admin/timetable page to fetch programs, subjects, batches, and faculty organization-wide with createAdminClient | | |
 | [2026-08-19] Timetable Compiler & Faculty UX Fix: Fixed timetable-compiler query-first deduplication (preventing partial-index 42P10 failure), enabled faculty tasks page to query both direct assignments and nominations, removed hardcoded 50 fallback in compiler, and simplified member earnings UI into an institutional academic credit ledger (removing blockchain jargon for faculty) | | |
 | [2026-08-19] Faculty Teaching Schedule & Attendance Pipeline Fix: Removed nonexistent task_type_code and timetable_slots.faculty_id queries from member/schedule/page.tsx, allowing allocated classes (e.g. Wednesday period 2) to render immediately for teacher@demo.com, and reinforced attendance logging & HOD approval routes with createAdminClient | | [ ] Rehearse 9:00 AM demo click-path |
+| [2026-08-22] Step 0 Audit: Generated docs/TRUSTED_REBUILD_AUDIT.md and JSON pre-reset export across all 17 public tables | None | [ ] Deploy and push commits to origin/main |
+| [2026-08-22] Trusted Work Model: Wrote 20260822_workledger_trusted_work.sql with work_cycles, scheduled_work_templates, scheduled_work_instances, scheduled_work_completions, credit_ledger_entries, monthly_work_progress, salary_requests, and blockchain_wallets | | [ ] Verify live acceptance scenarios with presenter |
+| [2026-08-22] Role Strictness: SYSTEM_ADMIN self-signup only, org_unit_id = null, eradicated DIRECTOR fallback in ensure-user.ts | | |
+| [2026-08-22] Data Reset: Live table preview + typed phrase "RESET WORKLEDGER DEMO DATA" + 2nd confirm button at config/reset and /api/admin/reset-data | | |
+| [2026-08-22] Timetable Engine: Built XLSX timetable import (/dept-admin/import) with canonical headers, dry-run validation preview, schedule matrix (/dept-admin/schedules), and idempotent instance generator (schedule-generator.ts) | | |
+| [2026-08-22] Faculty Dashboard: Minimal Faculty Dashboard with live Monthly Progress card (85% threshold, extra credits above target), today's scheduled sessions with 2-step confirmation modal (ScheduledCompletionModal), assigned ad-hoc work, and compact Task Pool link | | |
+| [2026-08-22] HOD Workspace: Dual View (Employee + Manager) with scheduled review feed, ad-hoc task management, nominations review, and salary endorsement | | |
+| [2026-08-22] Real Sepolia ERC-20: Built lib/blockchain/work-token.ts with ethers v6, AES-256-GCM encryption, readiness check route (/api/admin/blockchain/readiness), and honest "Not configured" UI states | | |
+| [2026-08-22] Build Validation: 0 TypeScript errors (npx tsc --noEmit) and 100% successful Next.js production build (npm run build) | | |
+
 
 
 

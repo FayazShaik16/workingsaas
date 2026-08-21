@@ -243,7 +243,7 @@ export default function OrgTreePage() {
     setInspectorRoleId(member.roleId || "")
 
     // Fetch personal wallet
-    const { data: walletData } = await supabase
+    const { data: walletData } = await (supabase as any)
       .from("wallets")
       .select("id, balance")
       .eq("owner_user_id", member.id)
@@ -252,14 +252,14 @@ export default function OrgTreePage() {
     setInspectorWalletAddress(walletData?.id || "No Personal Wallet")
 
     // Fetch overrides
-    const { data: overrides } = await supabase
+    const { data: overrides } = await (supabase as any)
       .from("permission_overrides")
       .select("permission_id, is_allowed")
       .eq("user_id", member.id)
 
     const initialPermissions: Record<string, boolean> = {}
     permissions.forEach((p) => {
-      const match = overrides?.find((o: any) => o.permission_id === p.id)
+      const match = (overrides as any[])?.find((o: any) => o.permission_id === p.id)
       initialPermissions[p.id] = match ? match.is_allowed : false
     })
     setInspectorPermissions(initialPermissions)
@@ -350,7 +350,7 @@ export default function OrgTreePage() {
 
       // 3. Update permissions
       for (const [permId, isAllowed] of Object.entries(inspectorPermissions)) {
-        await supabase.from("permission_overrides").upsert({
+        await (supabase as any).from("permission_overrides").upsert({
           user_id: memberId,
           permission_id: permId,
           is_allowed: isAllowed,

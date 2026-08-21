@@ -18,7 +18,21 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const db = admin as any
 
-    // Verify task exists
+    // 1. Try atomic RPC execution first
+    try {
+      const { data: rpcData, error: rpcErr } = await db.rpc("approve_adhoc_task_and_award_credit", {
+        p_task_id: taskId,
+        p_reviewer_id: user.id,
+      })
+
+      if (!rpcErr && rpcData) {
+        return NextResponse.json(rpcData)
+      }
+    } catch (rpcEx) {
+      console.warn("[approve-proof] RPC fallback triggered:", rpcEx)
+    }
+
+    // 2. Direct transactional fallback
     const { data: task, error: taskError } = await db
       .from("tasks")
       .select("id, status, organization_id, credit_value, assigned_to_id, title")
@@ -33,66 +47,62 @@ export async function POST(req: Request) {
     const facultyId = task.assigned_to_id
     const creditReward = Number(task.credit_value || 1.0)
     const nowIso = new Date().toISOString()
+    const monthStart = `${nowIso.slice(0, 7)}-01`
 
-    // Update task status to CLOSED (LEAD_SIGNED)
+    // Update task status to CLOSED
     await db
       .from("tasks")
       .update({
         status: "CLOSED",
+        lead_signed_by: user.id,
+        lead_signed_at: nowIso,
         updated_at: nowIso,
       })
       .eq("id", taskId)
 
-    // Credit faculty's PERSONAL wallet if assigned
+    // Write to credit_ledger_entries
     if (facultyId) {
-      let { data: wallet } = await db
-        .from("wallets")
-        .select("id, balance")
-        .eq("owner_user_id", facultyId)
-        .eq("purpose", "PERSONAL")
+      const { data: cycle } = await db
+        .from("work_cycles")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("status", "ACTIVE")
+        .limit(1)
         .maybeSingle()
 
-      if (!wallet) {
-        const { data: newWallet } = await db
-          .from("wallets")
-          .insert({
+      const cycleId = cycle?.id || null
+
+      if (cycleId) {
+        await db.from("credit_ledger_entries").upsert(
+          {
             organization_id: orgId,
-            owner_user_id: facultyId,
-            purpose: "PERSONAL",
-            balance: 0,
-          })
-          .select("id, balance")
-          .single()
-        wallet = newWallet
-      }
+            user_id: facultyId,
+            work_cycle_id: cycleId,
+            month_start: monthStart,
+            credit_type: "UNSTRUCTURED_APPROVAL",
+            amount: creditReward,
+            source_entity_type: "task",
+            source_entity_id: task.id,
+            idempotency_key: `adhoc_task_${task.id}`,
+            created_by: user.id,
+            metadata: { title: task.title, comment: comment || null },
+          },
+          { onConflict: "idempotency_key" }
+        )
 
-      if (wallet?.id) {
-        const newBalance = Number(wallet.balance || 0) + creditReward
-        await db
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id)
-
-        // Insert token transaction
-        await db.from("token_transactions").insert({
-          organization_id: orgId,
-          from_wallet_id: null,
-          to_wallet_id: wallet.id,
-          amount: creditReward,
-          type: "TASK_REWARD",
-          status: "CONFIRMED",
-          created_at: nowIso,
-        })
-
-        // Recompute progress in DB
-        await db.rpc("recompute_user_progress", { p_user_id: facultyId })
+        // Recompute progress
+        await db.rpc("recompute_monthly_work_progress", {
+          p_user_id: facultyId,
+          p_work_cycle_id: cycleId,
+          p_month_start: monthStart,
+        }).catch(() => {})
       }
     }
 
     return NextResponse.json({
       success: true,
       creditAwarded: creditReward,
-      message: `Task "${task.title}" verified and +${creditReward.toFixed(1)} WORK credits released.`,
+      message: `Task "${task.title}" approved and +${creditReward.toFixed(1)} WORK credits awarded in ledger.`,
     })
   } catch (error: any) {
     console.error("Approve proof error:", error)

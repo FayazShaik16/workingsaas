@@ -26,16 +26,17 @@ export default async function DeptAdminDashboardPage({ params }: PageProps) {
   await requireScope("DEPT_ADMIN", "DIRECTOR", "SYSTEM_ADMIN")
 
   const admin = createAdminClient()
+  const db = admin as any
 
   // 1. Get user profile & department details
-  const { data: userData } = await admin
+  const { data: userData } = await db
     .from("users")
     .select("org_unit_id, org_units(id, name, unit_type)")
     .eq("id", user.id)
     .single()
 
   let deptId = userData?.org_unit_id
-  let deptName = userData?.org_units?.name || ""
+  let deptName = (userData?.org_units as any)?.name || ""
 
   // Fallback to first department if user has no explicit org_unit_id (e.g. Director inspecting)
   if (!deptId) {

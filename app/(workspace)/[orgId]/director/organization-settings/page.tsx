@@ -29,10 +29,10 @@ export default function OrgSettingsPage() {
       try {
         if (!orgId) return
 
-        const { data: orgData, error: orgError } = await supabase
+        const { data: orgData, error: orgError } = await (supabase as any)
           .from("organizations")
           .select("name, type")
-          .eq("id", orgId)
+          .eq("id", String(orgId))
           .single()
 
         if (orgError) throw orgError
@@ -61,13 +61,13 @@ export default function OrgSettingsPage() {
         throw new Error("Organization Name and Type are required")
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from("organizations")
         .update({
           name: orgName.trim(),
           type: orgType,
         })
-        .eq("id", orgId)
+        .eq("id", String(orgId))
 
       if (updateError) throw updateError
 
