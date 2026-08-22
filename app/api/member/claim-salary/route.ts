@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
 import { getSessionUser } from "@/lib/auth/session"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
+import { getOrgCycleContext } from "@/lib/workledger/current-cycle"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -9,74 +11,82 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = await createClient()
-    const db = supabase as any
+    const admin = createAdminClient()
+    const db = admin as any
 
-    // 1. Fetch user's current earned credits and target credits
-    const { data: userProfile, error: profileError } = await db
-      .from("users")
-      .select("id, name, target_credits, progress_percentage, org_unit_id, organization_id")
-      .eq("id", user.id)
+    const ctx = await getOrgCycleContext(user.organizationId)
+    if (!ctx.activeWorkCycle) {
+      return NextResponse.json(
+        { error: "No active work cycle configured for this organization." },
+        { status: 400 }
+      )
+    }
+
+    // 1. Get live immutable progress from unified service layer
+    const progress = await getMemberMonthlyProgress(user.organizationId, user.id, ctx.monthStart)
+
+    if (!progress.configured || progress.totalTargetCredits <= 0) {
+      return NextResponse.json(
+        { error: "Your monthly work plan is not configured. Timetable templates must be allocated first." },
+        { status: 400 }
+      )
+    }
+
+    // Check 85% authorization threshold
+    if (!progress.salaryEligible) {
+      return NextResponse.json(
+        {
+          error: `Salary authorization threshold not met. Current progress is ${(progress.displayProgressPercentage || 0).toFixed(1)}% (requires ${progress.salaryThresholdPercentage || 85}%).`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // 2. Check open day rule (e.g. Day 26)
+    const currentDay = new Date().getDate()
+    const openDay = Number(ctx.activeWorkCycle.salary_request_open_day || 26)
+    if (currentDay < openDay) {
+      return NextResponse.json(
+        {
+          error: `Salary claims open on Day ${openDay} of the month (today is Day ${currentDay}).`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // 3. Upsert salary request idempotently
+    const { data: salaryReq, error: reqErr } = await db
+      .from("salary_requests")
+      .upsert(
+        {
+          organization_id: user.organizationId,
+          work_cycle_id: ctx.activeWorkCycle.id,
+          user_id: user.id,
+          month_start: ctx.monthStart,
+          status: "PENDING_LEAD",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id,user_id,month_start" }
+      )
+      .select("id, status, created_at")
       .single()
 
-    if (profileError || !userProfile) {
-      return NextResponse.json({ error: "User profile not found." }, { status: 404 })
-    }
-
-    // 2. Fetch personal wallet balance
-    const { data: wallet } = await db
-      .from("wallets")
-      .select("balance")
-      .eq("owner_user_id", user.id)
-      .eq("purpose", "PERSONAL")
-      .limit(1)
-      .maybeSingle()
-
-    const targetCredits =
-      userProfile.target_credits !== null && userProfile.target_credits !== undefined
-        ? Number(userProfile.target_credits)
-        : 0
-    const earnedCredits = Number(wallet?.balance || 0)
-
-    if (targetCredits <= 0) {
+    if (reqErr) {
+      console.error("[claim-salary] error:", reqErr)
       return NextResponse.json(
-        {
-          error: "Monthly target credits not yet configured. Please ensure your timetable has been compiled.",
-        },
-        { status: 400 }
+        { error: "Failed to record salary claim request." },
+        { status: 500 }
       )
     }
-
-    const progress = (earnedCredits / targetCredits) * 100
-
-    if (progress < 85) {
-      return NextResponse.json(
-        {
-          error: `Eligibility threshold not met (${progress.toFixed(1)}% < 85%). Please raise a work-loan or complete additional marketplace tasks.`,
-        },
-        { status: 400 }
-      )
-    }
-
-    // 3. Log salary claim signal or notification for HOD
-    const currentMonthYear = new Date().toLocaleString("default", { month: "long", year: "numeric" })
-
-    // Optional notification log or signal
-    await db
-      .from("users")
-      .update({
-        progress_percentage: Math.round(progress),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id)
 
     return NextResponse.json({
       success: true,
-      earnedCredits,
-      targetCredits,
-      progressPercentage: progress,
-      monthYear: currentMonthYear,
-      message: `Salary claim for ${currentMonthYear} (${earnedCredits.toFixed(1)} / ${targetCredits.toFixed(1)} credits, ${progress.toFixed(0)}%) successfully queued for HOD digital endorsement.`,
+      requestId: salaryReq?.id,
+      earnedCredits: progress.rawEarnedCredits,
+      targetCredits: progress.totalTargetCredits,
+      progressPercentage: progress.displayProgressPercentage,
+      status: "PENDING_LEAD",
+      message: `Salary claim for ${ctx.monthStart} (${progress.rawEarnedCredits.toFixed(1)} / ${progress.totalTargetCredits.toFixed(1)} credits, ${(progress.displayProgressPercentage || 0).toFixed(0)}%) successfully queued for HOD endorsement.`,
     })
   } catch (error: any) {
     console.error("[member/claim-salary] Error:", error)

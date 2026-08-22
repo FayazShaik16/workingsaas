@@ -37,6 +37,9 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   const db = admin as any
 
   // 1. Fetch all organizational core data in parallel
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
+
   const [
     { data: wallets },
     teachingStaff,
@@ -44,6 +47,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
     { data: tasks },
     { data: loanRequests },
     { data: activeLoansData },
+    { data: progressRecords },
   ] = await Promise.all([
     db.from("wallets").select("id, purpose, balance, owner_user_id").eq("organization_id", orgId),
     getTeachingStaff(admin, orgId),
@@ -51,6 +55,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
     db.from("tasks").select("id, status, credit_value, org_unit_id").eq("organization_id", orgId),
     db.from("loan_requests").select("id, borrower_user_id, amount, reason, status, created_at").eq("organization_id", orgId),
     db.from("loans").select("id, user_id, amount, status, created_at, description").eq("organization_id", orgId),
+    db.from("monthly_work_progress").select("user_id, display_progress_percentage, salary_eligible, raw_earned_credits, total_target_credits").eq("organization_id", orgId).eq("month_start", currentMonthStart),
   ])
 
   const allWallets = wallets || []
@@ -59,6 +64,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   const allTasks = tasks || []
   const allLoanRequests = loanRequests || []
   const allLoans = activeLoansData || []
+  const progressMap = new Map<string, number>((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
 
   // 2. Compute dynamic Wallet & Token balances
   let salaryPool = 0
@@ -83,13 +89,13 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
 
   // 3. User Progress & Threshold Metrics (Over Teaching Staff Only)
   const totalEmployees = allTeachingStaff.length
-  const belowThresholdUsers = allTeachingStaff.filter((u: any) => Number(u.progress_percentage || 0) < 85)
+  const belowThresholdUsers = allTeachingStaff.filter((u: any) => (progressMap.get(u.id) || 0) < 85)
   const belowThresholdCount = belowThresholdUsers.length
-  const eligibleCount = allTeachingStaff.filter((u: any) => Number(u.progress_percentage || 0) >= 85).length
+  const eligibleCount = allTeachingStaff.filter((u: any) => (progressMap.get(u.id) || 0) >= 85).length
   const overallAvgProgress =
     totalEmployees > 0
       ? Math.round(
-          allTeachingStaff.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
+          allTeachingStaff.reduce((sum: number, u: any) => sum + (progressMap.get(u.id) || 0), 0) /
             totalEmployees
         )
       : 0
@@ -98,7 +104,7 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
   const heatmap = allUnits.map((unit: any) => {
     const deptMembers = allTeachingStaff.filter((u: any) => u.org_unit_id === unit.id)
     const memberCount = deptMembers.length
-    const progresses = deptMembers.map((m: any) => Number(m.progress_percentage || 0))
+    const progresses = deptMembers.map((m: any) => progressMap.get(m.id) || 0)
     const avgProgress =
       memberCount > 0
         ? Math.round(progresses.reduce((a: number, b: number) => a + b, 0) / memberCount)

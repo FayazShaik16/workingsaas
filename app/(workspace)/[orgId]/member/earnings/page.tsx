@@ -1,268 +1,172 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { requireAuth } from "@/lib/auth/protect"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
+import { getOrgCycleContext } from "@/lib/workledger/current-cycle"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Coins, CheckCircle2, ShieldCheck, History, ArrowUpRight } from "lucide-react"
+import { Coins, CheckCircle2, ShieldCheck, History, Sparkles, Calendar } from "lucide-react"
 
-interface Transaction {
-  id: string
-  amount: number
-  type: string
-  status: string
-  created_at?: string
-  timestamp?: string
-  notes?: string
+interface PageProps {
+  params: Promise<{ orgId: string }>
 }
 
-export default function EarningsPage() {
-  const params = useParams()
-  const orgId = (params?.orgId as string) || ""
-  const supabase = createClient()
-  const db = supabase as any
+export default async function MemberEarningsPage({ params }: PageProps) {
+  const { orgId } = await params
+  const user = await requireAuth()
 
-  const [wallet, setWallet] = useState<any>(null)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const admin = createAdminClient()
+  const db = admin as any
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      try {
-        const { data: authData } = await supabase.auth.getUser()
-        if (!authData?.user) throw new Error("Not authenticated")
+  const ctx = await getOrgCycleContext(orgId)
+  const progress = await getMemberMonthlyProgress(orgId, user.id, ctx.monthStart)
 
-        // Get PERSONAL wallet
-        const { data: walletData, error: walletError } = await db
-          .from("wallets")
-          .select("*")
-          .eq("owner_user_id", authData.user.id)
-          .eq("purpose", "PERSONAL")
-          .maybeSingle()
+  // Fetch credit ledger entries
+  const { data: ledgerEntries } = await db
+    .from("credit_ledger_entries")
+    .select("id, credit_type, credit_amount, occurred_at, reference_id, metadata")
+    .eq("organization_id", orgId)
+    .eq("user_id", user.id)
+    .order("occurred_at", { ascending: false })
+    .limit(50)
 
-        if (walletError) {
-          console.warn("[earnings] wallet query note:", walletError.message || walletError)
-        }
-
-        setWallet(walletData || { balance: 0, is_locked: false })
-
-        // Get transaction history only if wallet exists
-        if (walletData?.id) {
-          const { data: txData, error: txError } = await db
-            .from("token_transactions")
-            .select("*")
-            .eq("to_wallet_id", walletData.id)
-            .order("created_at", { ascending: false })
-            .limit(30)
-
-          if (txError) {
-            console.warn("[earnings] tx query note:", txError.message || txError)
-          }
-
-          setTransactions((txData as any) || [])
-        } else {
-          setTransactions([])
-        }
-      } catch (err: any) {
-        const message = err?.message || (typeof err === "string" ? err : "Failed to fetch earnings")
-        setError(message)
-        console.error("[earnings] fetch failed:", message)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchEarnings()
-  }, [supabase])
-
-  const typeColors: { [key: string]: string } = {
-    MINT: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    SALARY_TRANSFER: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    LOAN_ISSUE: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    REVERSE_TRANSFER: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
-    LOAN_REPAY: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-    TASK_REWARD: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    BONUS: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    BURN: "bg-destructive/10 text-destructive border-destructive/20",
-  }
-
-  const statusColors: { [key: string]: string } = {
-    PENDING: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    CONFIRMED: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    FAILED: "bg-destructive/10 text-destructive border-destructive/20",
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  const entries = ledgerEntries || []
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-          My Earnings & Credit Ledger
+      <div className="border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Coins className="h-5 w-5 text-primary" />
+          My Work Credit Ledger
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Track your earned institutional credits, verified teaching sessions, and monthly salary release progress.
+        <p className="text-xs text-muted-foreground mt-1">
+          Itemized record of recorded scheduled work sessions and approved institutional initiatives.
         </p>
       </div>
 
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-semibold text-muted-foreground">Available Credits</CardTitle>
-              <CardDescription className="text-xs mt-0.5">Verified balance in your account</CardDescription>
-            </div>
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Coins className="h-5 w-5" />
-            </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Earned This Month
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-primary font-mono">
-                {Number(wallet?.balance || 0).toFixed(2)}
-              </span>
-              <span className="text-xs font-semibold text-muted-foreground">credits</span>
+            <div className="text-2xl font-bold text-primary font-mono">
+              {progress.rawEarnedCredits.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">credits</span>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Scheduled: {progress.scheduledEarnedCredits.toFixed(1)} cr · Initiatives: {progress.unscheduledEarnedCredits.toFixed(1)} cr
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-semibold text-muted-foreground">Account Status</CardTitle>
-              <CardDescription className="text-xs mt-0.5">Institutional verification standing</CardDescription>
-            </div>
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Monthly Progress
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 mt-1">
-              {wallet?.is_locked ? (
-                <Badge variant="destructive" className="text-xs font-semibold px-3 py-1">
-                  🔒 Locked by Finance
+            <div className="text-2xl font-bold text-foreground font-mono">
+              {progress.displayProgressPercentage !== null ? `${progress.displayProgressPercentage.toFixed(0)}%` : "0%"}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Target: {progress.totalTargetCredits.toFixed(1)} WORK credits
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Salary Authorization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-bold text-foreground mt-1">
+              {progress.salaryEligible ? (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
+                  85% Met (Eligible)
                 </Badge>
               ) : (
-                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold px-3 py-1">
-                  ✓ Active & Verified
+                <Badge variant="outline" className="text-xs">
+                  {progress.creditsToThreshold?.toFixed(1)} cr to 85% Threshold
                 </Badge>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-semibold text-muted-foreground">Completed Activities</CardTitle>
-              <CardDescription className="text-xs mt-0.5">Verified sessions & approved tasks</CardDescription>
-            </div>
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-foreground font-mono">
-                {transactions.length}
-              </span>
-              <span className="text-xs font-semibold text-muted-foreground">events</span>
-            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Claims open: {progress.salaryRequestOpenDate || "Day 26"}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Transaction History Ledger */}
-      <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
-        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-          <div>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              Verified Activity History
-            </CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              Itemized record of class attendance credits and completed departmental contributions
-            </CardDescription>
-          </div>
+      {/* Itemized Ledger Table */}
+      <Card>
+        <CardHeader className="pb-3 border-b bg-muted/20">
+          <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            Immutable Credit Ledger Entries ({entries.length})
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-0.5">
+            Every work event generates a single, irreversible credit entry with complete cryptographic and timestamp auditing.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-4">
-          {transactions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground space-y-2">
-              <Coins className="h-10 w-10 mx-auto opacity-30" />
-              <p className="text-sm font-medium">No credit transactions recorded yet</p>
-              <p className="text-xs opacity-75">
-                Attendance logs and completed tasks will appear here automatically upon HOD verification.
+
+        <CardContent className="p-0">
+          {entries.length === 0 ? (
+            <div className="py-12 text-center text-xs text-muted-foreground space-y-2">
+              <History className="h-8 w-8 mx-auto text-muted-foreground/40" />
+              <p className="font-semibold text-foreground">No credit entries recorded yet.</p>
+              <p className="text-muted-foreground">
+                Self-complete scheduled sessions or submit initiative reports to generate ledger entries.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {transactions.map((tx: Transaction) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between p-4 rounded-xl border border-muted/50 bg-background/40 hover:bg-muted/20 transition"
-                >
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`text-[10px] font-bold ${typeColors[tx.type] || "bg-muted text-muted-foreground"}`}>
-                        {tx.type.replace(/_/g, " ")}
-                      </Badge>
-                      <Badge className={`text-[10px] font-bold ${statusColors[tx.status] || "bg-muted text-muted-foreground"}`}>
-                        {tx.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(tx.created_at || tx.timestamp || Date.now()).toLocaleDateString(undefined, {
-                        weekday: "short",
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    {tx.notes && <p className="text-xs text-foreground/80 font-medium">{tx.notes}</p>}
-                  </div>
-                  <div className="text-right font-mono">
-                    <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-0.5">
-                      <ArrowUpRight className="h-4 w-4" />
-                      +{Number(tx.amount || 0).toFixed(2)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground block">Credits</span>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-muted-foreground font-mono text-[11px]">
+                    <th className="py-3 px-4 font-semibold">Activity Type</th>
+                    <th className="py-3 px-4 font-semibold">Date & Time</th>
+                    <th className="py-3 px-4 font-semibold">Reference ID</th>
+                    <th className="py-3 px-4 font-semibold text-right">Credits Awarded</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {entries.map((entry: any) => {
+                    const isScheduled = entry.credit_type === "STRUCTURED_SELF_COMPLETION"
+
+                    return (
+                      <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-3 px-4 font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            {isScheduled ? (
+                              <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                            )}
+                            <span>{isScheduled ? "Scheduled Work Session (Self-Completed)" : "Institutional Initiative (Approved)"}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground font-mono text-[11px]">
+                          {new Date(entry.occurred_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
+                          {entry.reference_id?.slice(0, 8)}...
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-primary text-right">
+                          +{Number(entry.credit_amount).toFixed(1)} cr
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Educational Guidelines */}
-      <Card className="rounded-2xl border-muted/60 bg-muted/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            How Institutional Work Credits Function
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs text-muted-foreground leading-relaxed">
-          <p>
-            • <strong>Teaching Sessions (75% structured load):</strong> Each scheduled lecture or lab period logged in your weekly schedule generates micro-credits upon HOD verification.
-          </p>
-          <p>
-            • <strong>Departmental & Committee Work (25% unstructured load):</strong> Extra contributions, accreditation tasks, or committee duties can be claimed from the Task Marketplace.
-          </p>
-          <p>
-            • <strong>Monthly Authorization:</strong> Reaching 85% of your personalized monthly target automatically releases salary disbursement authorization for the current billing cycle.
-          </p>
         </CardContent>
       </Card>
     </div>

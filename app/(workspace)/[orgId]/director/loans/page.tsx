@@ -15,36 +15,48 @@ export default async function DirectorLoansPage({ params }: PageProps) {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Fetch loan requests from loan_requests table (or fallback loans)
-  const { data: rawRequests } = await db
-    .from("loan_requests")
-    .select(`
-      id,
-      amount,
-      reason,
-      status,
-      created_at,
-      repayment_terms,
-      borrower:borrower_user_id (
-        id,
-        name,
-        email,
-        progress_percentage,
-        org_units (name)
-      )
-    `)
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
 
-  // 2. Fetch loan pool balance
-  const { data: loanWallet } = await db
-    .from("wallets")
-    .select("balance")
-    .eq("organization_id", orgId)
-    .eq("purpose", "LOAN_POOL")
-    .maybeSingle()
+  // 1. Fetch pending loan requests and progress in parallel
+  const [
+    { data: rawRequests },
+    { data: loanWallet },
+    { data: progressRecords },
+  ] = await Promise.all([
+    db
+      .from("loan_requests")
+      .select(`
+        id,
+        amount,
+        reason,
+        status,
+        created_at,
+        repayment_terms,
+        borrower:borrower_user_id (
+          id,
+          name,
+          email,
+          org_units (name)
+        )
+      `)
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false }),
+    db
+      .from("wallets")
+      .select("balance")
+      .eq("organization_id", orgId)
+      .eq("purpose", "LOAN_POOL")
+      .maybeSingle(),
+    db
+      .from("monthly_work_progress")
+      .select("user_id, display_progress_percentage")
+      .eq("organization_id", orgId)
+      .eq("month_start", currentMonthStart),
+  ])
 
   const poolBalance = Number(loanWallet?.balance ?? 0)
+  const progressMap = new Map((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
 
   const formattedRequests: LoanRequestItem[] = (rawRequests || []).map((r: any) => ({
     id: r.id,
@@ -56,7 +68,7 @@ export default async function DirectorLoansPage({ params }: PageProps) {
       id: r.borrower.id,
       name: r.borrower.name,
       email: r.borrower.email,
-      progress_percentage: Number(r.borrower.progress_percentage || 0),
+      progress_percentage: Number(progressMap.get(r.borrower.id) || 0),
       org_unit_name: r.borrower.org_units?.name || "General",
     } : null,
   }))

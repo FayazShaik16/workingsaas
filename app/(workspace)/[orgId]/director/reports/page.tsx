@@ -25,11 +25,15 @@ export default async function DirectorReportsPage({ params }: PageProps) {
 
   const admin = createAdminClient()
 
-  // Fetch departments, canonical teaching staff, and tasks in parallel
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
+
+  // Fetch departments, canonical teaching staff, progress records, and tasks in parallel
   const [
     { data: orgUnits },
     teachingStaff,
     { data: tasks },
+    { data: progressRecords },
   ] = await Promise.all([
     admin.from("org_units").select("*").eq("organization_id", orgId),
     getTeachingStaff(admin, orgId),
@@ -37,11 +41,17 @@ export default async function DirectorReportsPage({ params }: PageProps) {
       .from("tasks")
       .select("id, status, credit_value, org_unit_id")
       .eq("organization_id", orgId),
+    (admin as any)
+      .from("monthly_work_progress")
+      .select("user_id, display_progress_percentage, salary_eligible")
+      .eq("organization_id", orgId)
+      .eq("month_start", currentMonthStart),
   ])
 
   const allUnits = orgUnits || []
   const allTeachingStaff = teachingStaff || []
   const allTasks = tasks || []
+  const progressMap = new Map<string, number>((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
 
   // Compute departmental statistics dynamically over teaching staff only
   const deptStats = allUnits.map((unit: any) => {
@@ -49,7 +59,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
     const memberCount = deptMembers.length
     const activeMembers = deptMembers.filter((m: any) => m.status === "ACTIVE").length
 
-    const progresses = deptMembers.map((m: any) => Number(m.progress_percentage || 0))
+    const progresses = deptMembers.map((m: any) => progressMap.get(m.id) || 0)
     const avgProgress =
       memberCount > 0
         ? Math.round(progresses.reduce((a: number, b: number) => a + b, 0) / memberCount)
@@ -64,7 +74,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
       .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
 
     const eligibleCount = deptMembers.filter(
-      (m: any) => Number(m.progress_percentage || 0) >= 85
+      (m: any) => (progressMap.get(m.id) || 0) >= 85
     ).length
     const eligibilityRate =
       memberCount > 0 ? Math.round((eligibleCount / memberCount) * 100) : 0
@@ -97,7 +107,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
   const overallAvgProgress =
     totalEmployees > 0
       ? Math.round(
-          allTeachingStaff.reduce((sum: number, u: any) => sum + Number(u.progress_percentage || 0), 0) /
+          allTeachingStaff.reduce((sum: number, u: any) => sum + (progressMap.get(u.id) || 0), 0) /
             totalEmployees
         )
       : 0
@@ -106,7 +116,7 @@ export default async function DirectorReportsPage({ params }: PageProps) {
     .reduce((sum: number, t: any) => sum + Number(t.credit_value || 0), 0)
 
   const totalEligibleStaff = allTeachingStaff.filter(
-    (u: any) => Number(u.progress_percentage || 0) >= 85
+    (u: any) => (progressMap.get(u.id) || 0) >= 85
   ).length
 
   return (

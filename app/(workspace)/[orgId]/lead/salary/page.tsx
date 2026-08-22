@@ -1,12 +1,8 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { getTeachingStaff } from "@/lib/queries/teaching-staff"
-import {
-  HODSalaryApprovalConsole,
-  FacultySalaryProfile,
-  TaskSalaryItem,
-} from "@/components/lead/hod-salary-approval-console"
-import { CreditCard } from "lucide-react"
+import { getDepartmentDashboardData } from "@/lib/workledger/department-dashboard"
+import { HODSalaryApprovalConsole, DepartmentSalaryRequestItem } from "@/components/lead/hod-salary-approval-console"
+import { Card, CardContent } from "@/components/ui/card"
+import { AlertCircle } from "lucide-react"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -15,164 +11,55 @@ interface PageProps {
 export default async function LeadSalaryApprovePage({ params }: PageProps) {
   const { orgId } = await params
   const user = await requireAuth()
-  await requireScope("ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN", "DEPT_ADMIN")
+  await requireScope("ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN")
 
-  const admin = createAdminClient()
-  const db = admin as any
+  const deptData = await getDepartmentDashboardData(orgId, user.orgUnitId ?? null)
 
-  // 1. Fetch current user profile to determine department
-  const { data: userProfile } = await db
-    .from("users")
-    .select("org_unit_id, org_units(name)")
-    .eq("id", user.id)
-    .single()
-
-  const deptId = userProfile?.org_unit_id || user.orgUnitId
-  const deptName = (userProfile?.org_units as any)?.name || "Academic Department"
-
-  // 2. Fetch canonical teaching staff (scoped to this department if lead)
-  const teachingStaff = await getTeachingStaff(admin, orgId, deptId || undefined)
-  const staffIds = teachingStaff.map((s) => s.id)
-
-  // 3. Fetch personal wallet balances for each teaching staff member
-  const { data: wallets } = await db
-    .from("wallets")
-    .select("owner_user_id, balance")
-    .eq("organization_id", orgId)
-    .eq("purpose", "PERSONAL")
-    .in("owner_user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
-
-  const walletMap = new Map((wallets || []).map((w: any) => [w.owner_user_id, Number(w.balance || 0)]))
-
-  // 4. Fetch attendance records count per faculty
-  const { data: attendanceStats } = await db
-    .from("attendance_records")
-    .select("faculty_id, status")
-    .eq("organization_id", orgId)
-    .in("status", ["VERIFIED", "CONDUCTED"])
-    .in("faculty_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
-
-  const attendanceCountMap = new Map<string, number>()
-  for (const a of attendanceStats || []) {
-    attendanceCountMap.set(a.faculty_id, (attendanceCountMap.get(a.faculty_id) || 0) + 1)
+  if (!deptData.department) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <Card>
+          <CardContent className="py-12 text-center text-xs text-muted-foreground space-y-2">
+            <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground/40" />
+            <p className="font-semibold text-foreground text-sm">Department Assignment Required</p>
+            <p className="text-muted-foreground">
+              Your account must be assigned to an active department to review salary claims.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  // 5. Fetch approved leaves count
-  const { data: leaveStats } = await db
-    .from("leaves")
-    .select("user_id, status")
-    .eq("organization_id", orgId)
-    .eq("status", "APPROVED")
-    .in("user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
-
-  const leaveCountMap = new Map<string, number>()
-  for (const l of leaveStats || []) {
-    leaveCountMap.set(l.user_id, (leaveCountMap.get(l.user_id) || 0) + 1)
-  }
-
-  // 6. Fetch active loans to determine debt state
-  const { data: activeLoans } = await db
-    .from("loans")
-    .select("user_id")
-    .eq("organization_id", orgId)
-    .eq("status", "ACTIVE")
-    .in("user_id", staffIds.length > 0 ? staffIds : ["00000000-0000-0000-0000-000000000000"])
-
-  const activeLoanUserSet = new Set((activeLoans || []).map((l: any) => l.user_id))
-
-  // 7. Fetch org units for names
-  const { data: units } = await db
-    .from("org_units")
-    .select("id, name")
-    .eq("organization_id", orgId)
-
-  const unitMap = new Map<string, string>((units || []).map((u: any) => [u.id, String(u.name || "Department")]))
-
-  const formattedMembers: FacultySalaryProfile[] = teachingStaff.map((u) => {
-    const targetCredits = u.target_credits !== null && u.target_credits !== undefined ? Number(u.target_credits) : 0
-    const earnedCredits = Number(walletMap.get(u.id) || 0)
-    const calculatedProgress = targetCredits > 0 ? Math.round((earnedCredits / targetCredits) * 100) : 0
-
-    return {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      progress_percentage: calculatedProgress,
-      earned_credits: earnedCredits,
-      target_credits: targetCredits,
-      quality_score: Number(u.quality_score || 5.0),
-      attendance_logged_count: attendanceCountMap.get(u.id) || 0,
-      approved_leaves_count: leaveCountMap.get(u.id) || 0,
-      has_active_loan: activeLoanUserSet.has(u.id),
-      org_unit_name: u.org_unit_id ? unitMap.get(u.org_unit_id) || "Department" : "Department",
-      status: u.status || "ACTIVE",
-    }
-  })
-
-  // 8. Fetch department tasks for TaskWise View
-  let tasksQuery = db
-    .from("tasks")
-    .select(`
-      id,
-      title,
-      description,
-      credit_value,
-      status,
-      category,
-      created_at,
-      completed_at,
-      assigned_to_id,
-      users:assigned_to_id (id, name, email, designation),
-      task_proofs (id, proof_text, proof_url, created_at)
-    `)
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
-
-  if (deptId) {
-    tasksQuery = tasksQuery.eq("org_unit_id", deptId)
-  }
-
-  const { data: rawTasks } = await tasksQuery
-
-  const formattedTasks: TaskSalaryItem[] = (rawTasks || []).map((t: any) => {
-    const proof = Array.isArray(t.task_proofs) && t.task_proofs.length > 0 ? t.task_proofs[0] : null
-    const faculty = t.users
-
-    return {
-      id: t.id,
-      title: t.title,
-      description: t.description || undefined,
-      facultyId: t.assigned_to_id || "",
-      facultyName: faculty?.name || "Unassigned / Open",
-      facultyEmail: faculty?.email || undefined,
-      facultyDesignation: faculty?.designation || undefined,
-      category: t.category || "STRUCTURED",
-      creditValue: Number(t.credit_value || 0),
-      completedAt: t.completed_at || proof?.created_at || t.created_at || new Date().toISOString(),
-      status: t.status,
-      proofText: proof?.proof_text || undefined,
-      proofUrl: proof?.proof_url || undefined,
-    }
-  })
+  const requests: DepartmentSalaryRequestItem[] = deptData.salaryRequestsList.map((r) => ({
+    id: r.requestId,
+    userId: r.userId,
+    userName: r.userName,
+    userEmail: r.userEmail,
+    designation: "Faculty Member",
+    earnedCredits: r.earnedCredits,
+    targetCredits: r.targetCredits,
+    progressPercentage: r.progressPercentage,
+    isEligible: r.progressPercentage >= 85,
+    status: r.status,
+    requestedAt: r.requestedAt,
+  }))
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-          <CreditCard className="h-8 w-8 text-primary" />
-          Department Salary Release Approval Queue
+      <div className="border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          Department Salary Approvals
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Review teaching faculty monthly work progress against the 85% cryptographic verification threshold and apply digital signatures before Finance release.
+        <p className="text-xs text-muted-foreground mt-1">
+          Review and endorse monthly salary claims for {deptData.department.name} faculty members.
         </p>
       </div>
 
       <HODSalaryApprovalConsole
         orgId={orgId}
-        leadUserId={user.id}
-        members={formattedMembers}
-        tasks={formattedTasks}
-        deptName={deptName}
+        deptName={deptData.department.name}
+        requests={requests}
       />
     </div>
   )

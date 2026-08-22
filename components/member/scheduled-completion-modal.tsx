@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Clock, Sparkles, Loader2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -78,7 +79,7 @@ export function ScheduledCompletionModal({
       setTimeout(() => {
         handleReset()
         router.refresh()
-      }, 1200)
+      }, 1000)
     } catch (err: any) {
       setErrorMsg(err.message || "An unexpected error occurred.")
       setIsSubmitting(false)
@@ -87,73 +88,83 @@ export function ScheduledCompletionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleReset()}>
-      <DialogContent className="sm:max-w-md rounded-2xl border-white/10 bg-slate-950 text-slate-100 shadow-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2 text-violet-400 font-mono text-xs uppercase tracking-wider mb-1">
-            <Sparkles size={14} />
+          <div className="flex items-center gap-1.5 text-primary font-mono text-xs uppercase tracking-wider mb-1">
+            <Sparkles className="h-3.5 w-3.5" />
             <span>2-Step Self Confirmation</span>
           </div>
-          <DialogTitle className="text-xl font-bold text-white">
+          <DialogTitle className="text-lg font-bold text-foreground">
             {completedSuccess
               ? "Session Recorded!"
               : step === 1
               ? "Confirm Scheduled Work"
-              : "Final Verification"}
+              : "Final Credit Confirmation"}
           </DialogTitle>
-          <DialogDescription className="text-slate-400 text-sm">
+          <DialogDescription className="text-xs text-muted-foreground">
             {completedSuccess
-              ? `+${instance.creditValue.toFixed(1)} WORK credits credited to your monthly ledger.`
+              ? "Your work completion has been logged to the immutable ledger."
               : step === 1
-              ? `Step 1 of 2: Declaration of session completion.`
-              : `Step 2 of 2: Confirm ledger write and progress update.`}
+              ? "Please verify that this scheduled session was conducted as planned."
+              : "This action will update your monthly progress ledger. Confirm to apply credits."}
           </DialogDescription>
         </DialogHeader>
 
         {completedSuccess ? (
-          <div className="py-6 text-center space-y-3">
-            <div className="h-16 w-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto ring-4 ring-emerald-500/30 animate-pulse">
-              <CheckCircle2 size={32} />
+          <div className="py-6 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-1">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
-            <p className="text-sm font-medium text-emerald-300">
-              Work session recorded · +{instance.creditValue.toFixed(1)} Credits
+            <p className="font-semibold text-foreground text-sm">
+              +{instance.creditValue.toFixed(1)} Credits Awarded
+            </p>
+            <p className="text-xs text-muted-foreground font-mono">
+              Ledger entry created successfully.
             </p>
           </div>
         ) : (
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-2">
             {/* Session Card Info */}
-            <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] space-y-2">
+            <div className="p-4 rounded-lg border bg-muted/40 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-slate-400">{instance.workDate}</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                  +{instance.creditValue.toFixed(1)} Credits
-                </span>
+                <span className="font-semibold text-sm text-foreground">{instance.title}</span>
+                <Badge variant="outline" className="font-mono text-xs">
+                  +{instance.creditValue.toFixed(1)} cr
+                </Badge>
               </div>
-              <h4 className="text-base font-semibold text-white">{instance.title}</h4>
-              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-                <Clock size={13} />
-                <span>
-                  {instance.startTime} – {instance.endTime}
-                </span>
+
+              <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{instance.startTime} – {instance.endTime}</span>
+                </div>
+                <span>·</span>
+                <span>Date: {instance.workDate}</span>
               </div>
             </div>
 
+            {/* Error Message */}
             {errorMsg && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle size={14} className="shrink-0" />
+              <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            {step === 1 ? (
-              <p className="text-sm text-slate-300">
-                Have you completed <strong className="text-white">"{instance.title}"</strong> scheduled for{" "}
-                <span className="font-mono text-violet-300">{instance.workDate} ({instance.startTime})</span>?
-              </p>
-            ) : (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
-                <p className="font-semibold">Important Confirmation:</p>
-                <p className="text-amber-200/90">
-                  This will record an immutable entry in your monthly work ledger and update your progress towards the 85% salary threshold. Confirm completion?
+            {step === 1 && (
+              <div className="p-3 rounded-lg border bg-primary/5 text-xs text-foreground space-y-1">
+                <p className="font-medium">Self-Declaration Statement:</p>
+                <p className="text-muted-foreground">
+                  "I confirm that I conducted this scheduled teaching/work session on trust according to the allocated timetable."
+                </p>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="p-3 rounded-lg border bg-amber-500/10 border-amber-500/30 text-xs text-foreground space-y-1">
+                <p className="font-medium text-amber-700 dark:text-amber-300">Important:</p>
+                <p className="text-muted-foreground">
+                  Credits will be immediately added to your monthly work ledger. This action cannot be duplicated.
                 </p>
               </div>
             )}
@@ -162,43 +173,47 @@ export function ScheduledCompletionModal({
 
         {!completedSuccess && (
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              disabled={isSubmitting}
-              className="border-white/10 text-slate-300 hover:bg-white/10"
-            >
-              Cancel
-            </Button>
-
             {step === 1 ? (
-              <Button
-                type="button"
-                onClick={handleStep1Proceed}
-                className="bg-violet-600 hover:bg-violet-500 text-white font-medium shadow-lg shadow-violet-600/30"
-              >
-                Yes, Completed
-              </Button>
+              <>
+                <Button type="button" variant="outline" onClick={handleReset} size="sm" className="text-xs">
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleStep1Proceed} size="sm" className="text-xs">
+                  Yes, I completed this session
+                </Button>
+              </>
             ) : (
-              <Button
-                type="button"
-                onClick={handleFinalConfirm}
-                disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-lg shadow-emerald-600/30 gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Recording...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} />
-                    Confirm & Update Progress
-                  </>
-                )}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  disabled={isSubmitting}
+                  size="sm"
+                  className="text-xs"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleFinalConfirm}
+                  disabled={isSubmitting}
+                  size="sm"
+                  className="text-xs gap-1.5"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Recording...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Confirm & Apply Credits</span>
+                    </>
+                  )}
+                </Button>
+              </>
             )}
           </DialogFooter>
         )}

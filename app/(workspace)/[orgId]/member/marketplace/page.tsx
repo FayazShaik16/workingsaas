@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/protect"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { getScopedTaskPool } from "@/lib/workledger/task-pool"
+import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
 import { MarketplaceDiscoveryGrid, MarketplaceTask } from "@/components/marketplace/marketplace-discovery-grid"
 import { Sparkles } from "lucide-react"
 
@@ -10,119 +11,48 @@ interface PageProps {
 export default async function MemberMarketplacePage({ params }: PageProps) {
   const { orgId } = await params
   const user = await requireAuth()
-  const admin = createAdminClient()
-  const db = admin as any
 
-  // 1. Fetch user progress & targets
-  const { data: userProfile } = await db
-    .from("users")
-    .select("id, name, org_unit_id, target_credits, progress_percentage")
-    .eq("id", user.id)
-    .single()
+  // 1. Fetch user's live progress contract
+  const progress = await getMemberMonthlyProgress(orgId, user.id)
 
-  const targetCredits =
-    userProfile?.target_credits !== null && userProfile?.target_credits !== undefined
-      ? Number(userProfile.target_credits)
-      : 0
-  const userOrgUnitId = userProfile?.org_unit_id || user.orgUnitId
+  // 2. Fetch scoped tasks for user's department
+  const tasks = await getScopedTaskPool(orgId, user.id, user.orgUnitId ?? null)
 
-  // 2. Fetch user's earned credits from personal wallet
-  const { data: wallet } = await db
-    .from("wallets")
-    .select("balance")
-    .eq("owner_user_id", user.id)
-    .eq("purpose", "PERSONAL")
-    .limit(1)
-    .maybeSingle()
-
-  const earnedCredits = Number(wallet?.balance || 0)
-  const progressPercentage = targetCredits > 0 ? (earnedCredits / targetCredits) * 100 : 0
-
-  // 3. Fetch all OPEN unstructured marketplace tasks in this organization with visibility filtering
-  // Show (visibility_scope = 'ORGANIZATION') OR (visibility_scope = 'ORG_UNIT' AND org_unit_id = userOrgUnitId)
-  const { data: rawTasks } = await db
-    .from("tasks")
-    .select(`
-      id,
-      title,
-      description,
-      credit_value,
-      category,
-      priority,
-      status,
-      visibility_scope,
-      deadline,
-      created_at,
-      creator:creator_id (name),
-      org_units (id, name)
-    `)
-    .eq("organization_id", orgId)
-    .eq("status", "OPEN")
-    .eq("category", "UNSTRUCTURED")
-    .order("created_at", { ascending: false })
-
-  // 4. Fetch tasks user has already applied for (nominations / task_applications)
-  const { data: userApplications } = await db
-    .from("nominations")
-    .select("task_id")
-    .eq("user_id", user.id)
-
-  const appliedTaskIds = new Set((userApplications || []).map((a: any) => a.task_id))
-
-  // Filter tasks based on visibility scope and department isolation
-  const scopedTasks = (rawTasks || []).filter((t: any) => {
-    const scope = t.visibility_scope || (t.custom_fields as any)?.visibility_scope
-    if (scope === "ORGANIZATION") return true
-    if (!t.org_unit_id || t.org_unit_id === userOrgUnitId) return true
-    return false
-  })
-
-  // Sort organization-scoped tasks first, then by date
-  scopedTasks.sort((a: any, b: any) => {
-    const aScope = a.visibility_scope || (a.custom_fields as any)?.visibility_scope
-    const bScope = b.visibility_scope || (b.custom_fields as any)?.visibility_scope
-    if (aScope === "ORGANIZATION" && bScope !== "ORGANIZATION") return -1
-    if (aScope !== "ORGANIZATION" && bScope === "ORGANIZATION") return 1
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  })
-
-  const formattedTasks: MarketplaceTask[] = scopedTasks.map((t: any) => ({
+  const formattedTasks: MarketplaceTask[] = tasks.map((t) => ({
     id: t.id,
     title: t.title,
-    description: t.description,
-    credit_value: Number(t.credit_value || 1.0),
-    category: t.category,
-    priority: t.priority || (t.custom_fields as any)?.priority || "MEDIUM",
+    description: t.description || null,
+    credit_value: t.creditValue,
+    category: "UNSTRUCTURED",
+    priority: t.priority,
     status: t.status,
-    visibility_scope: t.visibility_scope || "ORG_UNIT",
-    deadline: t.deadline,
-    created_at: t.created_at,
-    creator_name: t.creator?.name || "Department Lead",
-    org_unit_name: t.visibility_scope === "ORGANIZATION" ? "Institution-Wide" : (t.org_units?.name || "Department Pool"),
-    org_unit_id: t.org_units?.id,
-    applied_by_user: appliedTaskIds.has(t.id),
+    visibility_scope: t.visibilityScope,
+    deadline: t.deadline || null,
+    created_at: new Date().toISOString(),
+    org_unit_name: t.orgUnitName || undefined,
+    org_unit_id: t.orgUnitId || undefined,
+    applied_by_user: t.isNominatedByMe,
   }))
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-          <Sparkles className="h-8 w-8 text-primary" />
-          Open Task Marketplace
+      <div className="border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          Task Pool & Initiatives
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Discover unstructured departmental tasks, self-nominate for accreditation & committee work, and accelerate your monthly credit target.
+        <p className="text-xs text-muted-foreground mt-1">
+          Explore open department tasks, committee roles, and institutional initiatives to earn monthly WORK credits.
         </p>
       </div>
 
+      {/* Discovery Grid */}
       <MarketplaceDiscoveryGrid
         orgId={orgId}
         userId={user.id}
-        userProgress={progressPercentage}
-        userEarnedCredits={earnedCredits}
-        userTargetCredits={targetCredits}
         tasks={formattedTasks}
+        isProgressConfigured={progress.configured}
       />
     </div>
   )

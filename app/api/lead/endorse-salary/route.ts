@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
+import { assertDepartmentScope } from "@/lib/workledger/permissions"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -9,47 +10,86 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { memberIds, action, notes } = await req.json()
+    const { requestId, memberIds, action, notes } = await req.json()
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return NextResponse.json({ error: "No faculty member IDs provided." }, { status: 400 })
-    }
-
-    const supabase = await createClient()
-    const db = supabase as any
-
+    const admin = createAdminClient()
+    const db = admin as any
     const isEndorse = action === "ENDORSE"
     const nowIso = new Date().toISOString()
 
-    let endorsedCount = 0
+    if (requestId) {
+      // 1. Fetch salary request
+      const { data: salaryReq, error: reqErr } = await db
+        .from("salary_requests")
+        .select("id, user_id, organization_id, users(org_unit_id)")
+        .eq("id", requestId)
+        .single()
 
-    for (const memberId of memberIds) {
-      if (isEndorse) {
-        // Digital endorsement stamped
-        await db
-          .from("users")
-          .update({
-            status: "ACTIVE",
-            updated_at: nowIso,
-          })
-          .eq("id", memberId)
-
-        endorsedCount++
+      if (reqErr || !salaryReq) {
+        return NextResponse.json({ error: "Salary request not found." }, { status: 404 })
       }
+
+      // 2. Enforce department isolation
+      assertDepartmentScope(user, salaryReq.users?.org_unit_id)
+
+      // 3. Update salary request status
+      const newStatus = isEndorse ? "APPROVED_LEAD" : "REJECTED_LEAD"
+      await db
+        .from("salary_requests")
+        .update({
+          status: newStatus,
+          lead_reviewed_by: user.id,
+          lead_reviewed_at: nowIso,
+          lead_notes: notes || null,
+          updated_at: nowIso,
+        })
+        .eq("id", requestId)
+
+      return NextResponse.json({
+        success: true,
+        status: newStatus,
+        message: isEndorse
+          ? "Salary claim endorsed and routed to Finance for monthly release."
+          : "Salary claim returned for faculty revision.",
+      })
     }
 
-    return NextResponse.json({
-      success: true,
-      endorsedCount,
-      message: isEndorse
-        ? `Cryptographic HOD digital endorsement stamped for ${endorsedCount} faculty member(s). Forwarded to Finance for monthly release.`
-        : `Salary endorsement rejected for ${memberIds.length} faculty member(s).`,
-    })
+    if (Array.isArray(memberIds) && memberIds.length > 0) {
+      const newStatus = isEndorse ? "APPROVED_LEAD" : "REJECTED_LEAD"
+      const monthStart = `${nowIso.slice(0, 7)}-01`
+
+      for (const mId of memberIds) {
+        const { data: u } = await db.from("users").select("org_unit_id").eq("id", mId).single()
+        if (u) {
+          assertDepartmentScope(user, u.org_unit_id)
+          await db
+            .from("salary_requests")
+            .update({
+              status: newStatus,
+              lead_reviewed_by: user.id,
+              lead_reviewed_at: nowIso,
+              lead_notes: notes || null,
+              updated_at: nowIso,
+            })
+            .eq("organization_id", user.organizationId)
+            .eq("user_id", mId)
+            .eq("month_start", monthStart)
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: memberIds.length,
+        message: `Processed ${memberIds.length} salary request(s).`,
+      })
+    }
+
+    return NextResponse.json({ error: "No requestId or memberIds provided." }, { status: 400 })
   } catch (error: any) {
     console.error("[lead/endorse-salary] Error:", error)
     return NextResponse.json(
       { error: error?.message || "Internal server error" },
-      { status: 500 }
+      { status: error?.statusCode || 500 }
     )
   }
 }

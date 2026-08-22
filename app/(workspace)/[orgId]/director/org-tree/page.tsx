@@ -153,11 +153,16 @@ export default function OrgTreePage() {
         .select("user_id, role_id, roles(id, name, scope_level)")
       const loadedUserRoles: any[] = (userRolesData as any) || []
 
-      // 4. Fetch members
-      const { data: usersData } = await supabase
-        .from("users")
-        .select("*")
-        .eq("organization_id", orgId)
+      // 4. Fetch members & progress
+      const todayStr = new Date().toISOString().split("T")[0]
+      const currentMonthStart = `${todayStr.slice(0, 7)}-01`
+
+      const [{ data: usersData }, { data: progressData }] = await Promise.all([
+        supabase.from("users").select("*").eq("organization_id", orgId),
+        supabase.from("monthly_work_progress").select("user_id, display_progress_percentage").eq("organization_id", orgId).eq("month_start", currentMonthStart),
+      ])
+
+      const progressMap = new Map((progressData || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
 
       const roleMap = new Map<string, any>()
       loadedRoles.forEach((r: any) => {
@@ -206,6 +211,7 @@ export default function OrgTreePage() {
 
         return {
           ...u,
+          progress_percentage: progressMap.get(u.id) || 0,
           role: cleanRole,
           roleId: cleanRole?.id || matchedRoleId,
         }

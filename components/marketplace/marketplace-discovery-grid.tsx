@@ -8,13 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,22 +17,17 @@ import {
 } from "@/components/ui/dialog"
 import {
   Sparkles,
-  Coins,
   Calendar,
   Layers,
   CheckCircle2,
   Clock,
   Building2,
   Search,
-  Filter,
-  Flame,
-  Target,
-  ShieldAlert,
   ArrowRight,
   Loader2,
-  Tag,
-  BookOpen,
   Check,
+  AlertCircle,
+  FileCheck,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -49,7 +37,7 @@ export interface MarketplaceTask {
   description: string | null
   credit_value: number
   category: string
-  priority?: string
+  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
   status: string
   visibility_scope?: string
   deadline: string | null
@@ -63,84 +51,56 @@ export interface MarketplaceTask {
 interface MarketplaceDiscoveryGridProps {
   orgId: string
   userId: string
-  userProgress: number
-  userEarnedCredits: number
-  userTargetCredits: number
   tasks: MarketplaceTask[]
+  isProgressConfigured: boolean
 }
 
 export function MarketplaceDiscoveryGrid({
   orgId,
   userId,
-  userProgress,
-  userEarnedCredits,
-  userTargetCredits,
   tasks: initialTasks,
+  isProgressConfigured,
 }: MarketplaceDiscoveryGridProps) {
   const router = useRouter()
 
   const [tasks, setTasks] = useState<MarketplaceTask[]>(initialTasks)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedDept, setSelectedDept] = useState<string>("ALL")
-  const [selectedTag, setSelectedTag] = useState<string>("ALL")
-  const [minReward, setMinReward] = useState<number>(0)
-  const [fairnessOnly, setFairnessOnly] = useState<boolean>(false)
+  const [selectedPriority, setSelectedPriority] = useState<string>("ALL")
+  const [selectedScope, setSelectedScope] = useState<string>("ALL")
 
-  // Drawer / Modal State
+  // Nomination Dialog State
   const [activeTask, setActiveTask] = useState<MarketplaceTask | null>(null)
   const [pitchNote, setPitchNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [nominationStatus, setNominationStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
-  // Calculate Shortfall
-  const isBelowTarget = userProgress < 85
-  const requiredCredits = userTargetCredits * 0.85
-  const creditShortfall = Math.max(0, requiredCredits - userEarnedCredits)
-
-  // Extract unique departments and tags
-  const departments = useMemo(() => {
-    const set = new Set<string>()
-    tasks.forEach((t) => {
-      if (t.org_unit_name) set.add(t.org_unit_name)
-    })
-    return Array.from(set)
-  }, [tasks])
-
-  // Filter Tasks
+  // Filter tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       // 1. Search Query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        const matchTitle = task.title.toLowerCase().includes(q)
-        const matchDesc = task.description?.toLowerCase().includes(q)
-        const matchDept = task.org_unit_name?.toLowerCase().includes(q)
+        const query = searchQuery.toLowerCase()
+        const matchTitle = task.title.toLowerCase().includes(query)
+        const matchDesc = task.description?.toLowerCase().includes(query) || false
+        const matchDept = task.org_unit_name?.toLowerCase().includes(query) || false
         if (!matchTitle && !matchDesc && !matchDept) return false
       }
 
-      // 2. Department
-      if (selectedDept !== "ALL" && task.org_unit_name !== selectedDept) {
-        return false
+      // 2. Priority Filter
+      if (selectedPriority !== "ALL") {
+        if ((task.priority || "MEDIUM").toUpperCase() !== selectedPriority) return false
       }
 
-      // 3. Minimum Reward
-      const taskCredits = Number(task.credit_value || 1.0)
-      if (minReward > 0 && taskCredits < minReward) {
-        return false
-      }
-
-      // 4. Fairness Filter (highlight/filter tasks that can bridge the shortfall)
-      if (fairnessOnly && isBelowTarget) {
-        if (taskCredits < Math.min(2.0, creditShortfall)) {
-          return false
-        }
+      // 3. Scope Filter
+      if (selectedScope !== "ALL") {
+        if (task.visibility_scope !== selectedScope) return false
       }
 
       return true
     })
-  }, [tasks, searchQuery, selectedDept, minReward, fairnessOnly, isBelowTarget, creditShortfall])
+  }, [tasks, searchQuery, selectedPriority, selectedScope])
 
-  const handleOpenNominationDrawer = (task: MarketplaceTask) => {
+  const handleOpenNomination = (task: MarketplaceTask) => {
     setActiveTask(task)
     setPitchNote("")
     setNominationStatus(null)
@@ -181,7 +141,7 @@ export function MarketplaceDiscoveryGrid({
       setTimeout(() => {
         setActiveTask(null)
         router.refresh()
-      }, 1500)
+      }, 1200)
     } catch (err: any) {
       setNominationStatus({
         type: "error",
@@ -192,294 +152,224 @@ export function MarketplaceDiscoveryGrid({
     }
   }
 
-  const formatDeadlineCountdown = (deadlineStr: string | null) => {
-    if (!deadlineStr) return "Open Deadline"
-    const diff = new Date(deadlineStr).getTime() - Date.now()
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-    if (days < 0) return "Overdue"
-    if (days === 0) return "Due Today"
-    if (days === 1) return "Due Tomorrow"
-    return `In ${days} days`
+  const renderPriorityBadge = (p?: string) => {
+    const val = (p || "MEDIUM").toUpperCase()
+    if (val === "URGENT") {
+      return <Badge variant="destructive" className="text-[10px]">Urgent</Badge>
+    }
+    if (val === "HIGH") {
+      return <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300">High</Badge>
+    }
+    return <Badge variant="outline" className="text-[10px]">Standard</Badge>
   }
 
   return (
     <div className="space-y-6">
-      {/* Fairness Priority Banner for Faculty < 85% */}
-      {isBelowTarget && (
-        <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
-              <Target className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-foreground">
-                  Fairness Filter: Autonomy Deficit Recovery
-                </span>
-                <Badge className="bg-amber-500 text-white font-mono text-[10px]">
-                  {userProgress.toFixed(0)}% Progress
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
-                You are currently <span className="font-bold text-foreground">{creditShortfall.toFixed(1)} credits</span> short of the 85% threshold needed to initiate salary release. Self-nominating for 1 or 2 unstructured tasks below will safely bridge your gap before the payroll snapshot.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            size="sm"
-            variant={fairnessOnly ? "default" : "outline"}
-            onClick={() => setFairnessOnly(!fairnessOnly)}
-            className={`rounded-xl text-xs font-semibold shrink-0 ${
-              fairnessOnly ? "bg-amber-600 hover:bg-amber-700 text-white" : "border-amber-500/40 text-amber-600"
-            }`}
-          >
-            {fairnessOnly ? "✓ Showing Deficit-Bridging Tasks" : "🎯 Show Deficit-Bridging Tasks"}
-          </Button>
+      {/* Neutral Informational Hint */}
+      {isProgressConfigured && (
+        <div className="p-3.5 rounded-lg border bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary shrink-0" />
+          <span>Approved initiatives contribute to this month’s unstructured work credits (25% target weight).</span>
         </div>
       )}
 
       {/* Filter Bar */}
-      <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
-        <CardContent className="p-4 flex flex-col md:flex-row items-center gap-3">
+      <Card>
+        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by keyword, accreditation criteria, committee..."
+              placeholder="Search initiatives by title, description, or department..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 text-xs rounded-xl h-9"
+              className="pl-9 text-xs h-9"
             />
           </div>
 
-          {/* Department Filter */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Select value={selectedDept} onValueChange={setSelectedDept}>
-              <SelectTrigger className="rounded-xl text-xs h-9 min-w-36">
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Minimum Reward Filter */}
-            <Select
-              value={String(minReward)}
-              onValueChange={(val) => setMinReward(Number(val))}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            {/* Priority Select */}
+            <select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value)}
+              className="h-9 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <SelectTrigger className="rounded-xl text-xs h-9 min-w-32 font-mono">
-                <SelectValue placeholder="Min Credits" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Any Reward</SelectItem>
-                <SelectItem value="2">≥ 2.0 Credits</SelectItem>
-                <SelectItem value="5">≥ 5.0 Credits</SelectItem>
-                <SelectItem value="8">≥ 8.0 Credits</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="ALL">All Priorities</option>
+              <option value="URGENT">Urgent</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+
+            {/* Scope Select */}
+            <select
+              value={selectedScope}
+              onChange={(e) => setSelectedScope(e.target.value)}
+              className="h-9 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="ALL">All Scopes</option>
+              <option value="ORG_UNIT">Department Only</option>
+              <option value="ORGANIZATION">Organization Wide</option>
+            </select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Task Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredTasks.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-muted-foreground text-sm font-light space-y-2">
-            <Sparkles className="h-8 w-8 mx-auto opacity-30" />
-            <p className="font-bold text-foreground">No Tasks Found</p>
-            <p className="text-xs">Try loosening your search query or department filters.</p>
-          </div>
-        ) : (
-          filteredTasks.map((task) => {
-            const taskCredits = Number(task.credit_value || 1.0)
-            const isHighYield = taskCredits >= 5.0
-            const bridgesDeficit = isBelowTarget && taskCredits >= creditShortfall
-            const countdownText = formatDeadlineCountdown(task.deadline)
-            const isOrgWide = task.visibility_scope === "ORGANIZATION" || task.org_unit_name === "Institution-Wide"
+      {/* Tasks Grid */}
+      {filteredTasks.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-xs text-muted-foreground space-y-2">
+            <Layers className="h-8 w-8 mx-auto text-muted-foreground/40" />
+            <p className="font-semibold text-foreground">No open initiatives are available for your department.</p>
+            <p className="text-muted-foreground">
+              New tasks posted by your HOD or Director will appear here when available.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTasks.map((task) => {
+            const isApplied = task.applied_by_user
 
             return (
-              <Card
-                key={task.id}
-                className={`rounded-2xl border transition-all flex flex-col justify-between hover:shadow-md ${
-                  bridgesDeficit
-                    ? "border-amber-500/50 bg-amber-500/5"
-                    : isOrgWide
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-muted/70 bg-background/60"
-                }`}
-              >
+              <Card key={task.id} className="flex flex-col justify-between hover:border-primary/40 transition-colors">
                 <CardHeader className="pb-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <Badge
-                      variant={isOrgWide ? "default" : "outline"}
-                      className="text-[10px] font-medium rounded-md truncate max-w-44"
-                    >
-                      <Building2 className="h-3 w-3 mr-1 text-primary/70" />
-                      {task.org_unit_name || "Institutional Pool"}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {renderPriorityBadge(task.priority)}
+                      <Badge variant="outline" className="text-[10px]">
+                        {task.visibility_scope === "ORGANIZATION" ? "Org-Wide" : "Department"}
+                      </Badge>
+                    </div>
+                    <Badge variant="secondary" className="font-mono text-xs font-bold shrink-0">
+                      +{task.credit_value.toFixed(1)} cr
                     </Badge>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {task.priority && task.priority !== "MEDIUM" && (
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                            task.priority === "URGENT"
-                              ? "bg-destructive/10 text-destructive border-destructive/30"
-                              : task.priority === "HIGH"
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                          }`}
-                        >
-                          {task.priority === "URGENT" ? "🔴 Urgent" : task.priority === "HIGH" ? "🟠 High" : "🟢 Low"}
-                        </span>
-                      )}
-                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
-                        +{taskCredits.toFixed(1)} WORK
-                      </span>
-                    </div>
                   </div>
 
-                  <CardTitle className="text-base font-bold line-clamp-2 text-foreground">
-                    {task.title}
-                  </CardTitle>
-
-                  {/* Deficit Callout */}
-                  {bridgesDeficit && (
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                      <Flame className="h-3.5 w-3.5" /> Closes your remaining {creditShortfall.toFixed(1)} token deficit!
-                    </div>
-                  )}
-                </CardHeader>
-
-                <CardContent className="pt-0 space-y-4">
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {task.description}
-                    </p>
-                  )}
-
-                  {/* Metadata row */}
-                  <div className="pt-2 border-t border-muted/50 flex items-center justify-between text-[11px] text-muted-foreground font-mono">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{countdownText}</span>
-                    </div>
-                    <span>By {task.creator_name || "Lead"}</span>
-                  </div>
-
-                  {/* Action Button */}
                   <div>
-                    {task.applied_by_user ? (
-                      <Button
-                        size="sm"
-                        disabled
-                        variant="secondary"
-                        className="w-full rounded-xl text-xs font-medium text-muted-foreground"
-                      >
-                        <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Nomination Submitted
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenNominationDrawer(task)}
-                        className={`w-full rounded-xl text-xs font-semibold shadow-xs ${
-                          bridgesDeficit
-                            ? "bg-amber-600 hover:bg-amber-700 text-white"
-                            : ""
-                        }`}
-                      >
-                        <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Nominate Myself (+{taskCredits.toFixed(1)})
-                      </Button>
+                    <CardTitle className="text-sm font-bold text-foreground line-clamp-1">{task.title}</CardTitle>
+                    {task.org_unit_name && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{task.org_unit_name}</p>
                     )}
                   </div>
+                </CardHeader>
+
+                <CardContent className="pb-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <p className="text-xs text-muted-foreground line-clamp-3">
+                    {task.description || "No specific instructions provided for this initiative."}
+                  </p>
+
+                  <div className="pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{task.deadline ? `Due ${task.deadline}` : "Open deadline"}</span>
+                    </div>
+                    <span>{task.creator_name || "Lead"}</span>
+                  </div>
                 </CardContent>
+
+                <div className="p-3 border-t bg-muted/20">
+                  {isApplied ? (
+                    <Button disabled variant="outline" size="sm" className="w-full text-xs gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Nomination Submitted</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenNomination(task)}
+                      className="w-full text-xs gap-1.5"
+                    >
+                      <span>Self-Nominate</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </Card>
             )
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
-      {/* Self-Nomination Drawer / Modal */}
-      <Dialog open={!!activeTask} onOpenChange={(open) => !open && setActiveTask(null)}>
-        <DialogContent className="max-w-lg rounded-2xl p-6">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-primary/10 text-primary">
-                <Sparkles className="h-5 w-5" />
-              </span>
-              <div>
-                <DialogTitle className="text-lg font-bold">Self-Nominate for Task</DialogTitle>
-                <DialogDescription className="text-xs">
-                  {activeTask?.org_unit_name || "Department"} · +{Number(activeTask?.credit_value || 1.0).toFixed(1)} WORK Credits
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
+      {/* Nomination Dialog */}
+      <Dialog open={Boolean(activeTask)} onOpenChange={(open) => !open && setActiveTask(null)}>
+        <DialogContent className="sm:max-w-md">
           {activeTask && (
-            <form onSubmit={handleNominateSubmit} className="space-y-4 pt-2">
-              {nominationStatus && (
-                <div
-                  className={`p-3 text-xs rounded-xl border font-semibold ${
-                    nominationStatus.type === "success"
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                      : "bg-destructive/10 text-destructive border-destructive/20"
-                  }`}
-                >
-                  {nominationStatus.message}
-                </div>
-              )}
+            <form onSubmit={handleNominateSubmit}>
+              <DialogHeader>
+                <DialogTitle className="text-base font-bold text-foreground">
+                  Nominate for Initiative
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Submit your expression of interest to your department lead for this initiative.
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="p-3.5 rounded-xl border border-muted/80 bg-muted/20 space-y-1.5">
-                <span className="text-xs font-bold text-foreground block">{activeTask.title}</span>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
-                  {activeTask.description}
-                </p>
-                <div className="flex items-center justify-between pt-2 border-t border-muted/60 text-[11px] font-mono text-muted-foreground">
-                  <span>Deadline: {activeTask.deadline ? new Date(activeTask.deadline).toLocaleDateString() : "Flexible"}</span>
-                  <span className="text-emerald-600 font-bold">Reward: +{Number(activeTask.credit_value || 1.0).toFixed(1)} WORK</span>
+              <div className="space-y-4 py-4 text-xs">
+                {nominationStatus && (
+                  <div
+                    className={`p-3 rounded-lg border flex items-center gap-2 ${
+                      nominationStatus.type === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                        : "bg-destructive/10 border-destructive/30 text-destructive"
+                    }`}
+                  >
+                    {nominationStatus.type === "success" ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                    )}
+                    <span>{nominationStatus.message}</span>
+                  </div>
+                )}
+
+                <div className="p-3 rounded-lg bg-muted/40 border space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-foreground text-sm">{activeTask.title}</span>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      +{activeTask.credit_value.toFixed(1)} cr
+                    </Badge>
+                  </div>
+                  {activeTask.description && (
+                    <p className="text-muted-foreground text-xs line-clamp-2">{activeTask.description}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-foreground">Pitch / Availability Note (Optional)</Label>
+                  <Textarea
+                    placeholder="Briefly state your experience, capacity, or plan for this task..."
+                    value={pitchNote}
+                    onChange={(e) => setPitchNote(e.target.value)}
+                    className="text-xs min-h-[80px]"
+                  />
                 </div>
               </div>
 
-              {/* Pitch Note */}
-              <div className="space-y-1.5">
-                <Label htmlFor="pitchNote" className="text-xs font-semibold">
-                  Expression of Interest / Qualification Note (Optional)
-                </Label>
-                <Textarea
-                  id="pitchNote"
-                  placeholder="e.g. I have prior experience with NAAC Criterion 4 documentation and can complete this audit within 7 days."
-                  value={pitchNote}
-                  onChange={(e) => setPitchNote(e.target.value)}
-                  rows={3}
-                  disabled={isSubmitting}
-                  className="rounded-xl text-xs"
-                />
-              </div>
-
-              <DialogFooter className="gap-2 pt-2">
+              <DialogFooter className="gap-2 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => setActiveTask(null)}
-                  disabled={isSubmitting}
-                  className="rounded-xl text-xs"
+                  className="text-xs"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="rounded-xl text-xs font-bold shadow-xs">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  size="sm"
+                  className="text-xs gap-1.5"
+                >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Submitting...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Submitting...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Submit Nomination
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Confirm Nomination</span>
                     </>
                   )}
                 </Button>

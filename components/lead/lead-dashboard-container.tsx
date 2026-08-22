@@ -1,95 +1,89 @@
 "use client"
 
 import { useState } from "react"
-import { LeadEmployeeView } from "./lead-employee-view"
-import { LeadManagerView, DepartmentBudget } from "./lead-manager-view"
-
-interface SalaryApproval {
-  id: string
-  name: string
-  designation: string
-  progress: number
-  tokens: number
-}
-
-interface Verification {
-  id: string
-  submittedBy: string
-  deptName: string
-  taskTitle: string
-  reward: number
-  submittedAt: string
-}
+import { MinimalFacultyDashboard } from "@/components/member/minimal-faculty-dashboard"
+import { TrustedHODManagerView } from "./trusted-hod-manager-view"
+import { MemberDashboardData } from "@/lib/workledger/member-dashboard"
+import { DepartmentDashboardData } from "@/lib/workledger/department-dashboard"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { User, Building2 } from "lucide-react"
 
 interface LeadDashboardContainerProps {
-  initialApprovals: SalaryApproval[]
-  initialVerifications: Verification[]
-  personalProgress: number
-  earnedTokens: number
-  targetTokens: number
   orgId: string
-  deptName: string
-  schedule: any[]
-  budget?: DepartmentBudget
+  personalData: MemberDashboardData
+  departmentData: DepartmentDashboardData
 }
 
 export function LeadDashboardContainer({
-  initialApprovals,
-  initialVerifications,
-  personalProgress,
-  earnedTokens,
-  targetTokens,
   orgId,
-  deptName,
-  schedule,
-  budget,
+  personalData,
+  departmentData,
 }: LeadDashboardContainerProps) {
-  const [activeContext, setActiveContext] = useState<"employee" | "manager">("manager")
+  const [activeTab, setActiveTab] = useState<"department" | "personal">("department")
 
   return (
-    <div className="space-y-8">
-      {/* Title section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
+      {/* Header & Dual Context Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div>
-          <h1 className="text-3xl font-light tracking-tight text-foreground/90">HOD Dashboard</h1>
-          <p className="text-muted-foreground font-light mt-1">{deptName || "Department Portal"}</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {activeTab === "department" ? "Department Management" : "My Personal Work"}
+            </h1>
+            <Badge variant="secondary" className="font-normal text-xs">
+              {departmentData.department?.name || "Academic Department"}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {activeTab === "department"
+              ? "Oversee faculty workload, review initiative proofs, and audit scheduled sessions."
+              : "Track your personal teaching commitments, monthly progress, and assigned tasks."}
+          </p>
         </div>
 
-        {/* Dual Context Toggle bar */}
-        <div className="flex bg-secondary/50 p-1 rounded-xl border border-secondary shadow-2xs">
+        {/* Dual Context Toggle */}
+        <div className="flex items-center bg-muted p-1 rounded-lg border shrink-0">
           <button
-            onClick={() => setActiveContext("employee")}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all font-medium ${
-              activeContext === "employee" ? "bg-background text-primary shadow-3xs" : "text-muted-foreground hover:text-foreground"
+            onClick={() => setActiveTab("department")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              activeTab === "department"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Employee View
+            <Building2 className="h-3.5 w-3.5" />
+            <span>Department View</span>
           </button>
           <button
-            onClick={() => setActiveContext("manager")}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all font-medium ${
-              activeContext === "manager" ? "bg-background text-primary shadow-3xs" : "text-muted-foreground hover:text-foreground"
+            onClick={() => setActiveTab("personal")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              activeTab === "personal"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Manager View
+            <User className="h-3.5 w-3.5" />
+            <span>My Work</span>
           </button>
         </div>
       </div>
 
-      {activeContext === "employee" ? (
-        <LeadEmployeeView
-          personalProgress={personalProgress}
-          earnedTokens={earnedTokens}
-          targetTokens={targetTokens}
-          schedule={schedule}
-        />
+      {/* Render Active View */}
+      {activeTab === "department" ? (
+        <TrustedHODManagerView orgId={orgId} data={departmentData} />
       ) : (
-        <LeadManagerView
-          initialApprovals={initialApprovals}
-          initialVerifications={initialVerifications}
+        <MinimalFacultyDashboard
           orgId={orgId}
-          budget={budget}
-          deptName={deptName}
+          userId={personalData.user.id}
+          userName={personalData.user.name}
+          userDesignation={personalData.user.designation}
+          departmentName={personalData.user.departmentName}
+          progress={personalData.progress}
+          todayInstances={personalData.todayInstances}
+          nextUpcomingInstance={personalData.nextUpcomingInstance}
+          assignedTasks={personalData.assignedTasks}
+          recentActivity={personalData.recentActivity}
         />
       )}
     </div>

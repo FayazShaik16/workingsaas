@@ -108,12 +108,11 @@ export function getNavItemsForRole(
       { label: "Settings",         href: `${base}/settings`,    icon: <Settings size={16} /> },
     ],
     DEPT_ADMIN: [
-      { label: "Dashboard",        href: base,                       icon: <LayoutDashboard size={16} /> },
       { label: "Faculty",          href: `${base}/faculty`,          icon: <Users size={16} /> },
       { label: "Schedules",        href: `${base}/schedules`,        icon: <CalendarDays size={16} /> },
-      { label: "Work Cycles",      href: `${base}/cycles`,           icon: <Clock size={16} /> },
+      { label: "Work Cycles",      href: `${base}/work-cycles`,     icon: <Clock size={16} /> },
       { label: "Import Center",    href: `${base}/import`,           icon: <FileSpreadsheet size={16} /> },
-      { label: "Settings",         href: `${base}/settings`,         icon: <Settings size={16} /> },
+      { label: "Settings",         href: `/${orgId}/settings`,       icon: <Settings size={16} /> },
     ],
     MEMBER: [
       { label: "Dashboard",        href: base,                   icon: <LayoutDashboard size={16} /> },

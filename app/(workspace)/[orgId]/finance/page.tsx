@@ -51,15 +51,19 @@ export default async function FinanceDashboardPage({ params }: PageProps) {
   const loanPool = allWallets.find((w: any) => w.purpose === "LOAN_POOL")
   const treasuryWallet = allWallets.find((w: any) => w.purpose === "TREASURY" || w.purpose === "ORGANIZATION")
 
-  // 3. Fetch count of staff eligible for payroll release
-  const { data: eligibleUsers } = await admin
-    .from("users")
-    .select("id, progress_percentage")
-    .eq("organization_id", orgId)
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
 
-  const totalStaff = eligibleUsers?.length || 0
-  const eligibleStaffCount = (eligibleUsers || []).filter(
-    (u) => Number(u.progress_percentage || 0) >= 85
+  // 3. Fetch count of staff eligible for payroll release from monthly_work_progress
+  const { data: progressRecords } = await db
+    .from("monthly_work_progress")
+    .select("user_id, salary_eligible, display_progress_percentage")
+    .eq("organization_id", orgId)
+    .eq("month_start", currentMonthStart)
+
+  const totalStaff = (progressRecords || []).length
+  const eligibleStaffCount = (progressRecords || []).filter(
+    (p: any) => p.salary_eligible || Number(p.display_progress_percentage || 0) >= 85
   ).length
 
   return (

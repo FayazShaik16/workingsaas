@@ -21,33 +21,30 @@ export default async function AdminUsersPage({ params }: PageProps) {
   const db = admin as any
 
   // Fetch users, user roles, and departments in parallel
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
+
   const [
     { data: users },
     { data: userRoles },
     { data: units },
+    { data: progressRecords },
   ] = await Promise.all([
-    db
-      .from("users")
-      .select("*")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false }),
-    db
-      .from("user_roles")
-      .select("user_id, role_id, roles(id, name, scope_level)"),
-    db
-      .from("org_units")
-      .select("id, name, unit_type")
-      .eq("organization_id", orgId),
+    db.from("users").select("*").eq("organization_id", orgId).order("created_at", { ascending: false }),
+    db.from("user_roles").select("user_id, roles(name, scope_level)"),
+    db.from("org_units").select("id, name").eq("organization_id", orgId),
+    db.from("monthly_work_progress").select("user_id, display_progress_percentage").eq("organization_id", orgId).eq("month_start", currentMonthStart),
   ])
 
-  const allUsers = users || []
-  const allRoles = userRoles || []
-  const allUnits = units || []
+  const allUsers: any[] = users || []
+  const allRoles: any[] = userRoles || []
+  const allUnits: any[] = units || []
+  const progressMap = new Map<string, number>((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
 
   // Map users with resolved roles and units
   const formattedUsers = allUsers.map((u: any) => {
     const userRoleMapping = allRoles.find((r: any) => r.user_id === u.id)
-    const roleObj = userRoleMapping?.roles
+    const roleObj = (userRoleMapping?.roles as any)
     const unitObj = allUnits.find((unit: any) => unit.id === u.org_unit_id)
 
     const rawRole = roleObj?.name || roleObj?.scope_level || (u.designation?.toLowerCase().includes("director") ? "DIRECTOR" : "MEMBER")
@@ -64,7 +61,7 @@ export default async function AdminUsersPage({ params }: PageProps) {
       roleName: cleanRoleName,
       scopeLevel: roleObj?.scope_level || "MEMBER",
       status: formatStatus(u.status || "ACTIVE"),
-      progress: Number(u.progress_percentage || 0),
+      progress: Number(progressMap.get(u.id) || 0),
       createdAt: u.created_at ? new Date(u.created_at).toLocaleDateString() : "Recent",
     }
   })

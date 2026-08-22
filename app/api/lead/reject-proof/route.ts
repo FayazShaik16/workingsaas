@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
-import { executeWorkflowTransition } from "@/lib/rpc/workflow"
+import { assertDepartmentScope } from "@/lib/workledger/permissions"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -10,50 +10,59 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { taskId, rejectionReason } = await req.json()
+    const { proofId, taskId, feedback } = await req.json()
 
-    if (!taskId || !rejectionReason) {
-      return NextResponse.json({ error: "Task ID and rejection reason required" }, { status: 400 })
+    if (!proofId && !taskId) {
+      return NextResponse.json({ error: "Either proofId or taskId is required." }, { status: 400 })
     }
 
     const admin = createAdminClient()
     const db = admin as any
+    const nowIso = new Date().toISOString()
 
-    // Verify task exists
-    const { data: task, error: taskError } = await db
-      .from("tasks")
-      .select("id, status, organization_id, assigned_to_id")
-      .eq("id", taskId)
-      .single()
+    if (proofId) {
+      const { data: proof } = await db
+        .from("task_proofs")
+        .select("id, task_id, tasks(org_unit_id)")
+        .eq("id", proofId)
+        .single()
 
-    if (taskError || !task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 })
+      if (proof) {
+        assertDepartmentScope(user, proof.tasks?.org_unit_id)
+        await db
+          .from("task_proofs")
+          .update({
+            status: "REJECTED",
+            reviewer_id: user.id,
+            reviewer_notes: feedback || "Returned for revision",
+            reviewed_at: nowIso,
+            updated_at: nowIso,
+          })
+          .eq("id", proofId)
+      }
     }
 
-    // Execute workflow transition: back to ASSIGNED / IN_PROGRESS
-    const result = await executeWorkflowTransition("tasks", taskId, "ASSIGNED", user.id)
+    const targetTaskId = taskId || (proofId ? (await db.from("task_proofs").select("task_id").eq("id", proofId).single()).data?.task_id : null)
 
-    if (!result.success) {
-      return NextResponse.json({ error: "Transition failed" }, { status: 400 })
+    if (targetTaskId) {
+      await db
+        .from("tasks")
+        .update({
+          status: "IN_PROGRESS",
+          updated_at: nowIso,
+        })
+        .eq("id", targetTaskId)
     }
-
-    await db
-      .from("tasks")
-      .update({
-        status: "ASSIGNED",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", taskId)
 
     return NextResponse.json({
       success: true,
-      message: "Task returned to in-progress status",
+      message: "Initiative proof returned for revision.",
     })
-  } catch (error) {
-    console.error("Reject proof error:", error)
+  } catch (error: any) {
+    console.error("[reject-proof] Error:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
+      { error: error?.message || "Internal server error" },
+      { status: error?.statusCode || 500 }
     )
   }
 }

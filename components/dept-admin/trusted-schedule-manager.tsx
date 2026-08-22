@@ -138,19 +138,21 @@ export function TrustedScheduleManager({
     setGenMessage(null)
 
     try {
-      const now = new Date()
       const res = await fetch("/api/dept-admin/import-schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workCycleId: selectedCycleId,
           dryRun: false,
-          rows: [], // will trigger generation
+          rows: [],
           autoGenerateMonth: true,
         }),
       })
 
-      setGenMessage(`Active work instances successfully synchronized for this month.`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to generate instances.")
+
+      setGenMessage(`Active work instances synchronized successfully for this month (${data.instancesCreated || 0} instances created/verified).`)
       setTimeout(() => setGenMessage(null), 4000)
       router.refresh()
     } catch (err: any) {
@@ -163,97 +165,97 @@ export function TrustedScheduleManager({
   return (
     <div className="space-y-6">
       {/* Top Filter & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Work Cycle Selector */}
-          <div>
-            <label className="text-[10px] font-mono text-slate-400 block mb-1">Work Cycle</label>
-            <select
-              value={selectedCycleId}
-              onChange={(e) => setSelectedCycleId(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
-            >
-              {workCycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.status === "ACTIVE" ? "(Active)" : `(${c.status})`}
-                </option>
-              ))}
-            </select>
+      <Card>
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Work Cycle Selector */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground block">Work Cycle</label>
+              <select
+                value={selectedCycleId}
+                onChange={(e) => setSelectedCycleId(e.target.value)}
+                className="h-8 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {workCycles.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.status === "ACTIVE" ? "(Active)" : `(${c.status})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Faculty Selector */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground block">Faculty Member</label>
+              <select
+                value={selectedFacultyId}
+                onChange={(e) => setSelectedFacultyId(e.target.value)}
+                className="h-8 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="ALL">All Faculty Members ({facultyMembers.length})</option>
+                {facultyMembers.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} ({f.email})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Faculty Selector */}
-          <div>
-            <label className="text-[10px] font-mono text-slate-400 block mb-1">Faculty Member</label>
-            <select
-              value={selectedFacultyId}
-              onChange={(e) => setSelectedFacultyId(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setIsAddModalOpen(true)}
+              className="text-xs gap-1.5"
             >
-              <option value="ALL">All Faculty Members ({facultyMembers.length})</option>
-              {facultyMembers.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} ({f.email})
-                </option>
-              ))}
-            </select>
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Manual Slot</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerateInstances}
+              disabled={isGenerating}
+              className="text-xs gap-1.5"
+            >
+              {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              <span>Sync Month Instances</span>
+            </Button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-xl shadow-md shadow-violet-600/20 gap-1.5"
-          >
-            <Plus size={14} />
-            <span>Add Manual Slot</span>
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateInstances}
-            disabled={isGenerating}
-            className="border-white/10 text-slate-200 hover:bg-white/10 text-xs rounded-xl gap-1.5"
-          >
-            {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            <span>Sync Month Instances</span>
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {genMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-          <CheckCircle2 size={14} className="shrink-0" />
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{genMessage}</span>
         </div>
       )}
 
       {/* Templates Table */}
-      <Card className="rounded-2xl border-white/[0.08] bg-slate-900/40 overflow-hidden">
-        <CardHeader className="pb-3 border-b border-white/[0.06]">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                <CalendarDays size={16} className="text-violet-400" />
-                Weekly Recurring Templates
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-400 mt-0.5">
-                {filteredTemplates.length} recurring weekly slot{filteredTemplates.length === 1 ? "" : "s"} defined.
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="font-mono text-[10px] bg-white/[0.04] text-slate-300 border-white/10">
-              Trust-Based Timetable Model
-            </Badge>
+      <Card>
+        <CardHeader className="pb-3 border-b bg-muted/20 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" />
+              Weekly Recurring Templates ({filteredTemplates.length})
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Active schedule slots allocated to department faculty members.
+            </CardDescription>
           </div>
+          <Badge variant="outline" className="font-mono text-xs">
+            75% Scheduled Target Weight
+          </Badge>
         </CardHeader>
 
         <CardContent className="p-0">
           {filteredTemplates.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs space-y-2">
-              <Layers size={28} className="mx-auto text-slate-600 opacity-60" />
-              <p className="font-medium text-slate-300">No scheduled templates found</p>
-              <p className="text-slate-500">
+            <div className="py-12 text-center text-muted-foreground text-xs space-y-2">
+              <Layers className="h-8 w-8 mx-auto text-muted-foreground/40" />
+              <p className="font-medium text-foreground">No scheduled templates found</p>
+              <p className="text-muted-foreground">
                 Add a manual session above or upload an XLSX timetable via the Import Center.
               </p>
             </div>
@@ -261,42 +263,38 @@ export function TrustedScheduleManager({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-white/[0.06] bg-white/[0.02] text-slate-400 font-mono">
-                    <th className="py-3 px-4">Weekday</th>
-                    <th className="py-3 px-4">Time Slot</th>
-                    <th className="py-3 px-4">Session / Task Name</th>
-                    <th className="py-3 px-4">Assigned Faculty</th>
-                    <th className="py-3 px-4">Credits</th>
-                    <th className="py-3 px-4">Status</th>
+                  <tr className="border-b bg-muted/40 text-muted-foreground font-mono text-[11px]">
+                    <th className="py-3 px-4 font-semibold">Faculty Member</th>
+                    <th className="py-3 px-4 font-semibold">Weekday</th>
+                    <th className="py-3 px-4 font-semibold">Time Slot</th>
+                    <th className="py-3 px-4 font-semibold">Session Title</th>
+                    <th className="py-3 px-4 font-semibold">Credit Value</th>
+                    <th className="py-3 px-4 font-semibold">Description</th>
+                    <th className="py-3 px-4 font-semibold">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y">
                   {filteredTemplates.map((t) => (
-                    <tr key={t.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 px-4 font-bold text-violet-300 font-mono">
+                    <tr key={t.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-foreground">{t.users?.name || "Unassigned"}</div>
+                        <div className="text-[11px] text-muted-foreground font-mono">{t.users?.email}</div>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-primary">
                         {t.weekly_day} ({DAY_LABELS[t.weekly_day] || t.weekly_day})
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-300">
+                      <td className="py-3 px-4 font-mono text-muted-foreground">
                         {t.start_time?.slice(0, 5)} – {t.end_time?.slice(0, 5)}
                       </td>
-                      <td className="py-3 px-4 font-medium text-white">
-                        {t.title}
-                        {t.description && (
-                          <span className="block text-[11px] text-slate-500 font-normal">{t.description}</span>
-                        )}
+                      <td className="py-3 px-4 font-medium text-foreground">{t.title}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-foreground">
+                        +{Number(t.credit_value).toFixed(1)} cr
                       </td>
-                      <td className="py-3 px-4 text-slate-300">
-                        {t.users?.name || "Faculty Member"}
-                        <span className="block text-[10px] text-slate-500 font-mono">{t.users?.email}</span>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-bold text-indigo-300">
-                        +{Number(t.credit_value).toFixed(1)}
+                      <td className="py-3 px-4 text-muted-foreground truncate max-w-[200px]">
+                        {t.description || "—"}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge
-                          variant="outline"
-                          className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                        >
+                        <Badge variant="secondary" className="text-[10px] text-emerald-600 bg-emerald-500/10">
                           Active
                         </Badge>
                       </td>
@@ -309,143 +307,139 @@ export function TrustedScheduleManager({
         </CardContent>
       </Card>
 
-      {/* Manual Add Modal */}
+      {/* Manual Add Dialog */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl border-white/10 bg-slate-950 text-slate-100 shadow-2xl">
+        <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleSaveManualTemplate}>
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-white">Add Scheduled Work Template</DialogTitle>
-              <DialogDescription className="text-slate-400 text-xs">
-                Create a recurring weekly session for a faculty member. No course/subject relational entity required.
+              <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" />
+                Add Recurring Weekly Session
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Creates a weekly recurring template for the selected faculty member and work cycle.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-4 space-y-4">
+            <div className="space-y-4 py-4">
               {saveError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle size={14} className="shrink-0" />
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{saveError}</span>
                 </div>
               )}
 
               {/* Faculty Selector */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Assigned Faculty Member *</Label>
+                <Label className="text-xs text-foreground">Assign Faculty Member *</Label>
                 <select
                   value={addFacultyId}
                   onChange={(e) => setAddFacultyId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
+                  required
+                  className="w-full h-9 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   {facultyMembers.map((f) => (
                     <option key={f.id} value={f.id}>
-                      {f.name} — {f.email}
+                      {f.name} ({f.email})
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Title / Session Name */}
+              {/* Session Title */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Session / Task Name *</Label>
+                <Label className="text-xs text-foreground">Session Title / Activity *</Label>
                 <Input
                   value={addTitle}
                   onChange={(e) => setAddTitle(e.target.value)}
-                  placeholder="e.g. V SE SEC-A, VII SE CSD, Lab Mentorship"
-                  className="bg-slate-900 border-white/10 text-xs text-white"
+                  placeholder="e.g. CS301 - Data Structures Lecture (Room 402)"
                   required
+                  className="h-9 text-xs"
                 />
               </div>
 
-              {/* Weekday & Times Grid */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Weekday & Credits */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-slate-300">Weekday *</Label>
+                  <Label className="text-xs text-foreground">Weekday *</Label>
                   <select
                     value={addDay}
                     onChange={(e) => setAddDay(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white"
+                    className="w-full h-9 px-3 rounded-md bg-background border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     {WEEKDAYS.map((d) => (
                       <option key={d} value={d}>
-                        {d} ({DAY_LABELS[d]})
+                        {DAY_LABELS[d]} ({d})
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-slate-300">Start Time *</Label>
+                  <Label className="text-xs text-foreground">Credit Value *</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    max="10"
+                    value={addCredits}
+                    onChange={(e) => setAddCredits(e.target.value)}
+                    required
+                    className="h-9 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Time Slots */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-foreground">Start Time (24h) *</Label>
                   <Input
                     type="time"
                     value={addStartTime}
                     onChange={(e) => setAddStartTime(e.target.value)}
-                    className="bg-slate-900 border-white/10 text-xs text-white"
                     required
+                    className="h-9 text-xs font-mono"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-slate-300">End Time *</Label>
+                  <Label className="text-xs text-foreground">End Time (24h) *</Label>
                   <Input
                     type="time"
                     value={addEndTime}
                     onChange={(e) => setAddEndTime(e.target.value)}
-                    className="bg-slate-900 border-white/10 text-xs text-white"
                     required
+                    className="h-9 text-xs font-mono"
                   />
                 </div>
               </div>
 
-              {/* Credits */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Credits per Session *</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  value={addCredits}
-                  onChange={(e) => setAddCredits(e.target.value)}
-                  className="bg-slate-900 border-white/10 text-xs text-white font-mono"
-                  required
-                />
-              </div>
-
               {/* Optional Description */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Description / Room / Location (Optional)</Label>
+                <Label className="text-xs text-foreground">Description / Notes (Optional)</Label>
                 <Textarea
                   value={addDesc}
                   onChange={(e) => setAddDesc(e.target.value)}
-                  placeholder="e.g. Room LH-101, Computer Lab 2"
-                  rows={2}
-                  className="bg-slate-900 border-white/10 text-xs text-white resize-none"
+                  placeholder="Optional room number, batch notes, or course objectives..."
+                  className="text-xs min-h-[60px]"
                 />
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
-                disabled={isSaving}
-                className="border-white/10 text-slate-300"
+                size="sm"
+                className="text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin mr-1.5" />
-                    Saving...
-                  </>
-                ) : (
-                  "Create Template"
-                )}
+              <Button type="submit" disabled={isSaving} size="sm" className="text-xs gap-1.5">
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                <span>Save Template</span>
               </Button>
             </DialogFooter>
           </form>

@@ -40,18 +40,26 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
 
   const poolBalance = Number(salaryPoolWallet?.balance ?? 0)
 
-  // 4. Fetch org units for names
-  const { data: units } = await db
-    .from("org_units")
-    .select("id, name")
-    .eq("organization_id", orgId)
+  const todayStr = new Date().toISOString().split("T")[0]
+  const currentMonthStart = `${todayStr.slice(0, 7)}-01`
+
+  // 4. Fetch org units for names & monthly work progress
+  const [
+    { data: units },
+    { data: progressRecords },
+  ] = await Promise.all([
+    db.from("org_units").select("id, name").eq("organization_id", orgId),
+    db.from("monthly_work_progress").select("user_id, display_progress_percentage, raw_earned_credits, total_target_credits, salary_eligible").eq("organization_id", orgId).eq("month_start", currentMonthStart),
+  ])
 
   const unitMap = new Map<string, string>((units || []).map((u: any) => [u.id, String(u.name || "Department")]))
+  const progressMap = new Map<string, any>((progressRecords || []).map((p: any) => [p.user_id, p]))
 
   const formattedMembers: FinanceFacultyMember[] = teachingStaff.map((u) => {
-    const targetCredits = u.target_credits !== null && u.target_credits !== undefined ? Number(u.target_credits) : 0
-    const walletBalance = Number(walletMap.get(u.id) || 0)
-    const progress = targetCredits > 0 ? Math.round((walletBalance / targetCredits) * 100) : 0
+    const p = progressMap.get(u.id)
+    const targetCredits = Number(p?.total_target_credits || 0)
+    const earnedCredits = Number(p?.raw_earned_credits || 0)
+    const progress = Number(p?.display_progress_percentage || 0)
 
     return {
       id: u.id,
@@ -59,7 +67,7 @@ export default async function FinanceSalaryPage({ params }: PageProps) {
       email: u.email,
       progress_percentage: progress,
       target_credits: targetCredits,
-      wallet_balance: walletBalance,
+      wallet_balance: earnedCredits,
       org_unit_name: u.org_unit_id ? unitMap.get(u.org_unit_id) || "Department" : "Department",
       status: u.status || "ACTIVE",
     }
