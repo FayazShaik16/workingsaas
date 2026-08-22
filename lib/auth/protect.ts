@@ -56,3 +56,20 @@ export async function requireDirector() {
 export async function requireLead() {
   return requireScope("DIRECTOR", "SYSTEM_ADMIN", "ORG_UNIT_LEAD")
 }
+
+/**
+ * requireSysAdmin
+ * Shorthand for SYSTEM_ADMIN scope
+ */
+export async function requireSysAdmin() {
+  return requireScope("SYSTEM_ADMIN")
+}
+
+/**
+ * requireRole
+ * Alias for requireScope
+ */
+export async function requireRole(...roles: string[]) {
+  return requireScope(...roles)
+}
+

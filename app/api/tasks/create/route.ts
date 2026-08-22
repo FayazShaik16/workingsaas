@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, hasScope } from "@/lib/auth/session"
+import { getOrCreateDefaultTaskType } from "@/lib/workledger/default-task-type"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -10,60 +11,54 @@ export async function POST(req: Request) {
     }
 
     const {
-      organizationId,
       title,
       description,
       creditValue,
-      penaltyValue,
-      category = "UNSTRUCTURED",
+      credit_value,
       priority = "MEDIUM",
       orgUnitId,
+      visibilityScope = "ORGANIZATION",
+      targetOrgUnitIds = [],
       deadline,
       assignedToId,
-      status = "OPEN",
-      validationMode = "FILE_PROOF",
-      tags = [],
+      verificationMode = "MANUAL_REPORT",
+      allowNomination = true,
     } = await req.json()
 
     if (!title?.trim()) {
       return NextResponse.json({ error: "Task title is required." }, { status: 400 })
     }
 
+    const rawCredits = creditValue ?? credit_value
+    const credits = parseFloat(rawCredits) || 1.0
+    const validPriority = ["LOW", "MEDIUM", "HIGH", "URGENT"].includes(priority) ? priority : "MEDIUM"
+    const validVerificationMode = verificationMode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT"
+
     const admin = createAdminClient()
     const db = admin as any
-    const orgId = organizationId || user.organizationId
+    const orgId = user.organizationId
 
-    const credits = parseFloat(creditValue) || 1.0
-    const validPriority = ["LOW", "MEDIUM", "HIGH", "URGENT"].includes(priority) ? priority : "MEDIUM"
+    const taskTypeId = await getOrCreateDefaultTaskType(orgId)
+    const nowIso = new Date().toISOString()
 
-    // Prepare description with tags if present
-    let enrichedDescription = description || ""
-    if (Array.isArray(tags) && tags.length > 0) {
-      enrichedDescription += `\n\n**Tags**: ${tags.join(", ")}`
-    }
-    if (validationMode) {
-      enrichedDescription += `\n**Verification**: ${validationMode}`
-    }
-
-    const targetOrgUnitId = orgUnitId || user.orgUnitId || null
-    const finalStatus = assignedToId ? "ASSIGNED" : status || "OPEN"
-
-    const taskPayload: any = {
+    const taskPayload = {
       organization_id: orgId,
-      org_unit_id: targetOrgUnitId,
-      category: category,
+      org_unit_id: orgUnitId || user.orgUnitId || null,
+      task_type_id: taskTypeId,
+      category: "UNSTRUCTURED",
       priority: validPriority,
       title: title.trim(),
-      description: enrichedDescription,
+      description: (description || "").trim(),
       credit_value: credits,
-      penalty_value: penaltyValue ? parseFloat(penaltyValue) : 0,
       creator_id: user.id,
       assigned_to_id: assignedToId || null,
-      status: finalStatus,
-      custom_fields: { tags, validationMode, priority: validPriority },
+      status: assignedToId ? "ASSIGNED" : "OPEN",
+      visibility_scope: visibilityScope,
+      verification_mode: validVerificationMode,
+      allow_nomination: allowNomination,
       deadline: deadline ? new Date(deadline).toISOString() : null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
     }
 
     const { data: inserted, error: insertError } = await db
@@ -74,7 +69,16 @@ export async function POST(req: Request) {
 
     if (insertError) {
       console.error("[tasks/create] insert error:", insertError)
-      throw new Error(`Failed to create task: ${insertError.message}`)
+      return NextResponse.json({ error: `Failed to create task: ${insertError.message}` }, { status: 500 })
+    }
+
+    if (visibilityScope === "ORGANIZATION" && Array.isArray(targetOrgUnitIds) && targetOrgUnitIds.length > 0) {
+      const targetRows = targetOrgUnitIds.map((uId: string) => ({
+        task_id: inserted.id,
+        org_unit_id: uId,
+        created_at: nowIso,
+      }))
+      await db.from("task_target_org_units").insert(targetRows)
     }
 
     return NextResponse.json({

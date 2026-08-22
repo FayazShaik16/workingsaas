@@ -27,6 +27,7 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
     priority: t.priority,
     status: t.status,
     visibility_scope: t.visibilityScope,
+    verification_mode: t.verificationMode,
     deadline: t.deadline || null,
     created_at: new Date().toISOString(),
     org_unit_name: t.orgUnitName || undefined,

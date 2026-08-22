@@ -18,7 +18,7 @@ export const STANDARD_ROLES = [
  * Ensures a user record exists in public.users, organizations, and user_roles.
  * Fresh signups receive ONLY the SYSTEM_ADMIN role with org_unit_id = null.
  * Invited users receive their exact designated invitation role.
- * NO silent promotion to DIRECTOR for role-less users.
+ * NO silent promotion to DIRECTOR, NO fake Main/Root department creation.
  */
 export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser | null> {
   const admin = createAdminClient()
@@ -106,24 +106,6 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       const roles = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
       const scopeLevels = (existingUser.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
 
-      // If user exists in org but has no user_roles record, assign ONLY MEMBER role (never DIRECTOR fallback)
-      if (scopeLevels.length === 0) {
-        const { data: orgRoles } = await db
-          .from("roles")
-          .select("id, scope_level")
-          .eq("organization_id", existingUser.organization_id)
-
-        const memberRole = (orgRoles || []).find((r: any) => r.scope_level === "MEMBER") || orgRoles?.[0]
-        if (memberRole) {
-          await db.from("user_roles").upsert(
-            { user_id: authUser.id, role_id: memberRole.id },
-            { onConflict: "user_id,role_id" }
-          )
-          roles.push(memberRole.id)
-          scopeLevels.push(memberRole.scope_level || "MEMBER")
-        }
-      }
-
       return {
         id: existingUser.id,
         email: existingUser.email,
@@ -131,7 +113,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
         organizationId: existingUser.organization_id,
         orgUnitId: existingUser.org_unit_id,
         roles,
-        scopeLevels,
+        scopeLevels, // If empty, router safely routes to setup-incomplete page
       }
     }
 
@@ -152,14 +134,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
     }
     const orgId = newOrg.id
 
-    // Create root organization unit
-    await db.from("org_units").insert({
-      organization_id: orgId,
-      name: "Main",
-      unit_type: "DEPARTMENT",
-    })
-
-    // Upsert user into public.users with org_unit_id = null (pure operator identity)
+    // Upsert user into public.users with org_unit_id = null (pure operator identity, NO Main/Root dept)
     await db.from("users").upsert({
       id: authUser.id,
       organization_id: orgId,
@@ -170,7 +145,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       employment_type: "FULL_TIME",
     })
 
-    // Seed standard roles for the organization
+    // Seed standard tenant-scoped roles
     const { data: insertedRoles } = await db
       .from("roles")
       .insert(
@@ -192,7 +167,7 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       )
     }
 
-    // Create default active work cycle (75% scheduled weight / 85% salary threshold / 26th day opens)
+    // Create default active work cycle
     const now = new Date()
     const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]
     const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().split("T")[0]

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
@@ -15,14 +15,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Task ID is required." }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const db = supabase as any
-    const orgId = user.organizationId
+    const admin = createAdminClient()
+    const db = admin as any
 
-    // 1. Fetch task to verify it is OPEN
+    // 1. Fetch task to verify it is OPEN and allow_nomination is true
     const { data: task, error: taskError } = await db
       .from("tasks")
-      .select("id, title, creator_id, organization_id, status")
+      .select("id, title, organization_id, status, allow_nomination, visibility_scope, org_unit_id")
       .eq("id", taskId)
       .single()
 
@@ -32,50 +31,54 @@ export async function POST(req: Request) {
 
     if (task.status !== "OPEN") {
       return NextResponse.json(
-        { error: "This task is no longer open for nominations." },
+        { error: "This task is no longer open for self-nomination." },
         { status: 400 }
       )
     }
 
-    // 2. Upsert application into task_applications
-    const { data: application, error: appError } = await db
-      .from("task_applications")
+    if (task.allow_nomination === false) {
+      return NextResponse.json(
+        { error: "Self-nomination is disabled for this task." },
+        { status: 400 }
+      )
+    }
+
+    // 2. Department isolation check
+    if (task.visibility_scope === "ORG_UNIT" && task.org_unit_id) {
+      if (user.orgUnitId !== task.org_unit_id) {
+        return NextResponse.json(
+          { error: "You can only self-nominate for tasks within your department." },
+          { status: 403 }
+        )
+      }
+    }
+
+    const nowIso = new Date().toISOString()
+
+    // 3. Upsert nomination record idempotently
+    const { data: nomination, error: nomError } = await db
+      .from("nominations")
       .upsert(
         {
-          organization_id: task.organization_id || orgId,
           task_id: taskId,
           user_id: user.id,
-          pitch_note: pitchNote || "I would like to volunteer for this task.",
           status: "PENDING",
-          created_at: new Date().toISOString(),
+          message: pitchNote || "I would like to volunteer for this task.",
         },
-        {
-          onConflict: "organization_id,task_id,user_id",
-        }
+        { onConflict: "task_id,user_id" }
       )
       .select()
       .single()
 
-    if (appError) {
-      // Fallback without conflict clause
-      const { data: fallbackApp, error: fallbackErr } = await db
-        .from("task_applications")
-        .insert({
-          organization_id: task.organization_id || orgId,
-          task_id: taskId,
-          user_id: user.id,
-          pitch_note: pitchNote || "I would like to volunteer for this task.",
-          status: "PENDING",
-        })
-        .select()
-        .single()
-
-      if (fallbackErr) throw fallbackErr
+    if (nomError) {
+      console.error("[tasks/nominate] nomination error:", nomError)
+      return NextResponse.json({ error: `Failed to record nomination: ${nomError.message}` }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      message: `Self-nomination for "${task.title}" submitted successfully. The task coordinator has been notified.`,
+      nomination,
+      message: `Self-nomination for "${task.title}" submitted successfully.`,
     })
   } catch (error: any) {
     console.error("[tasks/nominate] Error:", error)

@@ -2,7 +2,7 @@
 
 | [BUILT] | [BROKEN] | [LEFT TO DO] |
 | --- | --- | --- |
-| [2026-08-02] Restructured workspace routing to dynamic `/[orgId]/[role]` | None | [ ] Push commits to origin/main |
+| [2026-08-02] Restructured workspace routing to dynamic `/[orgId]/[role]` | None | [ ] Deploy and push commits to origin/main |
 | [2026-08-02] Dynamic validation layout at `[orgId]/layout.tsx` | | [ ] Rehearse 9:00 AM demo click-path |
 | [2026-08-03] Fixed client-side role switcher and dynamic menu mapping | | |
 | [2026-08-03] Created Director Invite Team Page | | |
@@ -48,3 +48,4 @@
 | [2026-08-22] UI Refactor: Built responsive 2-column faculty dashboard (Left ~60% Today's Sessions, Right ~40% Monthly Progress with circular ring capped at 100%), full-width prioritized initiatives, and clean standard Shadcn tokens | | |
 | [2026-08-22] Legacy Retirement & Redirection: Redirected all non-[orgId] routes to canonical [orgId] paths, retired legacy academic modules & surveillance routes | | |
 | [2026-08-22] Verification Reports: Generated docs/DEPLOYMENT_CONSISTENCY_AUDIT.md and docs/DEPLOYMENT_E2E_TEST_REPORT.md with full pass matrix | | |
+| [2026-08-22] Final Core Repair: Eradicated verification_type in favor of canonical verification_mode, built transactional getOrCreateDefaultTaskType (fixing null task_type_id), eliminated Main/Root department creation on signup, created People & Roles (/config/people) and Department Manager (/config/departments), built live Sepolia audit wallets (/member/wallet, /lead/wallet, /director/wallet, /api/wallets/me), and verified 100% PASS on 7 live Supabase acceptance scenarios | | |

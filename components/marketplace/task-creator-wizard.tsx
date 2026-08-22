@@ -112,12 +112,13 @@ export function TaskCreatorWizard({
         body: JSON.stringify({
           title,
           description,
-          tokenValue: parseFloat(tokenValue),
+          creditValue: parseFloat(tokenValue) || 1.0,
           priority,
           deadline,
           orgUnitId: orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null),
+          visibilityScope: orgUnitId === "INSTITUTION_WIDE" ? "ORGANIZATION" : "ORG_UNIT",
+          verificationMode: validationMode === "FILE_PROOF" ? "FILE_SUBMISSION" : "MANUAL_REPORT",
           skillTags: selectedTags,
-          validationMode,
           requiresPeerReview,
         }),
       })

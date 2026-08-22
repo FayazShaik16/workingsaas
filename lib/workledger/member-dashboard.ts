@@ -118,7 +118,7 @@ export async function getMemberDashboardData(
   // 5. Fetch assigned ad-hoc initiatives
   const { data: tasksData } = await db
     .from("tasks")
-    .select("id, title, description, credit_value, priority, status, deadline, verification_type")
+    .select("id, title, description, credit_value, priority, status, deadline, verification_mode")
     .eq("organization_id", organizationId)
     .eq("assigned_to_id", userId)
     .neq("status", "COMPLETED")
@@ -140,7 +140,7 @@ export async function getMemberDashboardData(
       priority: (t.priority || "MEDIUM") as any,
       status: t.status,
       deadline: t.deadline,
-      verificationMode: (t.verification_type === "FILE_UPLOAD" ? "FILE_SUBMISSION" : "MANUAL_REPORT") as any,
+      verificationMode: (t.verification_mode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT") as any,
     }))
     .sort((a: any, b: any) => {
       const pA = priorityOrder[a.priority] || 3

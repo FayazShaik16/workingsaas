@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, hasScope } from "@/lib/auth/session"
+import { getOrCreateDefaultTaskType } from "@/lib/workledger/default-task-type"
+import { assertDepartmentScope } from "@/lib/workledger/permissions"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -12,101 +14,124 @@ export async function POST(req: Request) {
     const {
       title,
       description,
-      tokenValue,
+      creditValue,
+      credit_value,
+      tokenValue, // backwards-compat fallback input
       deadline,
       priority = "MEDIUM",
       orgUnitId,
-      skillTags,
-      validationMode,
-      requiresPeerReview,
+      visibilityScope: reqVisibilityScope,
+      targetOrgUnitIds = [],
+      verificationMode = "MANUAL_REPORT",
+      allowNomination = true,
+      assignedToId = null,
     } = await req.json()
 
-    if (!title?.trim() || !tokenValue) {
-      return NextResponse.json(
-        { error: "Task title and credit token value are required." },
-        { status: 400 }
-      )
+    if (!title?.trim()) {
+      return NextResponse.json({ error: "Task title is required." }, { status: 400 })
+    }
+
+    if (!description?.trim()) {
+      return NextResponse.json({ error: "Task description is required." }, { status: 400 })
+    }
+
+    const rawCredits = creditValue ?? credit_value ?? tokenValue
+    const credits = parseFloat(rawCredits)
+    if (isNaN(credits) || credits <= 0) {
+      return NextResponse.json({ error: "Credit value must be a positive number greater than 0." }, { status: 400 })
+    }
+
+    const isDirectorOrAdmin = hasScope(user.scopeLevels, "DIRECTOR") || hasScope(user.scopeLevels, "SYSTEM_ADMIN")
+    const isHOD = hasScope(user.scopeLevels, "ORG_UNIT_LEAD")
+
+    if (!isDirectorOrAdmin && !isHOD) {
+      return NextResponse.json({ error: "Only HOD, Director, or System Admin can create unstructured initiatives." }, { status: 403 })
     }
 
     const admin = createAdminClient()
     const db = admin as any
     const orgId = user.organizationId
 
-    const credits = parseFloat(tokenValue) || 1.0
+    // 1. Transactionally resolve non-null task_type_id
+    const taskTypeId = await getOrCreateDefaultTaskType(orgId)
+    if (!taskTypeId) {
+      return NextResponse.json({ error: "Failed to resolve default task type definition." }, { status: 500 })
+    }
+
+    // 2. Determine department scope and visibility
+    let finalOrgUnitId: string | null = null
+    let finalVisibilityScope: "ORGANIZATION" | "ORG_UNIT" = "ORGANIZATION"
+
+    if (isHOD && !isDirectorOrAdmin) {
+      // HOD can only create tasks for their own department
+      if (!user.orgUnitId) {
+        return NextResponse.json({ error: "Your account is not assigned to a department." }, { status: 403 })
+      }
+      finalOrgUnitId = user.orgUnitId
+      finalVisibilityScope = "ORG_UNIT"
+    } else {
+      // Director or System Admin
+      if (reqVisibilityScope === "ORG_UNIT" && orgUnitId) {
+        finalOrgUnitId = orgUnitId
+        finalVisibilityScope = "ORG_UNIT"
+      } else {
+        finalVisibilityScope = "ORGANIZATION"
+        finalOrgUnitId = orgUnitId || null
+      }
+    }
+
     const validPriority = ["LOW", "MEDIUM", "HIGH", "URGENT"].includes(priority) ? priority : "MEDIUM"
+    const validVerificationMode = verificationMode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT"
+    const nowIso = new Date().toISOString()
 
-    // 1. Find or create task type definition if validationMode specified
-    let taskTypeId: string | null = null
-    const { data: taskType } = await db
-      .from("task_type_definitions")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("category", "UNSTRUCTURED")
-      .limit(1)
-      .maybeSingle()
-
-    taskTypeId = taskType?.id || null
-
-    // Format description with skill tags and validation mode if provided
-    let enrichedDescription = description || ""
-    if (Array.isArray(skillTags) && skillTags.length > 0) {
-      enrichedDescription += `\n\n**Skills Required**: ${skillTags.join(", ")}`
-    }
-    if (validationMode) {
-      enrichedDescription += `\n**Verification Method**: ${validationMode}`
-    }
-
-    const isDirectorOrAdmin = hasScope(user.scopeLevels, "DIRECTOR") || hasScope(user.scopeLevels, "SYSTEM_ADMIN")
-    const visibilityScope = isDirectorOrAdmin ? "ORGANIZATION" : "ORG_UNIT"
-    const targetOrgUnitId = isDirectorOrAdmin ? (orgUnitId || null) : (user.orgUnitId || orgUnitId || null)
-
-    // 2. Insert the unstructured open pool task (standardized on credit_value & priority)
-    const taskPayload: any = {
+    // 3. Insert Task
+    const taskPayload = {
       organization_id: orgId,
-      org_unit_id: targetOrgUnitId,
+      org_unit_id: finalOrgUnitId,
       task_type_id: taskTypeId,
       category: "UNSTRUCTURED",
       priority: validPriority,
       title: title.trim(),
-      description: enrichedDescription,
+      description: description.trim(),
       credit_value: credits,
       creator_id: user.id,
-      assigned_to_id: null, // Open pool
-      status: "OPEN",
-      custom_fields: { visibility_scope: visibilityScope, skillTags, validationMode, priority: validPriority },
+      assigned_to_id: assignedToId || null,
+      status: assignedToId ? "ASSIGNED" : "OPEN",
+      visibility_scope: finalVisibilityScope,
+      verification_mode: validVerificationMode,
+      allow_nomination: allowNomination,
+      custom_fields: { targetOrgUnitIds },
       deadline: deadline ? new Date(deadline).toISOString() : null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
     }
 
-    // Try inserting with visibility_scope column, fallback to custom_fields
-    let newTask = null
-    const { data: inserted, error: insertError } = await db
+    const { data: newTask, error: insertErr } = await db
       .from("tasks")
-      .insert({ ...taskPayload, visibility_scope: visibilityScope })
+      .insert(taskPayload)
       .select()
       .single()
 
-    if (insertError) {
-      const { data: fallbackInserted, error: fallbackError } = await db
-        .from("tasks")
-        .insert(taskPayload)
-        .select()
-        .single()
+    if (insertErr || !newTask) {
+      console.error("[create-unstructured] insert error:", insertErr)
+      return NextResponse.json({ error: `Failed to create task: ${insertErr?.message}` }, { status: 500 })
+    }
 
-      if (fallbackError) {
-        console.error("[create-unstructured] insert error:", fallbackError)
-        throw new Error(`Failed to create unstructured task: ${fallbackError.message}`)
-      }
-      newTask = fallbackInserted
-    } else {
-      newTask = inserted
+    // 4. If Director specified targeted departments, insert into task_target_org_units
+    if (finalVisibilityScope === "ORGANIZATION" && Array.isArray(targetOrgUnitIds) && targetOrgUnitIds.length > 0) {
+      const targetRows = targetOrgUnitIds.map((uId: string) => ({
+        task_id: newTask.id,
+        org_unit_id: uId,
+        created_at: nowIso,
+      }))
+
+      await db.from("task_target_org_units").insert(targetRows)
     }
 
     return NextResponse.json({
       success: true,
       task: newTask,
-      message: "Unstructured task published to open marketplace successfully.",
+      message: "Unstructured initiative created and published successfully.",
     })
   } catch (error: any) {
     console.error("[create-unstructured] Error:", error)

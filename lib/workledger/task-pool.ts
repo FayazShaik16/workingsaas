@@ -8,10 +8,11 @@ export interface TaskPoolItem {
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
   status: string
   deadline?: string | null
-  verificationType: "MANUAL_REPORT" | "FILE_SUBMISSION"
+  verificationMode: "MANUAL_REPORT" | "FILE_SUBMISSION"
   visibilityScope: "ORGANIZATION" | "ORG_UNIT"
   orgUnitId?: string | null
   orgUnitName?: string | null
+  targetOrgUnitNames?: string[]
   isNominatedByMe: boolean
   nominationStatus?: string | null
   nominationCount: number
@@ -23,13 +24,13 @@ export async function getScopedTaskPool(
   userOrgUnitId: string | null,
   filters?: {
     priority?: string
-    verificationType?: string
+    verificationMode?: string
   }
 ): Promise<TaskPoolItem[]> {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Query open tasks for organization
+  // 1. Query open tasks with real verification_mode and relations
   let query = db
     .from("tasks")
     .select(`
@@ -40,17 +41,22 @@ export async function getScopedTaskPool(
       priority,
       status,
       deadline,
-      verification_type,
+      verification_mode,
       visibility_scope,
       org_unit_id,
+      custom_fields,
       org_units(name),
       nominations(id, user_id, status)
     `)
     .eq("organization_id", organizationId)
     .eq("status", "OPEN")
 
-  if (filters?.priority) {
+  if (filters?.priority && filters.priority !== "ALL") {
     query = query.eq("priority", filters.priority)
+  }
+
+  if (filters?.verificationMode && filters.verificationMode !== "ALL") {
+    query = query.eq("verification_mode", filters.verificationMode)
   }
 
   const { data: tasksData, error } = await query
@@ -63,10 +69,18 @@ export async function getScopedTaskPool(
   const filteredTasks: TaskPoolItem[] = []
 
   for (const t of tasksData || []) {
-    // If scoped to an ORG_UNIT, user must belong to that same ORG_UNIT
+    // A. Department-scoped task: only visible if user belongs to same org_unit
     if (t.visibility_scope === "ORG_UNIT" && t.org_unit_id) {
       if (!userOrgUnitId || userOrgUnitId !== t.org_unit_id) {
-        continue // Skip tasks from other departments
+        continue // Skip department task from another department
+      }
+    }
+
+    // B. Organization-scoped task with explicit targets in custom_fields
+    const targetUnitIds = t.custom_fields?.targetOrgUnitIds
+    if (t.visibility_scope === "ORGANIZATION" && Array.isArray(targetUnitIds) && targetUnitIds.length > 0) {
+      if (!userOrgUnitId || !targetUnitIds.includes(userOrgUnitId)) {
+        continue // Skip task not targeted to user's department
       }
     }
 
@@ -80,7 +94,7 @@ export async function getScopedTaskPool(
       priority: (t.priority || "MEDIUM") as any,
       status: t.status,
       deadline: t.deadline,
-      verificationType: t.verification_type === "FILE_UPLOAD" ? "FILE_SUBMISSION" : "MANUAL_REPORT",
+      verificationMode: t.verification_mode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT",
       visibilityScope: t.visibility_scope || "ORGANIZATION",
       orgUnitId: t.org_unit_id,
       orgUnitName: t.org_units?.name || null,

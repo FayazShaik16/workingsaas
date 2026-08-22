@@ -40,6 +40,7 @@ export interface MarketplaceTask {
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
   status: string
   visibility_scope?: string
+  verification_mode?: "MANUAL_REPORT" | "FILE_SUBMISSION"
   deadline: string | null
   created_at: string
   creator_name?: string
@@ -238,6 +239,9 @@ export function MarketplaceDiscoveryGrid({
                       {renderPriorityBadge(task.priority)}
                       <Badge variant="outline" className="text-[10px]">
                         {task.visibility_scope === "ORGANIZATION" ? "Org-Wide" : "Department"}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">
+                        {task.verification_mode === "FILE_SUBMISSION" ? "File Proof" : "Report"}
                       </Badge>
                     </div>
                     <Badge variant="secondary" className="font-mono text-xs font-bold shrink-0">
