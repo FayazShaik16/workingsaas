@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     // 2. Check open day rule (e.g. Day 26)
     const currentDay = new Date().getDate()
-    const openDay = Number((ctx.activeWorkCycle as any).salary_request_opens_day ?? ctx.activeWorkCycle.salary_request_open_day ?? 26)
+    const openDay = Number(ctx.activeWorkCycle.salary_request_open_day ?? (ctx.activeWorkCycle as any).salary_request_opens_day ?? 26)
     if (currentDay < openDay) {
       return NextResponse.json(
         {
