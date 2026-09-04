@@ -43,6 +43,7 @@ interface TaskCreatorWizardProps {
   role: "LEAD" | "DIRECTOR"
   orgUnits: OrgUnit[]
   defaultOrgUnitId?: string
+  facultyMembers?: { id: string; name: string; email: string }[]
 }
 
 const COMMON_SKILL_TAGS = [
@@ -63,6 +64,7 @@ export function TaskCreatorWizard({
   role,
   orgUnits,
   defaultOrgUnitId,
+  facultyMembers = [],
 }: TaskCreatorWizardProps) {
   const router = useRouter()
 
@@ -71,6 +73,7 @@ export function TaskCreatorWizard({
   const [tokenValue, setTokenValue] = useState("5.0")
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM")
   const [orgUnitId, setOrgUnitId] = useState(defaultOrgUnitId || orgUnits[0]?.id || "")
+  const [assignedFacultyId, setAssignedFacultyId] = useState<string>("NONE")
   const [deadline, setDeadline] = useState(
     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   )
@@ -115,6 +118,7 @@ export function TaskCreatorWizard({
           creditValue: parseFloat(tokenValue) || 1.0,
           priority,
           deadline,
+          assignedToId: assignedFacultyId !== "NONE" ? assignedFacultyId : undefined,
           orgUnitId: orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null),
           visibilityScope: orgUnitId === "INSTITUTION_WIDE" ? "ORGANIZATION" : "ORG_UNIT",
           verificationMode: validationMode === "FILE_PROOF" ? "FILE_SUBMISSION" : "MANUAL_REPORT",
@@ -128,9 +132,12 @@ export function TaskCreatorWizard({
         throw new Error(data.error || "Failed to create task")
       }
 
+      const assignedFac = facultyMembers.find((f) => f.id === assignedFacultyId)
       setFeedback({
         type: "success",
-        text: `Unstructured task "${title}" published to Open Marketplace!`,
+        text: assignedFac
+          ? `Task "${title}" created and directly assigned to ${assignedFac.name}!`
+          : `Unstructured task "${title}" published to Open Marketplace!`,
       })
 
       setTimeout(() => {
@@ -338,6 +345,33 @@ export function TaskCreatorWizard({
                 </p>
               </div>
             </div>
+
+            {/* Direct Faculty Assignment (Optional) */}
+            {facultyMembers && facultyMembers.length > 0 && (
+              <div className="space-y-1.5 p-4 rounded-xl border border-muted/80 bg-muted/20">
+                <Label htmlFor="assignedFaculty" className="text-xs font-semibold flex items-center gap-1.5">
+                  <UserCheck className="h-4 w-4 text-primary" /> Direct Faculty Assignment (Optional)
+                </Label>
+                <Select value={assignedFacultyId} onValueChange={setAssignedFacultyId} disabled={isSubmitting}>
+                  <SelectTrigger id="assignedFaculty" className="rounded-xl text-xs">
+                    <SelectValue placeholder="Open Task Pool (Self-Nomination)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE" className="text-xs font-medium text-amber-600">
+                      ⚡ Open Task Pool (Self-Nomination)
+                    </SelectItem>
+                    {facultyMembers.map((f) => (
+                      <SelectItem key={f.id} value={f.id} className="text-xs">
+                        {f.name} ({f.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Direct assignments are validated against faculty timetables and existing tasks to prevent scheduling collisions.
+                </p>
+              </div>
+            )}
 
             {/* Validation Mode & Verification */}
             <div className="space-y-2">

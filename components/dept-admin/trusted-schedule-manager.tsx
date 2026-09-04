@@ -93,6 +93,30 @@ export function TrustedScheduleManager({
       return
     }
 
+    if (addStartTime >= addEndTime) {
+      setSaveError("Start time must be earlier than end time.")
+      return
+    }
+
+    // Pre-check for time slot conflicts
+    const conflictingTemplate = templates.find((t) => {
+      if (t.status === "ARCHIVED") return false
+      if (t.work_cycle_id !== selectedCycleId) return false
+      if (t.assigned_to_id !== addFacultyId) return false
+      if (t.weekly_day !== addDay) return false
+
+      const tStart = (t.start_time || "").slice(0, 5)
+      const tEnd = (t.end_time || "").slice(0, 5)
+      return tStart < addEndTime && addStartTime < tEnd
+    })
+
+    if (conflictingTemplate) {
+      setSaveError(
+        `This faculty member already has an assigned task ("${conflictingTemplate.title || "Scheduled Work"}") at ${conflictingTemplate.start_time.slice(0, 5)}-${conflictingTemplate.end_time.slice(0, 5)} on ${addDay}. Multiple assignments for the same faculty at overlapping time slots are prohibited.`
+      )
+      return
+    }
+
     setIsSaving(true)
     setSaveError(null)
 

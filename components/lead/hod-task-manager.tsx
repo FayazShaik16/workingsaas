@@ -43,6 +43,7 @@ import {
   X,
   SlidersHorizontal,
   RotateCcw,
+  UserCheck,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -131,6 +132,13 @@ export function HODTaskManager({
   const [rejectReason, setRejectReason] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Faculty Assignment Modal State
+  const [assigningTask, setAssigningTask] = useState<DepartmentTask | null>(null)
+  const [assignFacultyId, setAssignFacultyId] = useState<string>("")
+  const [assignDate, setAssignDate] = useState<string>("")
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [isAssigning, setIsAssigning] = useState(false)
 
   // Date filtering logic
   const isDateInPeriod = (dateStr?: string): boolean => {
@@ -355,6 +363,86 @@ export function HODTaskManager({
       setFeedback({ type: "error", text: err.message || "Failed to reject task." })
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  // Open assign modal
+  const handleOpenAssignModal = (task: DepartmentTask) => {
+    setAssigningTask(task)
+    setAssignFacultyId(task.assignedToId || facultyMembers[0]?.id || "")
+    setAssignDate(task.deadline ? task.deadline.slice(0, 10) : new Date().toISOString().slice(0, 10))
+    setAssignError(null)
+  }
+
+  // Confirm assign with collision prevention
+  const handleConfirmAssign = async () => {
+    if (!assigningTask || !assignFacultyId) return
+    setIsAssigning(true)
+    setAssignError(null)
+
+    // Inline pre-validation check against currently loaded tasks
+    const targetDate = assignDate || (assigningTask.deadline ? assigningTask.deadline.slice(0, 10) : "")
+    if (targetDate) {
+      const conflict = tasks.find((t) => {
+        if (t.id === assigningTask.id) return false
+        if (t.assignedToId !== assignFacultyId) return false
+        if (!["ASSIGNED", "IN_PROGRESS", "PENDING_VERIFICATION", "LEAD_SIGNED", "CLOSED"].includes(t.status)) return false
+        const tDate = t.deadline ? t.deadline.slice(0, 10) : ""
+        return tDate === targetDate && t.title.toLowerCase().trim() === assigningTask.title.toLowerCase().trim()
+      })
+
+      if (conflict) {
+        const facName = facultyMembers.find((f) => f.id === assignFacultyId)?.name || "This faculty member"
+        setAssignError(
+          `Collision detected: ${facName} is already assigned to "${conflict.title}" on ${targetDate}. Multiple assignments for the same task on the same date are prohibited.`
+        )
+        setIsAssigning(false)
+        return
+      }
+    }
+
+    try {
+      const res = await fetch("/api/tasks/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: assigningTask.id,
+          facultyId: assignFacultyId,
+          deadline: assignDate,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to assign task.")
+      }
+
+      const assignedFac = facultyMembers.find((f) => f.id === assignFacultyId)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === assigningTask.id
+            ? {
+                ...t,
+                status: "ASSIGNED",
+                assignedToId: assignFacultyId,
+                assignedToName: assignedFac?.name,
+                assignedToEmail: assignedFac?.email,
+                deadline: assignDate,
+              }
+            : t
+        )
+      )
+
+      setFeedback({
+        type: "success",
+        text: `Task "${assigningTask.title}" successfully assigned to ${assignedFac?.name}.`,
+      })
+      setAssigningTask(null)
+      router.refresh()
+    } catch (err: any) {
+      setAssignError(err.message || "Failed to assign task.")
+    } finally {
+      setIsAssigning(false)
     }
   }
 
@@ -854,6 +942,20 @@ export function HODTaskManager({
                             </Button>
                           )}
 
+                          {/* Assign / Reassign Button */}
+                          {!isApproved && (!task.assignedToId || task.status === "OPEN" || task.status === "ASSIGNED") && facultyMembers.length > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenAssignModal(task)}
+                              disabled={isProcessing || isAssigning}
+                              className="h-8 text-xs text-primary border-primary/25 hover:bg-primary/10 rounded-xl"
+                            >
+                              <UserCheck className="h-3.5 w-3.5 mr-1" />
+                              {task.assignedToId ? "Reassign" : "Assign"}
+                            </Button>
+                          )}
+
                           {isAwaitingReview && (
                             <>
                               <Button
@@ -999,6 +1101,78 @@ export function HODTaskManager({
               className="rounded-xl text-xs"
             >
               {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm Return"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 6. ASSIGN FACULTY MODAL (COLLISION PROTECTED)                 */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <Dialog open={!!assigningTask} onOpenChange={(open) => !open && setAssigningTask(null)}>
+        <DialogContent className="sm:max-w-md rounded-2xl border-border">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-primary" /> Assign Task to Faculty
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Assign "{assigningTask?.title}" (+{assigningTask?.creditValue.toFixed(1)} WORK) with collision protection.
+            </DialogDescription>
+          </DialogHeader>
+
+          {assignError && (
+            <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{assignError}</span>
+            </div>
+          )}
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Select Faculty Member</Label>
+              <Select value={assignFacultyId} onValueChange={setAssignFacultyId}>
+                <SelectTrigger className="rounded-xl text-xs">
+                  <SelectValue placeholder="Select faculty member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facultyMembers.map((fac) => (
+                    <SelectItem key={fac.id} value={fac.id} className="text-xs">
+                      {fac.name} {fac.designation ? `(${fac.designation})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Scheduled Date / Deadline</Label>
+              <Input
+                type="date"
+                value={assignDate}
+                onChange={(e) => setAssignDate(e.target.value)}
+                className="rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAssigningTask(null)}
+              disabled={isAssigning}
+              className="rounded-xl text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmAssign}
+              disabled={isAssigning || !assignFacultyId}
+              className="rounded-xl text-xs bg-primary hover:bg-primary/90"
+            >
+              {isAssigning ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <UserCheck className="h-3.5 w-3.5 mr-1" />}
+              Confirm Assignment
             </Button>
           </DialogFooter>
         </DialogContent>

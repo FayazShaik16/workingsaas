@@ -21,6 +21,19 @@ export default async function LeadNewTaskPage({ params }: PageProps) {
     .eq("organization_id", orgId)
     .order("name", { ascending: true })
 
+  // Fetch teaching staff for this department
+  let facultyMembersQuery = db
+    .from("users")
+    .select("id, name, email")
+    .eq("organization_id", orgId)
+    .order("name", { ascending: true })
+
+  if (user.orgUnitId) {
+    facultyMembersQuery = facultyMembersQuery.eq("org_unit_id", user.orgUnitId)
+  }
+
+  const { data: facultyMembers } = await facultyMembersQuery
+
   return (
     <div className="p-6 md:p-8">
       <TaskCreatorWizard
@@ -28,6 +41,7 @@ export default async function LeadNewTaskPage({ params }: PageProps) {
         role="LEAD"
         orgUnits={orgUnits || []}
         defaultOrgUnitId={user.orgUnitId || undefined}
+        facultyMembers={facultyMembers || []}
       />
     </div>
   )

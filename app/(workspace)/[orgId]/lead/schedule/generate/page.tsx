@@ -27,6 +27,8 @@ export default function RecurringScheduleGenerator() {
   const [taskTypeId, setTaskTypeId] = useState("")
   const [weeks, setWeeks] = useState("4")
   const [dayOfWeek, setDayOfWeek] = useState("1") // 1 = Monday, etc.
+  const [startTime, setStartTime] = useState("09:15")
+  const [endTime, setEndTime] = useState("10:15")
 
   // Database option states
   const [users, setUsers] = useState<any[]>([])
@@ -80,16 +82,19 @@ export default function RecurringScheduleGenerator() {
 
     try {
       if (!taskTitle.trim() || !assignedUserId || !taskTypeId || !orgUnitId) {
-        throw new Error("All fields are required")
+        throw new Error("All fields are required.")
+      }
+
+      if (startTime >= endTime) {
+        throw new Error("Start time must be strictly earlier than end time.")
       }
 
       const numWeeks = parseInt(weeks)
       const tasksToInsert = []
 
-      // Generate task records for each week
+      // Generate task records for each week and check for collisions
       for (let i = 0; i < numWeeks; i++) {
         const date = new Date()
-        // Calculate next occurrence of the day of the week
         const currentDay = date.getDay()
         const targetDay = parseInt(dayOfWeek)
         let daysToAdd = targetDay - currentDay
@@ -97,17 +102,64 @@ export default function RecurringScheduleGenerator() {
         daysToAdd += i * 7 // Add weeks offset
 
         date.setDate(date.getDate() + daysToAdd)
+        const dateStr = date.toISOString().split("T")[0]
+
+        // 1. Collision check against existing tasks for this faculty on this date
+        const dayStart = `${dateStr}T00:00:00.000Z`
+        const dayEnd = `${dateStr}T23:59:59.999Z`
+        const { data: existingTasks } = await (supabase as any)
+          .from("tasks")
+          .select("id, title")
+          .eq("assigned_to_id", assignedUserId)
+          .gte("deadline", dayStart)
+          .lte("deadline", dayEnd)
+          .in("status", ["OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING_VERIFICATION", "LEAD_SIGNED", "CLOSED"])
+
+        const duplicate = (existingTasks || []).find((ext: any) =>
+          ext.title.toLowerCase().includes(taskTitle.trim().toLowerCase())
+        )
+
+        if (duplicate) {
+          throw new Error(
+            `Scheduling conflict on ${dateStr}: Faculty is already assigned to "${duplicate.title}". Multiple assignments for the same task on the same date are prohibited.`
+          )
+        }
+
+        // 2. Collision check against scheduled_work_instances for this faculty on this date
+        const { data: existingInstances } = await (supabase as any)
+          .from("scheduled_work_instances")
+          .select("id, scheduled_start, scheduled_end, status")
+          .eq("assigned_to_id", assignedUserId)
+          .eq("work_date", dateStr)
+          .neq("status", "CANCELLED")
+
+        const hasTimeOverlap = (existingInstances || []).some((inst: any) => {
+          const sDate = new Date(inst.scheduled_start)
+          const eDate = new Date(inst.scheduled_end)
+          const instStart = !isNaN(sDate.getTime()) ? sDate.toISOString().slice(11, 16) : ""
+          const instEnd = !isNaN(eDate.getTime()) ? eDate.toISOString().slice(11, 16) : ""
+          if (instStart && instEnd) {
+            return instStart < endTime && startTime < instEnd
+          }
+          return false
+        })
+
+        if (hasTimeOverlap) {
+          throw new Error(
+            `Time slot conflict on ${dateStr}: Faculty already has a scheduled class/session overlapping with ${startTime}-${endTime}. Multiple assignments at overlapping time slots are prohibited.`
+          )
+        }
 
         tasksToInsert.push({
           organization_id: orgId,
           org_unit_id: orgUnitId,
           task_type_id: taskTypeId,
           category: "STRUCTURED",
-          title: `${taskTitle} (Week ${i + 1})`,
+          title: `${taskTitle.trim()} (Week ${i + 1}, ${startTime}-${endTime})`,
           credit_value: parseFloat(creditValue),
           assigned_to_id: assignedUserId,
           status: "ASSIGNED",
-          deadline: date.toISOString(),
+          deadline: `${dateStr}T${endTime}:00.000Z`,
         })
       }
 
@@ -203,6 +255,34 @@ export default function RecurringScheduleGenerator() {
                   <SelectItem value="0">Sunday</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Start Time (24h)</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End Time (24h)</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="font-mono text-xs"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

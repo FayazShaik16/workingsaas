@@ -49,6 +49,20 @@ export async function generateInstancesForMonth(params: {
 
   const instancesToInsert: any[] = []
   const facultyIds = new Set<string>()
+  const seenFacultyDaySlot = new Set<string>()
+
+  // Fetch already existing instances for this cycle and month to avoid duplicating any time slot
+  const { data: existingMonthInstances } = await db
+    .from("scheduled_work_instances")
+    .select("assigned_to_id, work_date, scheduled_start")
+    .eq("organization_id", organizationId)
+    .eq("work_cycle_id", workCycleId)
+    .gte("work_date", startDate.toISOString().split("T")[0])
+    .lte("work_date", endDate.toISOString().split("T")[0])
+
+  for (const ext of existingMonthInstances || []) {
+    seenFacultyDaySlot.add(`${ext.assigned_to_id}_${ext.work_date}_${ext.scheduled_start}`)
+  }
 
   for (let day = 1; day <= totalDays; day++) {
     const currentDate = new Date(Date.UTC(year, month - 1, day))
@@ -70,6 +84,13 @@ export async function generateInstancesForMonth(params: {
         const endTimeIso = new Date(
           Date.UTC(year, month - 1, day, Number(endParts[0]) || 10, Number(endParts[1]) || 0)
         ).toISOString()
+
+        const slotKey = `${tmpl.assigned_to_id}_${dateString}_${startTimeIso}`
+        if (seenFacultyDaySlot.has(slotKey)) {
+          // A session is already scheduled for this faculty at this exact time slot. Skip duplicate.
+          continue
+        }
+        seenFacultyDaySlot.add(slotKey)
 
         instancesToInsert.push({
           organization_id: organizationId,

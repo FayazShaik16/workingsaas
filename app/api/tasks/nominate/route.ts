@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     // 1. Fetch task to verify it is OPEN and allow_nomination is true
     const { data: task, error: taskError } = await db
       .from("tasks")
-      .select("id, title, organization_id, status, allow_nomination, visibility_scope, org_unit_id")
+      .select("id, title, organization_id, status, allow_nomination, visibility_scope, org_unit_id, deadline")
       .eq("id", taskId)
       .single()
 
@@ -49,6 +49,31 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: "You can only self-nominate for tasks within your department." },
           { status: 403 }
+        )
+      }
+    }
+
+    // 3. Collision check against active tasks for this user
+    if (task.deadline) {
+      const taskDate = task.deadline.slice(0, 10)
+      const { data: duplicateTask } = await db
+        .from("tasks")
+        .select("id, title")
+        .eq("assigned_to_id", user.id)
+        .eq("title", task.title)
+        .gte("deadline", `${taskDate}T00:00:00.000Z`)
+        .lte("deadline", `${taskDate}T23:59:59.999Z`)
+        .neq("status", "CANCELLED")
+        .neq("status", "REJECTED")
+        .limit(1)
+        .maybeSingle()
+
+      if (duplicateTask) {
+        return NextResponse.json(
+          {
+            error: `Self-nomination conflict: You already have an active assignment for "${duplicateTask.title}" on ${taskDate}. Multiple assignments for the same task on the same date are prohibited.`,
+          },
+          { status: 400 }
         )
       }
     }
