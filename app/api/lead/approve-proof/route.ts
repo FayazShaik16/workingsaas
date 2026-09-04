@@ -50,12 +50,21 @@ export async function POST(req: Request) {
     // Fetch the task details
     const { data: task, error: taskErr } = await db
       .from("tasks")
-      .select("id, title, credit_value, organization_id, org_unit_id, assigned_to_id")
+      .select("id, title, credit_value, organization_id, org_unit_id, assigned_to_id, status, lead_signed_at")
       .eq("id", targetTaskId)
       .single()
 
     if (taskErr || !task) {
       return NextResponse.json({ error: "Task record not found." }, { status: 404 })
+    }
+
+    if (task.status === "LEAD_SIGNED" || task.status === "CLOSED" || task.lead_signed_at) {
+      return NextResponse.json(
+        {
+          error: `Task "${task.title}" has already been approved and signed off. Duplicate reward disbursements are prohibited.`,
+        },
+        { status: 400 }
+      )
     }
 
     if (task.org_unit_id) {
@@ -72,6 +81,22 @@ export async function POST(req: Request) {
     const nowIso = new Date().toISOString()
     const reviewFeedback = feedback || comment || "Task deliverable approved by Department Lead"
     const idempotencyKey = `adhoc_proof_${targetProofId || targetTaskId}_${facultyId}`
+
+    // Check if rewards were already disbursed via ledger
+    const { data: existingLedger } = await db
+      .from("credit_ledger_entries")
+      .select("id")
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle()
+
+    if (existingLedger) {
+      return NextResponse.json(
+        {
+          error: `Reward credits for task "${task.title}" have already been disbursed to the faculty wallet.`,
+        },
+        { status: 400 }
+      )
+    }
 
     // 1. Record decision in task_peer_reviews
     try {

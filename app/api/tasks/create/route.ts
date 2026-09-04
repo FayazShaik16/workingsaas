@@ -61,6 +61,30 @@ export async function POST(req: Request) {
       updated_at: nowIso,
     }
 
+    if (assignedToId && deadline) {
+      const targetDate = new Date(deadline).toISOString().slice(0, 10)
+      const { data: existingTask } = await db
+        .from("tasks")
+        .select("id, title")
+        .eq("assigned_to_id", assignedToId)
+        .eq("title", title.trim())
+        .gte("deadline", `${targetDate}T00:00:00.000Z`)
+        .lte("deadline", `${targetDate}T23:59:59.999Z`)
+        .neq("status", "CANCELLED")
+        .neq("status", "REJECTED")
+        .limit(1)
+        .maybeSingle()
+
+      if (existingTask) {
+        return NextResponse.json(
+          {
+            error: `Task assignment conflict: The selected faculty member is already assigned to "${existingTask.title}" on ${targetDate}. Duplicate assignments for the same task and date are prohibited.`,
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data: inserted, error: insertError } = await db
       .from("tasks")
       .insert(taskPayload)

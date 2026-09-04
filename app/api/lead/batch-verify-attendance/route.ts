@@ -28,6 +28,7 @@ export async function POST(req: Request) {
         id,
         organization_id,
         faculty_id,
+        status,
         conducted_on,
         timetable_slot_id,
         timetable_slots (
@@ -59,6 +60,11 @@ export async function POST(req: Request) {
       const classDate = record.conducted_on
 
       if (isApprove) {
+        // Prevent duplicate approval & reward accumulation for already-conducted records
+        if (record.status === "CONDUCTED") {
+          continue
+        }
+
         // A. Mark attendance_record as CONDUCTED
         await db
           .from("attendance_records")
@@ -90,7 +96,18 @@ export async function POST(req: Request) {
             .eq("id", task.id)
         }
 
-        // C. Disburse tokens to faculty's PERSONAL wallet
+        // C. Check idempotency key before disbursing tokens
+        const attendanceIdempotencyKey = `attendance-${record.id}-reward`
+        const { data: existingLedger } = await db
+          .from("credit_ledger_entries")
+          .select("id")
+          .eq("idempotency_key", attendanceIdempotencyKey)
+          .maybeSingle()
+
+        if (existingLedger) {
+          continue
+        }
+
         let { data: wallet } = await db
           .from("wallets")
           .select("id, balance")

@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { taskId, facultyId, assigneeId, nominationId } = await req.json()
+    const { taskId, facultyId, assigneeId, nominationId, deadline } = await req.json()
     const targetFacultyId = facultyId || assigneeId
 
     if (!taskId || !targetFacultyId) {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // 1. Fetch task
     const { data: task, error: taskError } = await db
       .from("tasks")
-      .select("id, title, organization_id, org_unit_id, visibility_scope, status")
+      .select("id, title, organization_id, org_unit_id, visibility_scope, status, source_timetable_slot_id, deadline")
       .eq("id", taskId)
       .single()
 
@@ -57,15 +57,128 @@ export async function POST(req: Request) {
       }
     }
 
+    const effectiveDeadline = deadline || task.deadline
+
+    // 4. Scheduling & duplicate assignment collision check
+    if (task.source_timetable_slot_id) {
+      const { data: duplicateSlotTask } = await db
+        .from("tasks")
+        .select("id, title")
+        .eq("assigned_to_id", targetFacultyId)
+        .eq("source_timetable_slot_id", task.source_timetable_slot_id)
+        .neq("status", "CANCELLED")
+        .neq("status", "REJECTED")
+        .neq("id", taskId)
+        .limit(1)
+        .maybeSingle()
+
+      if (duplicateSlotTask) {
+        return NextResponse.json(
+          {
+            error: `Task assignment conflict: Faculty ${facultyUser.name} is already assigned to a task for this timetable slot ("${duplicateSlotTask.title}"). Duplicate task assignments for the same slot are prohibited.`,
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check slot time interval overlaps
+      const { data: targetSlot } = await db
+        .from("timetable_slots")
+        .select("id, day_of_week, start_time, end_time")
+        .eq("id", task.source_timetable_slot_id)
+        .maybeSingle()
+
+      if (targetSlot) {
+        const { data: facultySlots } = await db
+          .from("timetable_slots")
+          .select("id, day_of_week, start_time, end_time")
+          .eq("faculty_id", targetFacultyId)
+          .eq("day_of_week", targetSlot.day_of_week)
+          .neq("id", targetSlot.id)
+
+        const slotConflict = facultySlots?.find((s: any) =>
+          s.start_time < targetSlot.end_time && targetSlot.start_time < s.end_time
+        )
+
+        if (slotConflict) {
+          return NextResponse.json(
+            {
+              error: `Timetable slot conflict: Faculty ${facultyUser.name} already has a class assigned at ${slotConflict.start_time}-${slotConflict.end_time} on ${targetSlot.day_of_week}. Overlapping time slots are prohibited.`,
+            },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
+    if (effectiveDeadline) {
+      const taskDate = new Date(effectiveDeadline).toISOString().slice(0, 10)
+      const { data: duplicateTask } = await db
+        .from("tasks")
+        .select("id, title")
+        .eq("assigned_to_id", targetFacultyId)
+        .eq("title", task.title)
+        .gte("deadline", `${taskDate}T00:00:00.000Z`)
+        .lte("deadline", `${taskDate}T23:59:59.999Z`)
+        .neq("status", "CANCELLED")
+        .neq("status", "REJECTED")
+        .neq("id", taskId)
+        .limit(1)
+        .maybeSingle()
+
+      if (duplicateTask) {
+        return NextResponse.json(
+          {
+            error: `Task assignment conflict: Faculty ${facultyUser.name} already has an active assignment for "${task.title}" on this date (${taskDate}). Duplicate assignments for the same task and date are prohibited.`,
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check if target faculty has overlapping scheduled_work_instances
+      const { data: instances } = await db
+        .from("scheduled_work_instances")
+        .select("id, title, scheduled_start, scheduled_end, status")
+        .eq("assigned_to_id", targetFacultyId)
+        .eq("work_date", taskDate)
+        .neq("status", "CANCELLED")
+
+      if (instances && instances.length > 0 && task.source_timetable_slot_id) {
+        const { data: slot } = await db
+          .from("timetable_slots")
+          .select("start_time, end_time")
+          .eq("id", task.source_timetable_slot_id)
+          .maybeSingle()
+
+        if (slot?.start_time && slot?.end_time) {
+          const instConflict = instances.find((inst: any) => {
+            const s = inst.scheduled_start?.slice(11, 16)
+            const e = inst.scheduled_end?.slice(11, 16)
+            return s && e && s < slot.end_time && slot.start_time < e
+          })
+
+          if (instConflict) {
+            return NextResponse.json(
+              {
+                error: `Schedule collision: Faculty ${facultyUser.name} has an active class/session ("${instConflict.title}") on ${taskDate} during this time slot. Overlapping assignments are prohibited.`,
+              },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    }
+
     const nowIso = new Date().toISOString()
 
-    // 4. Update task assignment
+    // 5. Update task assignment
     const { data: updatedTask, error: updateErr } = await db
       .from("tasks")
       .update({
         assigned_to_id: targetFacultyId,
         assigned_by_id: user.id,
         status: "ASSIGNED",
+        deadline: effectiveDeadline ? new Date(effectiveDeadline).toISOString() : task.deadline,
         updated_at: nowIso,
       })
       .eq("id", taskId)
