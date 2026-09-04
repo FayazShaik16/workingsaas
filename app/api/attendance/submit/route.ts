@@ -57,10 +57,10 @@ export async function POST(req: Request) {
         const { data: updated } = await db
           .from("attendance_records")
           .update({
-            status: "VERIFIED",
+            status: "CONDUCTED",
             conducted_on: classDate,
-            class_date: classDate,
-            updated_at: new Date().toISOString(),
+            marked_at: new Date().toISOString(),
+            topic_covered: topicCovered || "Teaching Session Conducted",
           })
           .eq("id", existingRecord.id)
           .select()
@@ -72,10 +72,10 @@ export async function POST(req: Request) {
           organization_id: orgId,
           timetable_slot_id: timetableSlotId,
           faculty_id: user.id,
-          status: "VERIFIED",
-          class_date: classDate,
+          status: "CONDUCTED",
           conducted_on: classDate,
-          created_at: new Date().toISOString(),
+          marked_at: new Date().toISOString(),
+          topic_covered: topicCovered || "Teaching Session Conducted",
         }
 
         const { data: inserted, error: insError } = await db
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
           .from("tasks")
           .update({
             status: "CLOSED",
-            completed_at: new Date().toISOString(),
+            lead_signed_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", targetTaskId)
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
           .from("tasks")
           .update({
             status: "CLOSED",
-            completed_at: new Date().toISOString(),
+            lead_signed_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", targetTaskId)
@@ -145,7 +145,7 @@ export async function POST(req: Request) {
       const newBal = Number(userWallet.balance || 0) + creditValue
       await db
         .from("wallets")
-        .update({ balance: newBal, updated_at: new Date().toISOString() })
+        .update({ balance: newBal })
         .eq("id", userWallet.id)
     }
 

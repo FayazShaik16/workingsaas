@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
@@ -16,47 +16,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please enter a valid loan amount." }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const db = supabase as any
+    const admin = createAdminClient()
+    const db = admin as any
     const orgId = user.organizationId
 
-    // Insert into loan_requests / loans table
+    // Insert into loans table
     const { data: newLoan, error: loanError } = await db
-      .from("loan_requests")
+      .from("loans")
       .insert({
         organization_id: orgId,
-        borrower_user_id: user.id,
+        user_id: user.id,
         amount: requestedAmount,
+        remaining: requestedAmount,
         reason: reason || "Bridging monthly target credit deficit for salary authorization.",
+        buffer_eligible: true,
         status: "PENDING",
-        created_at: new Date().toISOString(),
       })
       .select()
       .single()
 
     if (loanError) {
-      // Also try loans table
-      const { data: fallbackLoan, error: fallbackErr } = await db
-        .from("loans")
-        .insert({
-          organization_id: orgId,
-          user_id: user.id,
-          amount: requestedAmount,
-          status: "PENDING",
-          description: reason || "Work loan deficit advance",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
-
-      if (fallbackErr) {
-        throw new Error(`Failed to submit loan request: ${fallbackErr.message}`)
-      }
+      console.error("[request-loan] insert error:", loanError)
+      return NextResponse.json(
+        { error: `Failed to submit loan request: ${loanError.message}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
+      loan: newLoan,
       amount: requestedAmount,
       message: `Work-loan request for ${requestedAmount} WORK tokens submitted to Director Loan Desk.`,
     })

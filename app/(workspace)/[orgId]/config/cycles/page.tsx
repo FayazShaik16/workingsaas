@@ -7,19 +7,19 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: "Work Cycles | Department Admin",
-  description: "Institutional monthly accounting periods, target weights, and salary threshold definitions.",
+  title: "Work Cycles Management | System Admin",
+  description: "Configure and manage dynamic institutional work cycles, formulas, and salary authorization gates.",
 }
 
-export default async function DeptAdminWorkCyclesPage({ params }: PageProps) {
+export default async function SystemAdminWorkCyclesPage({ params }: PageProps) {
   const { orgId } = await params
   const user = await requireAuth()
-  await requireScope("DEPT_ADMIN", "DIRECTOR", "SYSTEM_ADMIN")
+  await requireScope("SYSTEM_ADMIN", "DIRECTOR")
 
   const admin = createAdminClient()
   const db = admin as any
 
-  // Fetch all work cycles for the organization
+  // Fetch all work cycles for this organization ordered by start date
   const { data: cycles } = await db
     .from("work_cycles")
     .select("*")

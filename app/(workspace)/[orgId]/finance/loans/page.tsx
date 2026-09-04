@@ -16,18 +16,23 @@ export default async function FinanceLoansPage({ params }: PageProps) {
 
   const supabase = await createClient()
 
-  const { data: loans } = await supabase
-    .from("loan_requests")
+  const { data: loans, error } = await supabase
+    .from("loans")
     .select(`
       id,
       amount,
+      remaining,
       reason,
       status,
       created_at,
-      users:borrower_user_id(name, email)
+      users:user_id(name, email)
     `)
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
+
+  if (error) {
+    console.warn("[finance/loans] query error:", error.message)
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -57,6 +62,7 @@ export default async function FinanceLoansPage({ params }: PageProps) {
                 <TableRow>
                   <TableHead>Borrower</TableHead>
                   <TableHead>Principal Amount</TableHead>
+                  <TableHead>Remaining</TableHead>
                   <TableHead>Purpose</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Issued Date</TableHead>
@@ -70,6 +76,7 @@ export default async function FinanceLoansPage({ params }: PageProps) {
                       <div className="text-xs text-muted-foreground">{l.users?.email}</div>
                     </TableCell>
                     <TableCell className="font-mono font-semibold">{Number(l.amount).toLocaleString()} WORK</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{Number(l.remaining ?? l.amount).toLocaleString()} WORK</TableCell>
                     <TableCell className="text-sm">{l.reason || "General Advance"}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{l.status}</Badge>

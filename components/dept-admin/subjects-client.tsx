@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { BookOpen, Plus, Loader2 } from "lucide-react"
+import { BookOpen, Plus, Loader2, Trash2 } from "lucide-react"
 
 interface Subject {
   id: string
@@ -41,6 +41,7 @@ export function SubjectsClient({ orgId, programmes, initialSubjects }: SubjectsC
   const [semester, setSemester] = useState(1)
   const [programId, setProgramId] = useState(programmes[0]?.id || "")
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -83,6 +84,29 @@ export function SubjectsClient({ orgId, programmes, initialSubjects }: SubjectsC
       setErrorMsg(err.message || "Failed to create subject")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this course subject?")) return
+    setDeletingId(id)
+    try {
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_SUBJECT",
+          payload: { id, orgId },
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to delete subject")
+      setSubjects((prev) => prev.filter((s) => s.id !== id))
+      router.refresh()
+    } catch (err: any) {
+      alert(err.message || "Failed to delete subject")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -229,6 +253,7 @@ export function SubjectsClient({ orgId, programmes, initialSubjects }: SubjectsC
                   <TableHead className="font-bold text-xs">Format</TableHead>
                   <TableHead className="font-bold text-xs">Semester</TableHead>
                   <TableHead className="font-bold text-xs">Credits</TableHead>
+                  <TableHead className="font-bold text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -250,6 +275,22 @@ export function SubjectsClient({ orgId, programmes, initialSubjects }: SubjectsC
                     <TableCell className="text-xs font-mono font-medium">Sem {s.semester}</TableCell>
                     <TableCell className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
                       {s.credits} Credits
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={deletingId === s.id}
+                        onClick={() => handleDelete(s.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete Subject"
+                      >
+                        {deletingId === s.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -90,7 +90,7 @@ export function HODSalaryApprovalConsole({
       setRequests((prev) =>
         prev.map((r) =>
           r.id === selectedReq.id
-            ? { ...r, status: action === "ENDORSE" ? "APPROVED_LEAD" : "REJECTED_LEAD" }
+            ? { ...r, status: action === "ENDORSE" ? "HOD_APPROVED" : "HOD_REJECTED" }
             : r
         )
       )
@@ -126,7 +126,7 @@ export function HODSalaryApprovalConsole({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {requests.filter((r) => r.status === "PENDING_LEAD").length}
+              {requests.filter((r) => r.status === "PENDING_HOD" || r.status === "PENDING_LEAD").length}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">Faculty salary requests waiting review</p>
           </CardContent>
@@ -195,7 +195,7 @@ export function HODSalaryApprovalConsole({
                 </thead>
                 <tbody className="divide-y">
                   {requests.map((r) => {
-                    const isPending = r.status === "PENDING_LEAD"
+                    const isPending = r.status === "PENDING_HOD" || r.status === "PENDING_LEAD"
 
                     return (
                       <tr key={r.id} className="hover:bg-muted/30 transition-colors">
@@ -211,11 +211,11 @@ export function HODSalaryApprovalConsole({
                           {r.progressPercentage.toFixed(0)}%
                         </td>
                         <td className="py-3 px-4">
-                          {r.status === "APPROVED_LEAD" ? (
+                          {r.status === "HOD_APPROVED" || r.status === "APPROVED_LEAD" ? (
                             <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px]">
                               Endorsed
                             </Badge>
-                          ) : r.status === "PENDING_LEAD" ? (
+                          ) : isPending ? (
                             <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-500/40">
                               Pending Review
                             </Badge>

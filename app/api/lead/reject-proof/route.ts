@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { proofId, taskId, feedback } = await req.json()
+    const { proofId, taskId, feedback, rejectionReason } = await req.json()
 
     if (!proofId && !taskId) {
       return NextResponse.json({ error: "Either proofId or taskId is required." }, { status: 400 })
@@ -19,32 +19,38 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const db = admin as any
     const nowIso = new Date().toISOString()
+    const reason = feedback || rejectionReason || "Returned for revision"
+
+    let targetTaskId = taskId
 
     if (proofId) {
       const { data: proof } = await db
         .from("task_proofs")
-        .select("id, task_id, tasks(org_unit_id)")
+        .select("id, task_id, tasks:task_id(org_unit_id)")
         .eq("id", proofId)
         .single()
 
       if (proof) {
-        assertDepartmentScope(user, proof.tasks?.org_unit_id)
-        await db
-          .from("task_proofs")
-          .update({
-            status: "REJECTED",
-            reviewer_id: user.id,
-            reviewer_notes: feedback || "Returned for revision",
-            reviewed_at: nowIso,
-            updated_at: nowIso,
-          })
-          .eq("id", proofId)
+        const taskData = proof.tasks as any
+        if (taskData?.org_unit_id) {
+          assertDepartmentScope(user, taskData.org_unit_id)
+        }
+        targetTaskId = proof.task_id
       }
     }
 
-    const targetTaskId = taskId || (proofId ? (await db.from("task_proofs").select("task_id").eq("id", proofId).single()).data?.task_id : null)
-
     if (targetTaskId) {
+      const { data: task } = await db
+        .from("tasks")
+        .select("id, org_unit_id")
+        .eq("id", targetTaskId)
+        .single()
+
+      if (task?.org_unit_id) {
+        assertDepartmentScope(user, task.org_unit_id)
+      }
+
+      // 1. Reset task status back to IN_PROGRESS so faculty can resubmit
       await db
         .from("tasks")
         .update({
@@ -52,6 +58,22 @@ export async function POST(req: Request) {
           updated_at: nowIso,
         })
         .eq("id", targetTaskId)
+
+      // 2. Record rejection in task_peer_reviews
+      try {
+        await db.from("task_peer_reviews").upsert(
+          {
+            task_id: targetTaskId,
+            reviewer_id: user.id,
+            decision: "REJECT",
+            comment: reason,
+            reviewed_at: nowIso,
+          },
+          { onConflict: "task_id,reviewer_id" }
+        )
+      } catch (e: any) {
+        console.warn("[reject-proof] Peer review log note:", e?.message)
+      }
     }
 
     return NextResponse.json({

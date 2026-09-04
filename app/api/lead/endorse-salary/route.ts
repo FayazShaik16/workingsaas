@@ -33,14 +33,14 @@ export async function POST(req: Request) {
       assertDepartmentScope(user, salaryReq.users?.org_unit_id)
 
       // 3. Update salary request status
-      const newStatus = isEndorse ? "APPROVED_LEAD" : "REJECTED_LEAD"
+      const newStatus = isEndorse ? "HOD_APPROVED" : "HOD_REJECTED"
       await db
         .from("salary_requests")
         .update({
           status: newStatus,
-          lead_reviewed_by: user.id,
-          lead_reviewed_at: nowIso,
-          lead_notes: notes || null,
+          reviewed_by: user.id,
+          reviewed_at: nowIso,
+          review_note: notes || (isEndorse ? "Endorsed by HOD" : "Returned for revision"),
           updated_at: nowIso,
         })
         .eq("id", requestId)
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     }
 
     if (Array.isArray(memberIds) && memberIds.length > 0) {
-      const newStatus = isEndorse ? "APPROVED_LEAD" : "REJECTED_LEAD"
+      const newStatus = isEndorse ? "HOD_APPROVED" : "HOD_REJECTED"
       const monthStart = `${nowIso.slice(0, 7)}-01`
 
       for (const mId of memberIds) {
@@ -66,9 +66,9 @@ export async function POST(req: Request) {
             .from("salary_requests")
             .update({
               status: newStatus,
-              lead_reviewed_by: user.id,
-              lead_reviewed_at: nowIso,
-              lead_notes: notes || null,
+              reviewed_by: user.id,
+              reviewed_at: nowIso,
+              review_note: notes || (isEndorse ? "Endorsed by HOD" : "Returned for revision"),
               updated_at: nowIso,
             })
             .eq("organization_id", user.organizationId)

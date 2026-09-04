@@ -12,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { proofId, taskId, feedback } = await req.json()
+    const { proofId, taskId, feedback, comment } = await req.json()
 
     if (!proofId && !taskId) {
       return NextResponse.json({ error: "Either proofId or taskId is required." }, { status: 400 })
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (proofId) {
       const { data: proof, error: proofErr } = await db
         .from("task_proofs")
-        .select("id, task_id, submitted_by, status, tasks(id, credit_value, org_unit_id, title)")
+        .select("id, task_id, user_id, tasks:task_id(id, credit_value, org_unit_id, title, assigned_to_id)")
         .eq("id", proofId)
         .single()
 
@@ -37,37 +37,29 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Proof submission not found." }, { status: 404 })
       }
 
-      // Enforce department isolation
-      assertDepartmentScope(user, proof.tasks?.org_unit_id)
+      const taskData = proof.tasks as any
+      if (taskData?.org_unit_id) {
+        assertDepartmentScope(user, taskData.org_unit_id)
+      }
 
       targetTaskId = proof.task_id
       targetProofId = proof.id
-      facultyId = proof.submitted_by
-    } else if (taskId) {
-      const { data: task, error: taskErr } = await db
-        .from("tasks")
-        .select("id, credit_value, org_unit_id, assigned_to_id, title")
-        .eq("id", taskId)
-        .single()
-
-      if (taskErr || !task) {
-        return NextResponse.json({ error: "Task not found." }, { status: 404 })
-      }
-
-      // Enforce department isolation
-      assertDepartmentScope(user, task.org_unit_id)
-      facultyId = task.assigned_to_id
+      facultyId = proof.user_id || taskData?.assigned_to_id
     }
 
     // Fetch the task details
-    const { data: task } = await db
+    const { data: task, error: taskErr } = await db
       .from("tasks")
-      .select("id, title, credit_value, organization_id, assigned_to_id")
+      .select("id, title, credit_value, organization_id, org_unit_id, assigned_to_id")
       .eq("id", targetTaskId)
       .single()
 
-    if (!task) {
+    if (taskErr || !task) {
       return NextResponse.json({ error: "Task record not found." }, { status: 404 })
+    }
+
+    if (task.org_unit_id) {
+      assertDepartmentScope(user, task.org_unit_id)
     }
 
     facultyId = facultyId || task.assigned_to_id
@@ -78,60 +70,106 @@ export async function POST(req: Request) {
     const ctx = await getOrgCycleContext(task.organization_id)
     const creditAmount = Number(task.credit_value || 1.0)
     const nowIso = new Date().toISOString()
+    const reviewFeedback = feedback || comment || "Task deliverable approved by Department Lead"
     const idempotencyKey = `adhoc_proof_${targetProofId || targetTaskId}_${facultyId}`
 
-    // 1. Update proof status if proof exists
-    if (targetProofId) {
-      await db
-        .from("task_proofs")
-        .update({
-          status: "APPROVED",
+    // 1. Record decision in task_peer_reviews
+    try {
+      await db.from("task_peer_reviews").upsert(
+        {
+          task_id: targetTaskId,
           reviewer_id: user.id,
-          reviewer_notes: feedback || null,
+          decision: "APPROVE",
+          comment: reviewFeedback,
           reviewed_at: nowIso,
-          updated_at: nowIso,
-        })
-        .eq("id", targetProofId)
+        },
+        { onConflict: "task_id,reviewer_id" }
+      )
+    } catch (e: any) {
+      console.warn("[approve-proof] Peer review log note:", e?.message)
     }
 
-    // 2. Update task status to COMPLETED
-    await db
+    // 2. Update task status to LEAD_SIGNED
+    const { error: taskUpdateErr } = await db
       .from("tasks")
       .update({
-        status: "COMPLETED",
+        status: "LEAD_SIGNED",
         lead_signed_by: user.id,
         lead_signed_at: nowIso,
         updated_at: nowIso,
       })
       .eq("id", targetTaskId)
 
-    // 3. Insert idempotent credit ledger entry
-    const { error: ledgerErr } = await db.from("credit_ledger_entries").upsert(
-      {
-        organization_id: task.organization_id,
-        work_cycle_id: ctx.activeWorkCycle?.id || null,
-        user_id: facultyId,
-        credit_type: "UNSCHEDULED_APPROVAL",
-        credit_amount: creditAmount,
-        reference_id: targetTaskId,
-        idempotency_key: idempotencyKey,
-        occurred_at: nowIso,
-        metadata: {
-          title: task.title,
-          proof_id: targetProofId || null,
-          feedback: feedback || null,
-          approved_by: user.id,
-        },
-      },
-      { onConflict: "idempotency_key" }
-    )
-
-    if (ledgerErr) {
-      console.error("[approve-proof] ledger error:", ledgerErr)
+    if (taskUpdateErr) {
+      console.error("[approve-proof] task update error:", taskUpdateErr)
+      return NextResponse.json({ error: `Failed to update task: ${taskUpdateErr.message}` }, { status: 500 })
     }
 
-    // 4. Recompute progress
-    const updatedProgress = await getMemberMonthlyProgress(task.organization_id, facultyId, ctx.monthStart)
+    // 3. Insert idempotent credit ledger entry
+    if (ctx.activeWorkCycle?.id) {
+      const { error: ledgerErr } = await db.from("credit_ledger_entries").upsert(
+        {
+          organization_id: task.organization_id,
+          work_cycle_id: ctx.activeWorkCycle.id,
+          user_id: facultyId,
+          month_start: ctx.monthStart,
+          credit_type: "UNSTRUCTURED_APPROVAL",
+          amount: creditAmount,
+          source_entity_type: "tasks",
+          source_entity_id: targetTaskId,
+          idempotency_key: idempotencyKey,
+          created_by: user.id,
+          metadata: {
+            title: task.title,
+            proof_id: targetProofId || null,
+            feedback: reviewFeedback,
+            approved_by: user.id,
+          },
+        },
+        { onConflict: "idempotency_key" }
+      )
+
+      if (ledgerErr) {
+        console.error("[approve-proof] ledger error:", ledgerErr)
+      }
+    }
+
+    // 4. Disburse credits to faculty PERSONAL wallet
+    let { data: wallet } = await db
+      .from("wallets")
+      .select("id, balance")
+      .eq("owner_user_id", facultyId)
+      .eq("purpose", "PERSONAL")
+      .maybeSingle()
+
+    if (!wallet) {
+      const { data: newWallet } = await db
+        .from("wallets")
+        .insert({
+          organization_id: task.organization_id,
+          owner_user_id: facultyId,
+          purpose: "PERSONAL",
+          balance: 0,
+        })
+        .select("id, balance")
+        .single()
+      wallet = newWallet
+    }
+
+    if (wallet?.id) {
+      await db
+        .from("wallets")
+        .update({ balance: Number(wallet.balance || 0) + creditAmount })
+        .eq("id", wallet.id)
+    }
+
+    // 5. Recompute progress
+    let updatedProgress = null
+    try {
+      updatedProgress = await getMemberMonthlyProgress(task.organization_id, facultyId, ctx.monthStart)
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json({
       success: true,

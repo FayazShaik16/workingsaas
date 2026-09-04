@@ -64,14 +64,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { rows, workCycleId, dryRun = true, autoGenerateMonth = true } = await req.json()
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return NextResponse.json({ error: "No timetable rows provided." }, { status: 400 })
-    }
+    const { rows = [], workCycleId, dryRun = true, autoGenerateMonth = false } = await req.json()
 
     if (!workCycleId) {
       return NextResponse.json({ error: "Active work cycle ID is required." }, { status: 400 })
+    }
+
+    // If no rows provided but autoGenerateMonth requested, directly run instance generation for existing templates
+    if ((!Array.isArray(rows) || rows.length === 0) && autoGenerateMonth) {
+      const now = new Date()
+      const genRes = await generateInstancesForMonth({
+        organizationId: user.organizationId,
+        workCycleId,
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+      })
+      return NextResponse.json({
+        success: true,
+        dryRun: false,
+        totalRows: 0,
+        templatesCreated: 0,
+        instancesGenerated: genRes.instancesCreated,
+        message: `Successfully generated ${genRes.instancesCreated} active monthly work instances for this cycle.`,
+      })
+    }
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return NextResponse.json({ error: "No timetable rows provided." }, { status: 400 })
     }
 
     const admin = createAdminClient()

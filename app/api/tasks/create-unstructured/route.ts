@@ -117,15 +117,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to create task: ${insertErr?.message}` }, { status: 500 })
     }
 
-    // 4. If Director specified targeted departments, insert into task_target_org_units
+    // 4. If Director specified targeted departments, insert into task_target_org_units if available
     if (finalVisibilityScope === "ORGANIZATION" && Array.isArray(targetOrgUnitIds) && targetOrgUnitIds.length > 0) {
-      const targetRows = targetOrgUnitIds.map((uId: string) => ({
-        task_id: newTask.id,
-        org_unit_id: uId,
-        created_at: nowIso,
-      }))
+      try {
+        const targetRows = targetOrgUnitIds.map((uId: string) => ({
+          task_id: newTask.id,
+          org_unit_id: uId,
+          created_at: nowIso,
+        }))
 
-      await db.from("task_target_org_units").insert(targetRows)
+        await db.from("task_target_org_units").insert(targetRows)
+      } catch (targetErr: any) {
+        console.warn("[create-unstructured] task_target_org_units optional insert note:", targetErr?.message)
+      }
     }
 
     return NextResponse.json({

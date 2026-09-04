@@ -93,16 +93,28 @@ export async function POST(req: Request) {
           from_wallet_id: pWallet.id,
           to_wallet_id: salaryPoolWallet?.id || null,
           amount: balanceToSweep,
-          type: "SALARY_PAYOUT",
+          type: "REVERSE_TRANSFER",
           status: "CONFIRMED",
-          blockchain_tx_hash: batchTxHash,
-          created_at: nowIso,
+          notes: `Monthly Salary Payout & Pool Reversal (TxHash: ${batchTxHash})`,
+          timestamp: nowIso,
         })
 
         totalTokensReversed += balanceToSweep
         processedCount++
       }
     }
+
+    // D. Update salary_requests to ON_CHAIN_CONFIRMED
+    const monthStart = `${nowIso.slice(0, 7)}-01`
+    await db
+      .from("salary_requests")
+      .update({
+        status: "ON_CHAIN_CONFIRMED",
+        updated_at: nowIso,
+      })
+      .eq("organization_id", orgId)
+      .in("user_id", memberIds)
+      .eq("month_start", monthStart)
 
     return NextResponse.json({
       success: true,

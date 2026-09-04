@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Users, Plus, Loader2, Layers } from "lucide-react"
+import { Users, Plus, Loader2, Layers, Trash2 } from "lucide-react"
 
 interface Batch {
   id: string
@@ -41,6 +41,7 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
   const [studentCount, setStudentCount] = useState(60)
   const [academicYear, setAcademicYear] = useState("2025-2026")
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -80,6 +81,29 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
       setErrorMsg(err.message || "Failed to create batch")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this student cohort batch?")) return
+    setDeletingId(id)
+    try {
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_BATCH",
+          payload: { id, orgId },
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to delete batch")
+      setBatches((prev) => prev.filter((b) => b.id !== id))
+      router.refresh()
+    } catch (err: any) {
+      alert(err.message || "Failed to delete batch")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -224,6 +248,7 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
                   <TableHead className="font-bold text-xs">Year & Semester</TableHead>
                   <TableHead className="font-bold text-xs">Enrolled Capacity</TableHead>
                   <TableHead className="font-bold text-xs">Academic Year</TableHead>
+                  <TableHead className="font-bold text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -245,6 +270,22 @@ export function BatchesClient({ orgId, programmes, initialBatches }: BatchesClie
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-medium">
                       {b.academic_year}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={deletingId === b.id}
+                        onClick={() => handleDelete(b.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete Batch"
+                      >
+                        {deletingId === b.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

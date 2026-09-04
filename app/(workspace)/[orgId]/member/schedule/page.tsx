@@ -41,23 +41,31 @@ export default async function MemberSchedulePage({ params }: PageProps) {
   // 2. Fetch date-specific work instances for this faculty in the current month
   const { data: instancesData } = await db
     .from("scheduled_work_instances")
-    .select("id, template_id, title, work_date, start_time, end_time, credit_value, status")
+    .select(`
+      id,
+      template_id,
+      work_date,
+      scheduled_start,
+      scheduled_end,
+      credit_value,
+      status,
+      scheduled_work_templates (title, start_time, end_time)
+    `)
     .eq("organization_id", orgId)
     .eq("assigned_to_id", user.id)
     .gte("work_date", currentMonthStart)
     .neq("status", "CANCELLED")
     .order("work_date", { ascending: true })
-    .order("start_time", { ascending: true })
 
   const instances: InstanceItem[] = (instancesData || []).map((i: any) => ({
     id: i.id,
     templateId: i.template_id,
-    title: i.title,
+    title: i.scheduled_work_templates?.title || "Scheduled Class Session",
     workDate: i.work_date,
-    startTime: i.start_time,
-    endTime: i.end_time,
+    startTime: i.scheduled_work_templates?.start_time?.slice(0, 5) || (i.scheduled_start ? new Date(i.scheduled_start).toISOString().slice(11, 16) : "09:00"),
+    endTime: i.scheduled_work_templates?.end_time?.slice(0, 5) || (i.scheduled_end ? new Date(i.scheduled_end).toISOString().slice(11, 16) : "10:00"),
     creditValue: Number(i.credit_value || 1.0),
-    status: i.status,
+    status: i.status === "UPCOMING" ? "SCHEDULED" : i.status,
   }))
 
   return (
