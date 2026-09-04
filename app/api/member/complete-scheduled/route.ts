@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
+import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {

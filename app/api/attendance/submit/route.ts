@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     const {
       timetableSlotId,
       taskId,
+      topicCovered,
       classDate = new Date().toISOString().split("T")[0],
     } = await req.json()
 
