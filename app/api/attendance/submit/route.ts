@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     const {
       timetableSlotId,
       taskId,
+      topicCovered,
       classDate = new Date().toISOString().split("T")[0],
     } = await req.json()
 
@@ -27,12 +28,12 @@ export async function POST(req: Request) {
 
     // 1. Fetch timetable slot details if provided
     let orgId = user.organizationId
-    let slotData = null
+    let slotData: any = null
 
     if (timetableSlotId) {
       const { data: slot } = await db
         .from("timetable_slots")
-        .select("id, organization_id, subject_assignment_id")
+        .select("id, organization_id, subject_assignment_id, faculty_id, day_of_week, period_number")
         .eq("id", timetableSlotId)
         .maybeSingle()
 
@@ -42,17 +43,100 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Insert or update the attendance record (auto-approved status = 'VERIFIED')
-    let attendanceRecord = null
-    if (timetableSlotId) {
-      const { data: existingRecord } = await db
+    // 2. Prevent duplicate completion for another class in the same period on classDate
+    if (slotData && slotData.period_number) {
+      const { data: duplicatePeriodRecord } = await db
         .from("attendance_records")
-        .select("id")
-        .eq("timetable_slot_id", timetableSlotId)
+        .select("id, timetable_slots!inner(period_number)")
         .eq("faculty_id", user.id)
+        .eq("conducted_on", classDate)
+        .eq("status", "CONDUCTED")
+        .eq("timetable_slots.period_number", slotData.period_number)
+        .neq("timetable_slot_id", timetableSlotId)
         .limit(1)
         .maybeSingle()
 
+      if (duplicatePeriodRecord) {
+        return NextResponse.json(
+          {
+            error: `You have already completed another class session during Period ${slotData.period_number} on ${classDate}. Duplicate completion rewards for the same period are prohibited.`,
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 3. Check if this specific slot or task was already completed
+    let existingRecord: any = null
+    if (timetableSlotId) {
+      const { data: rec } = await db
+        .from("attendance_records")
+        .select("id, status")
+        .eq("timetable_slot_id", timetableSlotId)
+        .eq("faculty_id", user.id)
+        .eq("conducted_on", classDate)
+        .limit(1)
+        .maybeSingle()
+
+      existingRecord = rec
+    }
+
+    let alreadyCompleted = existingRecord?.status === "CONDUCTED"
+    let targetTaskId = taskId
+    let creditValue = 1.0
+
+    if (targetTaskId) {
+      const { data: currentTask } = await db
+        .from("tasks")
+        .select("id, credit_value, status")
+        .eq("id", targetTaskId)
+        .single()
+
+      if (currentTask) {
+        creditValue = Number(currentTask.credit_value || 1.0)
+        if (["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"].includes(currentTask.status)) {
+          alreadyCompleted = true
+        } else {
+          await db
+            .from("tasks")
+            .update({
+              status: "CLOSED",
+              lead_signed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", targetTaskId)
+        }
+      }
+    } else if (timetableSlotId) {
+      // Find task associated with this slot
+      const { data: slotTasks } = await db
+        .from("tasks")
+        .select("id, credit_value, status")
+        .or(`source_timetable_slot_id.eq.${timetableSlotId},description.ilike.%${timetableSlotId}%`)
+        .eq("assigned_to_id", user.id)
+        .limit(1)
+
+      if (slotTasks && slotTasks.length > 0) {
+        targetTaskId = slotTasks[0].id
+        creditValue = Number(slotTasks[0].credit_value || 1.0)
+        if (["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"].includes(slotTasks[0].status)) {
+          alreadyCompleted = true
+        } else {
+          await db
+            .from("tasks")
+            .update({
+              status: "CLOSED",
+              lead_signed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", targetTaskId)
+        }
+      }
+    }
+
+    // 4. Insert or update the attendance record
+    let attendanceRecord = null
+    if (timetableSlotId) {
       if (existingRecord) {
         const { data: updated } = await db
           .from("attendance_records")
@@ -78,7 +162,7 @@ export async function POST(req: Request) {
           topic_covered: topicCovered || "Teaching Session Conducted",
         }
 
-        const { data: inserted, error: insError } = await db
+        const { data: inserted } = await db
           .from("attendance_records")
           .insert(insertPayload)
           .select()
@@ -88,100 +172,61 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Auto-approve the corresponding structured task (status = 'CLOSED')
-    let targetTaskId = taskId
-    let creditValue = 1.0
+    // 5. Update Faculty Wallet & Target Progress ONLY if not previously completed
+    if (!alreadyCompleted) {
+      const { data: userWallet } = await db
+        .from("wallets")
+        .select("id, balance")
+        .eq("owner_user_id", user.id)
+        .eq("purpose", "PERSONAL")
+        .maybeSingle()
 
-    if (targetTaskId) {
-      const { data: currentTask } = await db
-        .from("tasks")
-        .select("id, credit_value, status")
-        .eq("id", targetTaskId)
+      if (userWallet) {
+        const newBal = Number(userWallet.balance || 0) + creditValue
+        await db
+          .from("wallets")
+          .update({ balance: newBal })
+          .eq("id", userWallet.id)
+      }
+
+      // Update user progress percentage
+      const { data: userProfile } = await db
+        .from("users")
+        .select("id, target_credits")
+        .eq("id", user.id)
         .single()
 
-      if (currentTask) {
-        creditValue = Number(currentTask.credit_value || 1.0)
-        await db
+      if (userProfile && Number(userProfile.target_credits) > 0) {
+        const { data: allClosedTasks } = await db
           .from("tasks")
-          .update({
-            status: "CLOSED",
-            lead_signed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", targetTaskId)
-      }
-    } else if (timetableSlotId) {
-      // Find task associated with this slot
-      const { data: slotTasks } = await db
-        .from("tasks")
-        .select("id, credit_value")
-        .or(`source_timetable_slot_id.eq.${timetableSlotId},description.ilike.%${timetableSlotId}%`)
-        .eq("assigned_to_id", user.id)
-        .limit(1)
+          .select("credit_value")
+          .eq("assigned_to_id", user.id)
+          .in("status", ["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"])
 
-      if (slotTasks && slotTasks.length > 0) {
-        targetTaskId = slotTasks[0].id
-        creditValue = Number(slotTasks[0].credit_value || 1.0)
+        const totalEarned = (allClosedTasks || []).reduce(
+          (sum: number, t: any) => sum + Number(t.credit_value || 0),
+          0
+        )
+        const target = Number(userProfile.target_credits)
+        const newProgress = Math.min(100, Math.round((totalEarned / target) * 100))
+
         await db
-          .from("tasks")
-          .update({
-            status: "CLOSED",
-            lead_signed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", targetTaskId)
+          .from("users")
+          .update({ progress_percentage: newProgress, updated_at: new Date().toISOString() })
+          .eq("id", user.id)
       }
-    }
-
-    // 4. Update Faculty Wallet & Target Progress (Auto-mint credit)
-    const { data: userWallet } = await db
-      .from("wallets")
-      .select("id, balance")
-      .eq("owner_user_id", user.id)
-      .eq("purpose", "PERSONAL")
-      .maybeSingle()
-
-    if (userWallet) {
-      const newBal = Number(userWallet.balance || 0) + creditValue
-      await db
-        .from("wallets")
-        .update({ balance: newBal })
-        .eq("id", userWallet.id)
-    }
-
-    // 5. Update user progress percentage
-    const { data: userProfile } = await db
-      .from("users")
-      .select("id, target_credits")
-      .eq("id", user.id)
-      .single()
-
-    if (userProfile && Number(userProfile.target_credits) > 0) {
-      const { data: allClosedTasks } = await db
-        .from("tasks")
-        .select("credit_value")
-        .eq("assigned_to_id", user.id)
-        .in("status", ["CLOSED", "VERIFIED", "LEAD_SIGNED", "APPROVED"])
-
-      const totalEarned = (allClosedTasks || []).reduce(
-        (sum: number, t: any) => sum + Number(t.credit_value || 0),
-        0
-      )
-      const target = Number(userProfile.target_credits)
-      const newProgress = Math.min(100, Math.round((totalEarned / target) * 100))
-
-      await db
-        .from("users")
-        .update({ progress_percentage: newProgress, updated_at: new Date().toISOString() })
-        .eq("id", user.id)
     }
 
     return NextResponse.json({
       success: true,
+      already_completed: alreadyCompleted,
       autoApproved: true,
       attendanceRecordId: attendanceRecord?.id,
       taskId: targetTaskId,
-      message: "Scheduled task marked as completed and auto-approved successfully!",
+      creditAwarded: alreadyCompleted ? 0 : creditValue,
+      message: alreadyCompleted
+        ? "This session was already completed. Attendance record updated without duplicate reward crediting."
+        : "Scheduled task marked as completed and auto-approved successfully!",
     })
   } catch (error: any) {
     console.error("[attendance/submit] Error:", error)

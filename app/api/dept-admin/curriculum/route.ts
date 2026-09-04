@@ -192,12 +192,68 @@ export async function POST(req: Request) {
         )
       }
 
+      if (startTime >= endTime) {
+        return NextResponse.json(
+          { error: `Invalid time slot: End time (${endTime}) must be strictly after start time (${startTime}).` },
+          { status: 400 }
+        )
+      }
+
+      // Check if faculty is already assigned to a slot at this day and period
+      const { data: facultySlotConflict } = await db
+        .from("timetable_slots")
+        .select(`
+          id,
+          day_of_week,
+          period_number,
+          subject_assignments!inner(faculty_id, subjects(name, code))
+        `)
+        .eq("day_of_week", dayOfWeek)
+        .eq("period_number", Number(periodNumber))
+        .eq("is_active", true)
+        .eq("subject_assignments.faculty_id", facultyId)
+        .limit(1)
+        .maybeSingle()
+
+      if (facultySlotConflict) {
+        return NextResponse.json(
+          {
+            error: `Time slot conflict: This faculty member is already assigned to a teaching slot on ${dayOfWeek} Period ${periodNumber}. Multiple tasks or slots cannot be assigned to the same faculty at the same time slot.`,
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check if batch is already scheduled at this day and period
+      const { data: batchSlotConflict } = await db
+        .from("timetable_slots")
+        .select(`
+          id,
+          day_of_week,
+          period_number,
+          subject_assignments!inner(batch_id)
+        `)
+        .eq("day_of_week", dayOfWeek)
+        .eq("period_number", Number(periodNumber))
+        .eq("is_active", true)
+        .eq("subject_assignments.batch_id", batchId)
+        .limit(1)
+        .maybeSingle()
+
+      if (batchSlotConflict) {
+        return NextResponse.json(
+          {
+            error: `Schedule conflict: This student cohort/batch already has a class scheduled on ${dayOfWeek} Period ${periodNumber}.`,
+          },
+          { status: 400 }
+        )
+      }
+
       // 1. Find or create subject_assignment
       let assignmentId = ""
       const { data: existingAssignment } = await db
         .from("subject_assignments")
         .select("id")
-        .eq("organization_id", orgId)
         .eq("faculty_id", facultyId)
         .eq("subject_id", subjectId)
         .eq("batch_id", batchId)
@@ -206,6 +262,25 @@ export async function POST(req: Request) {
 
       if (existingAssignment) {
         assignmentId = existingAssignment.id
+
+        const { data: existingSlot } = await db
+          .from("timetable_slots")
+          .select("id")
+          .eq("subject_assignment_id", assignmentId)
+          .eq("day_of_week", dayOfWeek)
+          .eq("period_number", Number(periodNumber))
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle()
+
+        if (existingSlot) {
+          return NextResponse.json(
+            {
+              error: `This class is already assigned to ${dayOfWeek} Period ${periodNumber}. Duplicate assignments for the same slot are prohibited.`,
+            },
+            { status: 400 }
+          )
+        }
       } else {
         const { data: newAssignment, error: aError } = await db
           .from("subject_assignments")

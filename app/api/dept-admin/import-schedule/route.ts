@@ -113,6 +113,14 @@ export async function POST(req: Request) {
       if (u.employee_id) userByEmpId.set(u.employee_id.toLowerCase(), u)
     }
 
+    // 1b. Fetch active templates in this work cycle for slot conflict validation
+    const { data: allCycleTemplates } = await db
+      .from("scheduled_work_templates")
+      .select("id, assigned_to_id, weekly_day, start_time, end_time, title")
+      .eq("organization_id", orgId)
+      .eq("work_cycle_id", workCycleId)
+      .eq("active", true)
+
     // 2. Validate rows
     const validTemplates: any[] = []
     const rejectedRows: Array<{ rowNumber: number; row: TimetableRow; reason: string }> = []
@@ -166,7 +174,39 @@ export async function POST(req: Request) {
         continue
       }
 
-      // D. Validate Task Name
+      if (startTime >= endTime) {
+        rejectedRows.push({
+          rowNumber: rowNum,
+          row,
+          reason: `Invalid time interval: End time (${endTime.slice(0, 5)}) must be strictly after start time (${startTime.slice(0, 5)}).`,
+        })
+        continue
+      }
+
+      // D. Check for time slot collision for this faculty
+      const existingConflict = (allCycleTemplates || []).find((ext: any) => {
+        if (ext.assigned_to_id !== matchedUser.id || ext.weekly_day !== normalizedDay) return false
+        const extStart = (ext.start_time || "").slice(0, 8)
+        const extEnd = (ext.end_time || "").slice(0, 8)
+        return extStart < endTime && startTime < extEnd
+      })
+
+      const batchConflict = validTemplates.find((vt: any) => {
+        if (vt.assigned_to_id !== matchedUser.id || vt.weekly_day !== normalizedDay) return false
+        return vt.start_time < endTime && startTime < vt.end_time
+      })
+
+      const conflict = existingConflict || batchConflict
+      if (conflict) {
+        rejectedRows.push({
+          rowNumber: rowNum,
+          row,
+          reason: `Time slot conflict: Faculty ${matchedUser.name} already has a task/session ('${conflict.title}') assigned on ${normalizedDay} from ${(conflict.start_time || "").slice(0, 5)} to ${(conflict.end_time || "").slice(0, 5)}. Multiple tasks cannot be assigned to the same faculty at the same time slot.`,
+        })
+        continue
+      }
+
+      // E. Validate Task Name
       const taskName = (row.task_name || "").trim()
       if (!taskName) {
         rejectedRows.push({
@@ -177,7 +217,7 @@ export async function POST(req: Request) {
         continue
       }
 
-      // E. Validate Credits
+      // F. Validate Credits
       const credits = Number(row.credits)
       if (isNaN(credits) || credits <= 0) {
         rejectedRows.push({
@@ -220,6 +260,16 @@ export async function POST(req: Request) {
       })
     }
 
+    if (validTemplates.length === 0 && rejectedRows.length > 0) {
+      return NextResponse.json(
+        {
+          error: rejectedRows[0].reason,
+          rejectedRows,
+        },
+        { status: 400 }
+      )
+    }
+
     // 4. Actual Database Insertion
     const insertedTemplates: any[] = []
     for (const t of validTemplates) {
@@ -257,6 +307,7 @@ export async function POST(req: Request) {
       dryRun: false,
       totalRows: rows.length,
       templatesCreated: insertedTemplates.length,
+      insertedTemplates,
       rejectedCount: rejectedRows.length,
       rejectedRows,
       instancesGenerated: generatedInstancesCount,

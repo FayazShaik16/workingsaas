@@ -196,22 +196,34 @@ export async function compileMonthlyScheduleTasks(
     }
 
     if (tasksToInsert.length > 0) {
-      // Deduplicate against existing tasks in DB to maintain idempotency
+      // Deduplicate against existing tasks in DB to maintain idempotency and time slot exclusivity
       const { data: existingTasks } = await db
         .from("tasks")
-        .select("source_timetable_slot_id, scheduled_date")
+        .select("source_timetable_slot_id, scheduled_date, deadline")
         .eq("organization_id", organizationId)
         .eq("assigned_to_id", facultyId)
         .gte("scheduled_date", startDateStr)
         .lte("scheduled_date", endDateStr)
 
-      const existingKeys = new Set(
+      const existingSlotDates = new Set(
         (existingTasks || []).map((t: any) => `${t.source_timetable_slot_id}_${t.scheduled_date}`)
       )
-
-      const uniqueNewTasks = tasksToInsert.filter(
-        (t: any) => !existingKeys.has(`${t.source_timetable_slot_id}_${t.scheduled_date}`)
+      const existingTimeSlots = new Set(
+        (existingTasks || []).map((t: any) => `${t.scheduled_date}_${t.deadline}`)
       )
+
+      const seenBatchSlots = new Set<string>()
+      const uniqueNewTasks: any[] = []
+
+      for (const t of tasksToInsert) {
+        const slotKey = `${t.source_timetable_slot_id}_${t.scheduled_date}`
+        const timeKey = `${t.scheduled_date}_${t.deadline}`
+        if (existingSlotDates.has(slotKey) || existingTimeSlots.has(timeKey) || seenBatchSlots.has(timeKey)) {
+          continue
+        }
+        seenBatchSlots.add(timeKey)
+        uniqueNewTasks.push(t)
+      }
 
       if (uniqueNewTasks.length > 0) {
         const { data: inserted, error: insertError } = await db

@@ -134,6 +134,22 @@ export function TimetableBuilderClient({
     setStatusMessage(null)
 
     try {
+      // Pre-check for faculty or batch collision
+      for (const a of initialAssignments) {
+        if (a.faculty_id === newFacultyId && a.timetable_slots) {
+          const clash = a.timetable_slots.find((s: any) => s.day_of_week === newDay && s.period_number === newPeriod)
+          if (clash) {
+            throw new Error(`Faculty member is already assigned to Period ${newPeriod} on ${newDay} (${a.subjects?.code || "another subject"}). Double-booking a faculty at the same period is prohibited.`)
+          }
+        }
+        if (a.batch_id === newBatchId && a.timetable_slots) {
+          const clash = a.timetable_slots.find((s: any) => s.day_of_week === newDay && s.period_number === newPeriod)
+          if (clash) {
+            throw new Error(`This batch already has a scheduled class for Period ${newPeriod} on ${newDay}. Duplicate slot allocations for the same batch period are prohibited.`)
+          }
+        }
+      }
+
       const times = periodTimes[newPeriod] || { start: "09:00:00", end: "09:50:00" }
 
       const res = await fetch("/api/dept-admin/curriculum", {

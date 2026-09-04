@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
+import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -17,21 +18,7 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const db = admin as any
 
-    // 1. Try atomic RPC execution first
-    try {
-      const { data: rpcData, error: rpcErr } = await db.rpc("confirm_scheduled_work_instance", {
-        p_instance_id: instanceId,
-        p_faculty_id: user.id,
-      })
-
-      if (!rpcErr && rpcData) {
-        return NextResponse.json(rpcData)
-      }
-    } catch (rpcEx) {
-      console.warn("[complete-scheduled] RPC fallback triggered:", rpcEx)
-    }
-
-    // 2. Direct Node-level transactional fallback if RPC not yet compiled
+    // 1. Fetch instance first to validate assignment, status, and prevent duplicate slot payouts
     const { data: instance, error: instErr } = await db
       .from("scheduled_work_instances")
       .select("*, work_cycles(*), scheduled_work_templates(title)")
@@ -53,6 +40,52 @@ export async function POST(req: Request) {
         message: "This work session was already self-confirmed.",
       })
     }
+
+    // 2. Guard: Prevent duplicate reward accumulation for overlapping time slots on the same date
+    const { data: existingCompleted } = await db
+      .from("scheduled_work_instances")
+      .select("id, scheduled_start, scheduled_end, status")
+      .eq("assigned_to_id", user.id)
+      .eq("work_date", instance.work_date)
+      .eq("status", "SELF_COMPLETED")
+      .neq("id", instance.id)
+
+    const hasTimeOverlap = (existingCompleted || []).some((other: any) => {
+      const otherStart = new Date(other.scheduled_start).getTime()
+      const otherEnd = new Date(other.scheduled_end).getTime()
+      const instStart = new Date(instance.scheduled_start).getTime()
+      const instEnd = new Date(instance.scheduled_end).getTime()
+
+      if (!isNaN(otherStart) && !isNaN(otherEnd) && !isNaN(instStart) && !isNaN(instEnd)) {
+        return otherStart < instEnd && instStart < otherEnd
+      }
+      return other.scheduled_start === instance.scheduled_start
+    })
+
+    if (hasTimeOverlap) {
+      return NextResponse.json(
+        {
+          error: "A scheduled session for this exact or overlapping time slot has already been completed and rewarded. Duplicate completion rewards for the same time slot are prohibited.",
+        },
+        { status: 400 }
+      )
+    }
+
+    // 3. Try atomic RPC execution first
+    try {
+      const { data: rpcData, error: rpcErr } = await db.rpc("confirm_scheduled_work_instance", {
+        p_instance_id: instanceId,
+        p_faculty_id: user.id,
+      })
+
+      if (!rpcErr && rpcData) {
+        return NextResponse.json(rpcData)
+      }
+    } catch (rpcEx) {
+      console.warn("[complete-scheduled] RPC fallback triggered:", rpcEx)
+    }
+
+    // 4. Direct Node-level transactional fallback if RPC not available
 
     const orgId = instance.organization_id || user.organizationId
     const cycleId = instance.work_cycle_id
