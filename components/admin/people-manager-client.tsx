@@ -355,7 +355,7 @@ export function PeopleManagerClient({ orgId, initialUsers, departments }: Props)
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-right text-muted-foreground font-mono">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "Recent"}
+                      {u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : "Recent"}
                     </td>
                   </tr>
                 ))}

@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     // 2. Check open day rule (e.g. Day 26)
     const currentDay = new Date().getDate()
-    const openDay = Number(ctx.activeWorkCycle.salary_request_open_day || 26)
+    const openDay = Number(ctx.activeWorkCycle.salary_request_opens_day ?? ctx.activeWorkCycle.salary_request_open_day ?? 26)
     if (currentDay < openDay) {
       return NextResponse.json(
         {
@@ -63,10 +63,13 @@ export async function POST(req: Request) {
           work_cycle_id: ctx.activeWorkCycle.id,
           user_id: user.id,
           month_start: ctx.monthStart,
-          status: "PENDING_LEAD",
+          requested_raw_credits: progress.rawEarnedCredits,
+          requested_target_credits: progress.totalTargetCredits,
+          threshold_percentage: progress.salaryThresholdPercentage || 85,
+          status: "PENDING_HOD",
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "organization_id,user_id,month_start" }
+        { onConflict: "organization_id,user_id,work_cycle_id,month_start" }
       )
       .select("id, status, created_at")
       .single()
@@ -85,7 +88,7 @@ export async function POST(req: Request) {
       earnedCredits: progress.rawEarnedCredits,
       targetCredits: progress.totalTargetCredits,
       progressPercentage: progress.displayProgressPercentage,
-      status: "PENDING_LEAD",
+      status: "PENDING_HOD",
       message: `Salary claim for ${ctx.monthStart} (${progress.rawEarnedCredits.toFixed(1)} / ${progress.totalTargetCredits.toFixed(1)} credits, ${(progress.displayProgressPercentage || 0).toFixed(0)}%) successfully queued for HOD endorsement.`,
     })
   } catch (error: any) {

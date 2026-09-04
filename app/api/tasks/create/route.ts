@@ -73,12 +73,16 @@ export async function POST(req: Request) {
     }
 
     if (visibilityScope === "ORGANIZATION" && Array.isArray(targetOrgUnitIds) && targetOrgUnitIds.length > 0) {
-      const targetRows = targetOrgUnitIds.map((uId: string) => ({
-        task_id: inserted.id,
-        org_unit_id: uId,
-        created_at: nowIso,
-      }))
-      await db.from("task_target_org_units").insert(targetRows)
+      try {
+        const targetRows = targetOrgUnitIds.map((uId: string) => ({
+          task_id: inserted.id,
+          org_unit_id: uId,
+          created_at: nowIso,
+        }))
+        await db.from("task_target_org_units").insert(targetRows)
+      } catch (targetErr: any) {
+        console.warn("[tasks/create] task_target_org_units optional insert note:", targetErr?.message)
+      }
     }
 
     return NextResponse.json({

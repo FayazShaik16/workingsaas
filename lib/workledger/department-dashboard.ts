@@ -270,7 +270,7 @@ export async function getDepartmentDashboardData(
       todayScheduledExpected: todayExpected,
       todayScheduledCompleted: todayCompleted,
       pendingInitiativeReviews: pendingProofsList.length,
-      pendingSalaryRequests: salaryRequestsList.filter((s) => s.status === "PENDING_LEAD").length,
+      pendingSalaryRequests: salaryRequestsList.filter((s) => s.status === "PENDING_HOD" || s.status === "PENDING_LEAD").length,
     },
     attentionItems,
     facultyProgressList,

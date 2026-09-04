@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // 2. Direct Node-level transactional fallback if RPC not yet compiled
     const { data: instance, error: instErr } = await db
       .from("scheduled_work_instances")
-      .select("*, work_cycles(*)")
+      .select("*, work_cycles(*), scheduled_work_templates(title)")
       .eq("id", instanceId)
       .single()
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
         source_entity_id: instance.id,
         idempotency_key: idempotencyKey,
         created_by: user.id,
-        metadata: { work_date: instance.work_date, title: instance.title },
+        metadata: { work_date: instance.work_date, title: instance.scheduled_work_templates?.title || "Scheduled Session" },
       },
       { onConflict: "idempotency_key" }
     )
@@ -102,35 +102,37 @@ export async function POST(req: Request) {
       })
       .eq("id", instance.id)
 
-    // D. Recompute monthly progress summary
-    let progressResult = null
-    try {
-      const { data: pData } = await db.rpc("recompute_monthly_work_progress", {
-        p_user_id: user.id,
-        p_work_cycle_id: cycleId,
-        p_month_start: monthStart,
-      })
-      progressResult = pData
-    } catch {
-      // Direct summary calculation fallback
-      const { data: ledgerEntries } = await db
-        .from("credit_ledger_entries")
-        .select("amount")
-        .eq("user_id", user.id)
-        .eq("month_start", monthStart)
+    // D. Credit personal wallet
+    let { data: userWallet } = await db
+      .from("wallets")
+      .select("id, balance")
+      .eq("owner_user_id", user.id)
+      .eq("purpose", "PERSONAL")
+      .maybeSingle()
 
-      const rawEarned = (ledgerEntries || []).reduce((acc: number, cur: any) => acc + (Number(cur.amount) || 0), 0)
-      const schedWeight = Number(instance.work_cycles?.scheduled_weight_percentage) || 75
-      const totalTarget = 100 // fallback standard
-      const displayPct = Math.min(100, Math.round((rawEarned / totalTarget) * 100))
-
-      progressResult = {
-        raw_earned_credits: rawEarned,
-        total_target_credits: totalTarget,
-        display_progress_percentage: displayPct,
-        salary_eligible: rawEarned >= 85,
-      }
+    if (!userWallet) {
+      const { data: newW } = await db
+        .from("wallets")
+        .insert({
+          organization_id: orgId,
+          owner_user_id: user.id,
+          purpose: "PERSONAL",
+          balance: 0,
+        })
+        .select("id, balance")
+        .single()
+      userWallet = newW
     }
+
+    if (userWallet?.id) {
+      await db
+        .from("wallets")
+        .update({ balance: Number(userWallet.balance || 0) + creditVal })
+        .eq("id", userWallet.id)
+    }
+
+    // E. Recompute monthly progress summary via unified service layer
+    const progressResult = await getMemberMonthlyProgress(orgId, user.id, monthStart)
 
     return NextResponse.json({
       success: true,

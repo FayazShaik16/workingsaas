@@ -43,13 +43,12 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
       title,
       description,
       credit_value,
-      penalty_value,
       category,
       priority,
       status,
       deadline,
       created_at,
-      completed_at,
+      lead_signed_at,
       custom_fields,
       assigned_to_id,
       creator_id,
@@ -57,7 +56,7 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
       assigned_user:assigned_to_id (id, name, email, designation),
       creator_user:creator_id (id, name, email),
       org_units (id, name),
-      task_proofs (id, proof_text, proof_url, created_at)
+      task_proofs (id, description, file_url, submitted_at)
     `)
     .eq("id", taskId)
     .eq("organization_id", orgId)
@@ -185,7 +184,7 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-foreground">Submission Remarks</span>
                     <span className="text-muted-foreground">
-                      {new Date(proof.created_at).toLocaleDateString("en-IN", {
+                      {new Date(proof.submitted_at).toLocaleDateString("en-IN", {
                         day: "2-digit",
                         month: "short",
                         year: "numeric",
@@ -195,13 +194,13 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {proof.proof_text || "No written remarks provided."}
+                    {proof.description || "No written remarks provided."}
                   </p>
 
-                  {proof.proof_url && (
+                  {proof.file_url && (
                     <div className="pt-2">
                       <Button asChild size="sm" variant="outline" className="rounded-xl text-xs gap-1.5">
-                        <a href={proof.proof_url} target="_blank" rel="noopener noreferrer">
+                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer">
                           <FileText className="h-3.5 w-3.5 text-primary" /> View Deliverable Attachment
                           <ExternalLink className="h-3 w-3 ml-1 text-muted-foreground" />
                         </a>
@@ -242,10 +241,6 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
                 <div className="flex justify-between">
                   <span>Department:</span>
                   <span className="font-medium text-foreground">{task.org_units?.name || "Department Pool"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Penalty:</span>
-                  <span className="font-medium text-foreground">{task.penalty_value || 0} WORK</span>
                 </div>
               </div>
             </CardContent>
@@ -314,11 +309,11 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
                     : "Open Ended"}
                 </span>
               </div>
-              {task.completed_at && (
+              {task.lead_signed_at && (
                 <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
                   <span>Completed:</span>
                   <span>
-                    {new Date(task.completed_at).toLocaleDateString("en-IN", {
+                    {new Date(task.lead_signed_at).toLocaleDateString("en-IN", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",

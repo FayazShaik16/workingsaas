@@ -18,22 +18,22 @@ export default async function DirectorLoansPage({ params }: PageProps) {
   const todayStr = new Date().toISOString().split("T")[0]
   const currentMonthStart = `${todayStr.slice(0, 7)}-01`
 
-  // 1. Fetch pending loan requests and progress in parallel
+  // 1. Fetch loans and progress in parallel
   const [
-    { data: rawRequests },
+    { data: rawRequests, error: reqErr },
     { data: loanWallet },
     { data: progressRecords },
   ] = await Promise.all([
     db
-      .from("loan_requests")
+      .from("loans")
       .select(`
         id,
         amount,
+        remaining,
         reason,
         status,
         created_at,
-        repayment_terms,
-        borrower:borrower_user_id (
+        borrower:user_id (
           id,
           name,
           email,
@@ -54,6 +54,10 @@ export default async function DirectorLoansPage({ params }: PageProps) {
       .eq("organization_id", orgId)
       .eq("month_start", currentMonthStart),
   ])
+
+  if (reqErr) {
+    console.warn("[director/loans] query error:", reqErr.message)
+  }
 
   const poolBalance = Number(loanWallet?.balance ?? 0)
   const progressMap = new Map((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))

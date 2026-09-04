@@ -28,7 +28,7 @@ export async function POST(req: Request) {
         id,
         organization_id,
         faculty_id,
-        class_date,
+        conducted_on,
         timetable_slot_id,
         timetable_slots (
           id,
@@ -56,16 +56,15 @@ export async function POST(req: Request) {
       const facultyId = record.faculty_id
       const orgId = record.organization_id || user.organizationId
       const slotId = record.timetable_slot_id
-      const classDate = record.class_date
+      const classDate = record.conducted_on
 
       if (isApprove) {
-        // A. Mark attendance_record as VERIFIED
+        // A. Mark attendance_record as CONDUCTED
         await db
           .from("attendance_records")
           .update({
-            status: "VERIFIED",
-            verified_by: user.id,
-            verified_at: nowIso,
+            status: "CONDUCTED",
+            marked_at: nowIso,
           })
           .eq("id", record.id)
 
@@ -101,7 +100,6 @@ export async function POST(req: Request) {
           .maybeSingle()
 
         if (!wallet) {
-          // Provision personal wallet if missing
           const { data: newWallet } = await db
             .from("wallets")
             .insert({
@@ -124,19 +122,24 @@ export async function POST(req: Request) {
             .eq("id", wallet.id)
 
           // Anchor on-chain cryptographic receipt
-          const receipt = await anchorTaskRewardOnChain({
-            recipientId: facultyId,
-            amount: creditReward,
-            taskId: task?.id || record.id,
-            organizationId: orgId,
-            metadata: {
-              slotId,
-              classDate,
-              verifierId: user.id,
-            },
-          })
+          let receipt = { txHash: "off-chain-ledger" }
+          try {
+            receipt = await anchorTaskRewardOnChain({
+              recipientId: facultyId,
+              amount: creditReward,
+              taskId: task?.id || record.id,
+              organizationId: orgId,
+              metadata: {
+                slotId,
+                classDate,
+                verifierId: user.id,
+              },
+            })
+          } catch (anchorErr) {
+            console.warn("[batch-verify] On-chain anchor skipped:", anchorErr)
+          }
 
-          // Record token transaction with blockchain hash
+          // Record token transaction
           await db.from("token_transactions").insert({
             organization_id: orgId,
             from_wallet_id: null,
@@ -144,32 +147,41 @@ export async function POST(req: Request) {
             amount: creditReward,
             type: "TASK_REWARD",
             status: "CONFIRMED",
-            blockchain_tx_hash: receipt.txHash,
-            created_at: nowIso,
+            notes: `Teaching session verification on ${classDate}. Receipt: ${receipt.txHash}`,
+            timestamp: nowIso,
+          })
+
+          // Record in credit_ledger_entries
+          await db.from("credit_ledger_entries").insert({
+            organization_id: orgId,
+            user_id: facultyId,
+            credit_type: "TEACHING",
+            amount: creditReward,
+            source_entity_type: "ATTENDANCE",
+            source_entity_id: record.id,
+            month_start: classDate ? `${classDate.slice(0, 7)}-01` : `${nowIso.slice(0, 7)}-01`,
+            idempotency_key: `attendance-${record.id}-reward`,
+            created_by: user.id,
           })
 
           totalTokensDisbursed += creditReward
 
-          // Recompute progress percentage in DB & update users table
-          const { error: rpcErr } = await db.rpc("recompute_user_progress", { p_user_id: facultyId })
-          if (rpcErr) {
-            const { data: userRec } = await db.from("users").select("target_credits").eq("id", facultyId).single()
-            const target = Number(userRec?.target_credits || 0)
-            const progress = target > 0 ? Math.min(100, Math.round((newBalance / target) * 100)) : 0
-            await db.from("users").update({ progress_percentage: progress, updated_at: nowIso }).eq("id", facultyId)
-          }
+          // Update user progress percentage
+          const { data: userRec } = await db.from("users").select("target_credits").eq("id", facultyId).single()
+          const target = Number(userRec?.target_credits || 0)
+          const progress = target > 0 ? Math.min(100, Math.round((newBalance / target) * 100)) : 0
+          await db.from("users").update({ progress_percentage: progress, updated_at: nowIso }).eq("id", facultyId)
         }
 
         processedCount++
       } else {
-        // Reject flow
+        // Reject flow -> mark CANCELLED
         await db
           .from("attendance_records")
           .update({
-            status: "REJECTED",
-            verified_by: user.id,
-            verified_at: nowIso,
-            topics_covered: rejectionReason ? `[REJECTED: ${rejectionReason}]` : undefined,
+            status: "CANCELLED",
+            marked_at: nowIso,
+            topic_covered: rejectionReason ? `[REJECTED: ${rejectionReason}]` : "[CANCELLED_BY_LEAD]",
           })
           .eq("id", record.id)
 

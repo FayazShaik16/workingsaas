@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+.DS_Store
+*/.DS_Store
 
 # next.js
 /.next/
@@ -18,7 +20,11 @@ yarn-error.log*
 
 # env files
 .env*
+env.local
 !.env.example
+
+# scratch scripts
+scratch/
 
 # vercel
 .vercel

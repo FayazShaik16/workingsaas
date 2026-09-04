@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building2, Plus, Loader2, GraduationCap } from "lucide-react"
+import { Building2, Plus, Loader2, GraduationCap, Trash2 } from "lucide-react"
 
 interface Programme {
   id: string
@@ -33,6 +33,7 @@ export function ProgrammesClient({ orgId, deptId, initialProgrammes }: Programme
   const [name, setName] = useState("")
   const [code, setCode] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -70,6 +71,29 @@ export function ProgrammesClient({ orgId, deptId, initialProgrammes }: Programme
       setErrorMsg(err.message || "Failed to create programme")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this programme?")) return
+    setDeletingId(id)
+    try {
+      const res = await fetch("/api/dept-admin/curriculum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_PROGRAM",
+          payload: { id, orgId },
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to delete programme")
+      setProgrammes((prev) => prev.filter((p) => p.id !== id))
+      router.refresh()
+    } catch (err: any) {
+      alert(err.message || "Failed to delete programme")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -159,6 +183,7 @@ export function ProgrammesClient({ orgId, deptId, initialProgrammes }: Programme
                   <TableHead className="font-bold text-xs">Programme Name</TableHead>
                   <TableHead className="font-bold text-xs">Status</TableHead>
                   <TableHead className="font-bold text-xs">Created Date</TableHead>
+                  <TableHead className="font-bold text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -172,7 +197,23 @@ export function ProgrammesClient({ orgId, deptId, initialProgrammes }: Programme
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-medium">
-                      {p.created_at ? new Date(p.created_at).toLocaleDateString() : "Active"}
+                      {p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : "Active"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={deletingId === p.id}
+                        onClick={() => handleDelete(p.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete Programme"
+                      >
+                        {deletingId === p.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

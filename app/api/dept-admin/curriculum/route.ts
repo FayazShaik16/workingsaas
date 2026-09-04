@@ -245,6 +245,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, slot: newSlot })
     }
 
+    if (action === "DELETE_PROGRAM") {
+      const { id } = payload
+      if (!id) return NextResponse.json({ error: "Program ID is required." }, { status: 400 })
+      const { error } = await db
+        .from("academic_programs")
+        .delete()
+        .eq("id", id)
+        .eq("organization_id", orgId)
+      if (error) throw error
+      return NextResponse.json({ success: true, message: "Programme deleted successfully." })
+    }
+
+    if (action === "DELETE_SUBJECT") {
+      const { id } = payload
+      if (!id) return NextResponse.json({ error: "Subject ID is required." }, { status: 400 })
+      const { error } = await db
+        .from("subjects")
+        .delete()
+        .eq("id", id)
+        .eq("organization_id", orgId)
+      if (error) throw error
+      return NextResponse.json({ success: true, message: "Subject deleted successfully." })
+    }
+
+    if (action === "DELETE_BATCH") {
+      const { id } = payload
+      if (!id) return NextResponse.json({ error: "Batch ID is required." }, { status: 400 })
+      const { error } = await db
+        .from("academic_batches")
+        .delete()
+        .eq("id", id)
+        .eq("organization_id", orgId)
+      if (error) throw error
+      return NextResponse.json({ success: true, message: "Batch deleted successfully." })
+    }
+
+    if (action === "DELETE_SLOT") {
+      const { id } = payload
+      if (!id) return NextResponse.json({ error: "Slot ID is required." }, { status: 400 })
+      const { error } = await db
+        .from("timetable_slots")
+        .delete()
+        .eq("id", id)
+        .eq("organization_id", orgId)
+      if (error) throw error
+      return NextResponse.json({ success: true, message: "Timetable slot deleted successfully." })
+    }
+
     return NextResponse.json({ error: "Unknown action" }, { status: 400 })
   } catch (error: any) {
     console.error("[api/dept-admin/curriculum] Error:", error)

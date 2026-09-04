@@ -89,14 +89,20 @@ export default function TaskDetailPage() {
       const { data: authData } = await supabase.auth.getUser()
       if (!authData?.user) throw new Error("Not authenticated")
 
-      // Create nomination
-      const { error: nomError } = await (supabase as any).from("nominations").insert({
-        task_id: taskId,
-        user_id: authData.user.id,
-        message: nominationMessage,
+      // Create nomination via API
+      const res = await fetch("/api/tasks/nominate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId,
+          pitchNote: nominationMessage,
+        }),
       })
 
-      if (nomError) throw nomError
+      const resData = await res.json()
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to submit nomination")
+      }
 
       setHasNominated(true)
       setNominationMessage("")

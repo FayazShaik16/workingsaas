@@ -49,16 +49,15 @@ export default async function LeadExistingTasksPage({ params }: PageProps) {
       title,
       description,
       credit_value,
-      penalty_value,
       category,
       priority,
       status,
       deadline,
       created_at,
-      completed_at,
+      lead_signed_at,
       assigned_to_id,
       users:assigned_to_id (id, name, email),
-      task_proofs (id, proof_text, proof_url, created_at)
+      task_proofs (id, description, file_url, submitted_at)
     `)
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
@@ -78,18 +77,18 @@ export default async function LeadExistingTasksPage({ params }: PageProps) {
       title: t.title,
       description: t.description || undefined,
       creditValue: Number(t.credit_value || 0),
-      penaltyValue: t.penalty_value ? Number(t.penalty_value) : undefined,
+      penaltyValue: undefined,
       category: t.category || "UNSTRUCTURED",
       priority: t.priority || "MEDIUM",
       status: t.status,
       deadline: t.deadline || undefined,
       createdAt: t.created_at,
-      completedAt: t.completed_at || proof?.created_at || undefined,
+      completedAt: t.lead_signed_at || proof?.submitted_at || undefined,
       assignedToId: t.assigned_to_id || undefined,
       assignedToName: assignedUser?.name || undefined,
       assignedToEmail: assignedUser?.email || undefined,
-      proofText: proof?.proof_text || undefined,
-      proofUrl: proof?.proof_url || undefined,
+      proofText: proof?.description || undefined,
+      proofUrl: proof?.file_url || undefined,
     }
   })
 

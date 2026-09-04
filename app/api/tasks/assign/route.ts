@@ -80,13 +80,13 @@ export async function POST(req: Request) {
     // 5. Update nomination states if applicable
     await db
       .from("nominations")
-      .update({ status: "ACCEPTED", updated_at: nowIso })
+      .update({ status: "ACCEPTED" })
       .eq("task_id", taskId)
       .eq("user_id", targetFacultyId)
 
     await db
       .from("nominations")
-      .update({ status: "REJECTED", updated_at: nowIso })
+      .update({ status: "REJECTED" })
       .eq("task_id", taskId)
       .neq("user_id", targetFacultyId)
 

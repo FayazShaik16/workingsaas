@@ -55,8 +55,8 @@ export default async function ProofReviewPage({ params }: PageProps) {
             <CardTitle className="text-sm">Assigned To</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold">{task.users.name}</p>
-            <p className="text-xs text-muted-foreground">{task.users.email}</p>
+            <p className="font-semibold">{task.users?.name || "Unassigned"}</p>
+            <p className="text-xs text-muted-foreground">{task.users?.email || "N/A"}</p>
           </CardContent>
         </Card>
 
