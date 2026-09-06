@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function DepartmentManagerClient({ orgId, initialDepartments, availableUsers }: Props) {
+  const router = useRouter()
   const [departments, setDepartments] = useState<DepartmentItem[]>(initialDepartments)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -89,6 +91,7 @@ export function DepartmentManagerClient({ orgId, initialDepartments, availableUs
       setCode("")
       setLeadUserId("")
       setShowForm(false)
+      router.refresh()
     } catch (err: any) {
       toast.error(err.message || "Failed to create department.")
     } finally {

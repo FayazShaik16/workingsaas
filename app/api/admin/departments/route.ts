@@ -1,6 +1,49 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser, hasScope } from "@/lib/auth/session"
+import { revalidatePath } from "next/cache"
 import { NextResponse } from "next/server"
+
+export async function GET(req: Request) {
+  try {
+    const user = await getSessionUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const admin = createAdminClient()
+    const db = admin as any
+    const orgId = user.organizationId
+
+    const { data: depts, error } = await db
+      .from("org_units")
+      .select("id, name, unit_type, lead_user_id, created_at")
+      .eq("organization_id", orgId)
+      .order("name", { ascending: true })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { data: allUsers } = await db
+      .from("users")
+      .select("id, name, org_unit_id")
+      .eq("organization_id", orgId)
+
+    const formatted = (depts || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      code: d.name.slice(0, 4).toUpperCase(),
+      leadUserId: d.lead_user_id,
+      leadName: (allUsers || []).find((u: any) => u.id === d.lead_user_id)?.name || "Unassigned",
+      memberCount: (allUsers || []).filter((u: any) => u.org_unit_id === d.id).length,
+      createdAt: d.created_at,
+    }))
+
+    return NextResponse.json({ departments: formatted })
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 })
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -45,7 +88,7 @@ export async function POST(req: Request) {
         path: pathSlug,
         lead_user_id: leadUserId || null,
       })
-      .select()
+      .select("id, name, unit_type, lead_user_id, created_at")
       .single()
 
     if (insertErr || !newUnit) {
@@ -75,6 +118,11 @@ export async function POST(req: Request) {
         )
       }
     }
+
+    try {
+      revalidatePath(`/${orgId}/config/departments`)
+      revalidatePath(`/${orgId}/config/people`)
+    } catch {}
 
     return NextResponse.json({
       success: true,

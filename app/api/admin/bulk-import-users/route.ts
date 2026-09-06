@@ -2,13 +2,17 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { NextResponse } from "next/server"
 
-interface FacultyImportRow {
-  faculty_id?: string
+interface ImportRowInput {
+  full_name?: string
+  name?: string
   faculty_name?: string
+  email?: string
   faculty_email?: string
-  department?: string
   designation?: string
   role?: string
+  department?: string
+  faculty_id?: string
+  employee_id?: string
 }
 
 export async function POST(req: Request) {
@@ -23,21 +27,22 @@ export async function POST(req: Request) {
       user.scopeLevels.includes("DIRECTOR")
 
     if (!hasAdminScope) {
-      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden: System Admin permissions required." }, { status: 403 })
     }
 
-    const { rows, dryRun = true } = await req.json()
+    const { rows, dryRun = false } = await req.json()
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      return NextResponse.json({ error: "No faculty rows provided." }, { status: 400 })
+      return NextResponse.json({ error: "No user rows provided." }, { status: 400 })
     }
 
     const admin = createAdminClient()
     const db = admin as any
     const orgId = user.organizationId
 
-    // 1. Fetch existing org units and roles
-    const [{ data: orgUnits }, { data: roles }] = await Promise.all([
+    // 1. Fetch organization details, units, and roles
+    const [{ data: org }, { data: orgUnits }, { data: roles }] = await Promise.all([
+      db.from("organizations").select("id, name").eq("id", orgId).single(),
       db.from("org_units").select("id, name").eq("organization_id", orgId),
       db.from("roles").select("id, name, scope_level").eq("organization_id", orgId),
     ])
@@ -52,124 +57,169 @@ export async function POST(req: Request) {
       roleByScope.set(r.scope_level, r.id)
     }
 
-    // 2. Validate rows
-    const validRows: any[] = []
-    const rejectedRows: Array<{ rowNumber: number; row: FacultyImportRow; reason: string }> = []
+    const defaultPassword = process.env.BULK_IMPORT_DEFAULT_PASSWORD || "ChangeMe123!"
 
-    const defaultPassword = process.env.BULK_IMPORT_DEFAULT_PASSWORD || "Welcome@WorkLedger2026!"
+    // 2. Validate and normalize rows
+    const validRows: any[] = []
+    const rejectedRows: Array<{ rowNumber: number; row: ImportRowInput; reason: string }> = []
+    const newDeptsToCreate = new Set<string>()
 
     for (let i = 0; i < rows.length; i++) {
-      const row: FacultyImportRow = rows[i]
+      const row: ImportRowInput = rows[i]
       const rowNum = i + 1
 
-      const email = (row.faculty_email || "").trim().toLowerCase()
-      const name = (row.faculty_name || "").trim()
-      const employeeId = (row.faculty_id || "").trim()
-      const deptName = (row.department || "").trim()
-      const designation = (row.designation || "Faculty Member").trim()
+      const email = (row.email || row.faculty_email || "").trim().toLowerCase()
+      const name = (row.full_name || row.name || row.faculty_name || "").trim()
+      const designation = (row.designation || "Staff Member").trim()
       const roleStr = (row.role || "MEMBER").trim().toUpperCase()
-
-      if (!email || !email.includes("@")) {
-        rejectedRows.push({ rowNumber: rowNum, row, reason: `Invalid email address: "${row.faculty_email}"` })
-        continue
-      }
+      const deptName = (row.department || "").trim()
+      let facultyId = (row.faculty_id || row.employee_id || "").trim()
 
       if (!name) {
-        rejectedRows.push({ rowNumber: rowNum, row, reason: "Faculty name is required." })
+        rejectedRows.push({ rowNumber: rowNum, row, reason: "Full name is required." })
         continue
       }
 
-      const scopeLevel = roleStr.includes("HOD") || roleStr.includes("LEAD")
-        ? "ORG_UNIT_LEAD"
-        : roleStr.includes("DEPT_ADMIN")
-        ? "DEPT_ADMIN"
-        : roleStr.includes("DIRECTOR")
-        ? "DIRECTOR"
-        : "MEMBER"
+      if (!email || !email.includes("@")) {
+        rejectedRows.push({ rowNumber: rowNum, row, reason: `Invalid email address: "${email}"` })
+        continue
+      }
+
+      // Map role string to standard scope_level
+      let scopeLevel = "MEMBER"
+      if (roleStr === "SYSTEM_ADMIN" || roleStr.includes("SYS_ADMIN")) {
+        scopeLevel = "SYSTEM_ADMIN"
+      } else if (roleStr === "DIRECTOR") {
+        scopeLevel = "DIRECTOR"
+      } else if (roleStr === "ORG_UNIT_LEAD" || roleStr === "HOD" || roleStr.includes("HEAD")) {
+        scopeLevel = "ORG_UNIT_LEAD"
+      } else if (roleStr === "DEPT_ADMIN" || roleStr.includes("SCHEDULE_ADMIN")) {
+        scopeLevel = "DEPT_ADMIN"
+      } else if (roleStr === "FINANCE_ADMIN" || roleStr === "FINANCE") {
+        scopeLevel = "FINANCE_ADMIN"
+      } else {
+        scopeLevel = "MEMBER"
+      }
+
+      const deptRequired = ["MEMBER", "ORG_UNIT_LEAD", "DEPT_ADMIN"].includes(scopeLevel)
+      if (deptRequired && !deptName) {
+        rejectedRows.push({
+          rowNumber: rowNum,
+          row,
+          reason: `Department is required for role "${scopeLevel}".`,
+        })
+        continue
+      }
+
+      if (deptName && !unitByName.has(deptName.toLowerCase())) {
+        newDeptsToCreate.add(deptName)
+      }
+
+      if (!facultyId && deptRequired) {
+        const prefix = deptName.slice(0, 3).toUpperCase() || "MEM"
+        facultyId = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`
+      }
 
       validRows.push({
         rowNum,
-        email,
         name,
-        employeeId,
-        deptName,
+        email,
         designation,
         scopeLevel,
+        deptName,
+        facultyId,
       })
     }
 
-    // 3. Dry Run Preview Response
     if (dryRun) {
       return NextResponse.json({
         dryRun: true,
         totalRows: rows.length,
         validCount: validRows.length,
         rejectedCount: rejectedRows.length,
-        validRowsPreview: validRows.slice(0, 15),
+        newDepartments: Array.from(newDeptsToCreate),
+        validRows: validRows.slice(0, 50),
         rejectedRows,
       })
     }
 
-    // 4. Actual Provisioning
-    const createdUsers: any[] = []
-    for (const item of validRows) {
-      // Find or create org unit
-      let unitId = item.deptName ? unitByName.get(item.deptName.toLowerCase()) : null
-      if (!unitId && item.deptName) {
-        const { data: newUnit } = await db
-          .from("org_units")
-          .insert({
-            organization_id: orgId,
-            name: item.deptName,
-            unit_type: "DEPARTMENT",
-          })
-          .select("id")
-          .single()
+    // 3. Execution: Create missing departments first
+    const createdDepts: string[] = []
+    for (const deptName of newDeptsToCreate) {
+      const newId = crypto.randomUUID()
+      const pathSlug = `n${newId.replace(/-/g, "_")}`
 
-        if (newUnit?.id && item.deptName) {
-          unitId = newUnit.id
-          unitByName.set(item.deptName.toLowerCase(), newUnit.id)
-        }
+      const { data: newUnit, error: deptErr } = await db
+        .from("org_units")
+        .insert({
+          id: newId,
+          organization_id: orgId,
+          name: deptName,
+          unit_type: "ACADEMIC_DEPARTMENT",
+          parent_id: null,
+          path: pathSlug,
+        })
+        .select("id, name")
+        .single()
+
+      if (!deptErr && newUnit) {
+        unitByName.set(deptName.toLowerCase(), newUnit.id)
+        createdDepts.push(deptName)
       }
+    }
 
-      // Check if Auth user exists
+    // 4. Provision users
+    let createdCount = 0
+    let existingCount = 0
+    const results: any[] = []
+
+    for (const item of validRows) {
+      const orgUnitId = item.deptName ? unitByName.get(item.deptName.toLowerCase()) || null : null
+      const roleId = roleByScope.get(item.scopeLevel)
+      const memberRoleId = roleByScope.get("MEMBER")
+
       let authUserId: string | null = null
-      const { data: authCreate, error: authErr } = await admin.auth.admin.createUser({
+
+      // Create or lookup auth user
+      const { data: authCreated, error: authErr } = await admin.auth.admin.createUser({
         email: item.email,
         password: defaultPassword,
         email_confirm: true,
-        user_metadata: { name: item.name, organization_id: orgId },
+        user_metadata: {
+          name: item.name,
+          must_change_password: true,
+        },
       })
 
-      if (authCreate?.user) {
-        authUserId = authCreate.user.id
-      } else if (authErr?.message?.includes("already registered")) {
-        // Find existing user id
-        const { data: existingUser } = await db
-          .from("users")
-          .select("id")
-          .eq("email", item.email)
-          .maybeSingle()
-        authUserId = existingUser?.id || null
+      if (authCreated?.user?.id) {
+        authUserId = authCreated.user.id
+        createdCount++
+      } else {
+        // Find existing auth user
+        const { data: userList } = await admin.auth.admin.listUsers()
+        const found = userList?.users?.find((u) => u.email?.toLowerCase() === item.email)
+        if (found) {
+          authUserId = found.id
+          existingCount++
+        }
       }
 
       if (authUserId) {
-        // Upsert into public.users
+        // Upsert public.users
+        const nowIso = new Date().toISOString()
         await db.from("users").upsert({
           id: authUserId,
           organization_id: orgId,
-          org_unit_id: unitId,
+          org_unit_id: orgUnitId,
           email: item.email,
           name: item.name,
-          employee_id: item.employeeId || null,
           designation: item.designation,
           status: "ACTIVE",
           employment_type: "FULL_TIME",
-          must_reset_password: true,
+          updated_at: nowIso,
         })
 
-        // Assign Role
-        const roleId = roleByScope.get(item.scopeLevel)
+        // Assign primary role
         if (roleId) {
           await db.from("user_roles").upsert(
             { user_id: authUserId, role_id: roleId },
@@ -177,35 +227,46 @@ export async function POST(req: Request) {
           )
         }
 
-        // Create Personal internal wallet if missing
-        await db.from("wallets").upsert(
-          {
-            organization_id: orgId,
-            owner_user_id: authUserId,
-            purpose: "PERSONAL",
-            balance: 0,
-          },
-          { onConflict: "owner_user_id,purpose" }
-        ).catch(() => {})
+        // If HOD, also assign MEMBER role
+        if (item.scopeLevel === "ORG_UNIT_LEAD" && memberRoleId && memberRoleId !== roleId) {
+          await db.from("user_roles").upsert(
+            { user_id: authUserId, role_id: memberRoleId },
+            { onConflict: "user_id,role_id" }
+          )
+        }
 
-        createdUsers.push({ id: authUserId, email: item.email, name: item.name })
+        // If HOD and department has no lead, set lead_user_id
+        if (item.scopeLevel === "ORG_UNIT_LEAD" && orgUnitId) {
+          await db
+            .from("org_units")
+            .update({ lead_user_id: authUserId })
+            .eq("id", orgUnitId)
+            .is("lead_user_id", null)
+        }
+
+        results.push({
+          email: item.email,
+          name: item.name,
+          role: item.scopeLevel,
+          department: item.deptName || "None",
+          status: "SUCCESS",
+        })
       }
     }
 
     return NextResponse.json({
       success: true,
-      dryRun: false,
-      totalRows: rows.length,
-      importedCount: createdUsers.length,
+      createdCount,
+      existingCount,
       rejectedCount: rejectedRows.length,
+      createdDepartments: createdDepts,
+      passwordResetRequiredCount: createdCount,
+      results,
       rejectedRows,
-      message: `Successfully imported and provisioned ${createdUsers.length} faculty accounts with password reset required.`,
+      message: `Successfully processed ${validRows.length} user records (${createdCount} created, ${existingCount} linked).`,
     })
   } catch (error: any) {
-    console.error("[api/admin/bulk-import-users] Error:", error)
-    return NextResponse.json(
-      { error: error?.message || "Internal server error" },
-      { status: 500 }
-    )
+    console.error("[bulk-import-users] Error:", error)
+    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 })
   }
 }

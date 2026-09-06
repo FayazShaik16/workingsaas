@@ -141,16 +141,17 @@ export default function OrgTreePage() {
       const loadedUnits: OrgUnit[] = (unitsData as any) || []
       setUnits(loadedUnits)
 
-      // 2. Fetch all roles in the database
+      // 2. Fetch roles strictly for this organization
       const { data: rolesData } = await supabase
         .from("roles")
         .select("*")
+        .eq("organization_id", orgId)
       const loadedRoles: any[] = (rolesData as any) || []
 
-      // 3. Fetch user_roles with role definitions
+      // 3. Fetch user_roles for members in this organization
       const { data: userRolesData } = await supabase
         .from("user_roles")
-        .select("user_id, role_id, roles(id, name, scope_level)")
+        .select("user_id, role_id, roles(id, name, scope_level, organization_id)")
       const loadedUserRoles: any[] = (userRolesData as any) || []
 
       // 4. Fetch members & progress
@@ -159,40 +160,55 @@ export default function OrgTreePage() {
 
       const [{ data: usersData }, { data: progressData }] = await Promise.all([
         supabase.from("users").select("*").eq("organization_id", orgId),
-        supabase.from("monthly_work_progress").select("user_id, display_progress_percentage").eq("organization_id", orgId).eq("month_start", currentMonthStart),
+        supabase
+          .from("monthly_work_progress")
+          .select("user_id, display_progress_percentage")
+          .eq("organization_id", orgId)
+          .eq("month_start", currentMonthStart),
       ])
 
-      const progressMap = new Map((progressData || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
+      const progressMap = new Map(
+        (progressData || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)])
+      )
 
-      const roleMap = new Map<string, any>()
+      // Deduplicate roles strictly by scope_level for the organization
+      const roleMapByScope = new Map<string, any>()
       loadedRoles.forEach((r: any) => {
-        roleMap.set(r.id, {
-          ...r,
-          name: formatRole(r.name || r.scope_level),
-        })
+        if (!roleMapByScope.has(r.scope_level)) {
+          roleMapByScope.set(r.scope_level, {
+            ...r,
+            name: formatRole(r.name || r.scope_level),
+          })
+        }
       })
+
+      const uniqueRoles = Array.from(roleMapByScope.values())
 
       const formattedMembers: OrgMember[] = (usersData || []).map((u: any) => {
         const ur = loadedUserRoles.find((r: any) => r.user_id === u.id)
         const matchedRoleId = ur?.role_id || ""
-        let matchedRole = ur?.roles || loadedRoles.find((r: any) => r.id === matchedRoleId)
+        let matchedRole =
+          ur?.roles || loadedRoles.find((r: any) => r.id === matchedRoleId)
 
         // Fallback for Director / HOD if role is not mapped
         if (!matchedRole) {
           if (u.designation?.toLowerCase().includes("director") || !u.org_unit_id) {
-            matchedRole = loadedRoles.find((r: any) => r.scope_level === "DIRECTOR") || {
+            matchedRole = uniqueRoles.find((r: any) => r.scope_level === "DIRECTOR") || {
               id: "role-director",
               name: "Director",
               scope_level: "DIRECTOR",
             }
-          } else if (u.designation?.toLowerCase().includes("lead") || u.designation?.toLowerCase().includes("hod")) {
-            matchedRole = loadedRoles.find((r: any) => r.scope_level === "ORG_UNIT_LEAD") || {
+          } else if (
+            u.designation?.toLowerCase().includes("lead") ||
+            u.designation?.toLowerCase().includes("hod")
+          ) {
+            matchedRole = uniqueRoles.find((r: any) => r.scope_level === "ORG_UNIT_LEAD") || {
               id: "role-lead",
               name: "HOD / Dept Lead",
               scope_level: "ORG_UNIT_LEAD",
             }
           } else {
-            matchedRole = loadedRoles.find((r: any) => r.scope_level === "MEMBER") || {
+            matchedRole = uniqueRoles.find((r: any) => r.scope_level === "MEMBER") || {
               id: "role-member",
               name: "Faculty Member",
               scope_level: "MEMBER",
@@ -200,14 +216,12 @@ export default function OrgTreePage() {
           }
         }
 
-        const cleanRole = matchedRole ? {
-          ...matchedRole,
-          name: formatRole(matchedRole.name || matchedRole.scope_level),
-        } : null
-
-        if (cleanRole?.id) {
-          roleMap.set(cleanRole.id, cleanRole)
-        }
+        const cleanRole = matchedRole
+          ? {
+              ...matchedRole,
+              name: formatRole(matchedRole.name || matchedRole.scope_level),
+            }
+          : null
 
         return {
           ...u,
@@ -217,7 +231,7 @@ export default function OrgTreePage() {
         }
       })
       setMembers(formattedMembers)
-      setRoles(Array.from(roleMap.values()))
+      setRoles(uniqueRoles)
 
       // 5. Fetch permissions
       const { data: permsData } = await supabase

@@ -50,3 +50,5 @@
 | [2026-08-22] Verification Reports: Generated docs/DEPLOYMENT_CONSISTENCY_AUDIT.md and docs/DEPLOYMENT_E2E_TEST_REPORT.md | | |
 | [2026-08-22] Final Core Repair: Eradicated verification_type in favor of canonical verification_mode, built transactional getOrCreateDefaultTaskType | | |
 | [2026-09-04] Verified PR #5 (Commit 797ddd7): Verified all 12 audit remediations pulled, resolved TypeScript typings, compiled 53/53 Next.js routes with Turbopack, and passed 7/7 live database acceptance tests | | |
+| [2026-09-06] Core Demo Flow Repair & Simple ERC-20 Sepolia: Deployed standard WorkLedgerToken.sol logic, fixed disappearing departments & cross-org role pollution, built bulk people & timetable CSV importers with downloadable templates, integrated HOD nominations/assignment portal, and built live Sepolia ERC-20 mint settlement | None | [ ] Execute demo runbook flow for tomorrow's presentation |
+

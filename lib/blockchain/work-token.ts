@@ -6,44 +6,11 @@ export const WORK_TOKEN_ABI = [
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
   "function totalSupply() view returns (uint256)",
-  "function balanceOf(address owner) view returns (uint256)",
-  "function transfer(address to, uint256 amount) returns (bool)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-  "function transferFrom(address from, address to, uint256 amount) returns (bool)",
-  "function increaseAllowance(address spender, uint256 addedValue) returns (bool)",
-  "function decreaseAllowance(address spender, uint256 subtractedValue) returns (bool)",
-  "function mintProofReward(address recipient, uint256 amount, string taskId, bytes32 proofHash) returns (bool)",
-  "function issueWorkLoan(address borrower, uint256 amount, string loanId) returns (bool)",
-  "function executeBatchReversal(address[] accounts, uint256[] amounts, bytes32 batchId) returns (bool)",
-  "function proposeDirector(address newDirector)",
-  "function acceptDirector()",
-  "function setSalaryPoolVault(address newVault)",
-  "function setFinanceAdmin(address newFinanceAdmin)",
-  "function setRelayer(address relayer, bool enabled)",
-  "function pause()",
-  "function unpause()",
-  "function director() view returns (address)",
-  "function pendingDirector() view returns (address)",
-  "function financeAdmin() view returns (address)",
-  "function salaryPoolVault() view returns (address)",
-  "function isRelayer(address) view returns (bool)",
-  "function paused() view returns (bool)",
-  "function processedProofs(bytes32) view returns (bool)",
-  "function processedLoans(bytes32) view returns (bool)",
-  "function processedBatches(bytes32) view returns (bool)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function transfer(address recipient, uint256 amount) returns (bool)",
+  "function mint(address to, uint256 amount)",
+  "function owner() view returns (address)",
   "event Transfer(address indexed from, address indexed to, uint256 value)",
-  "event Approval(address indexed owner, address indexed spender, uint256 value)",
-  "event MintRecorded(address indexed recipient, uint256 amount, string taskId, bytes32 indexed proofHash)",
-  "event BatchReversalExecuted(address indexed executor, address indexed salaryPoolVault, uint256 totalSwept, bytes32 indexed batchId)",
-  "event LoanIssued(address indexed borrower, uint256 amount, string loanId, bytes32 indexed loanKey)",
-  "event RoleUpdated(string role, address indexed account, bool enabled)",
-  "event DirectorTransferProposed(address indexed currentDirector, address indexed proposedDirector)",
-  "event DirectorTransferred(address indexed previousDirector, address indexed newDirector)",
-  "event FinanceAdminUpdated(address indexed previousAdmin, address indexed newAdmin)",
-  "event SalaryPoolVaultUpdated(address indexed previousVault, address indexed newVault)",
-  "event Paused(address indexed account)",
-  "event Unpaused(address indexed account)",
 ]
 
 export const SEPOLIA_CHAIN_ID = 11155111
@@ -111,11 +78,15 @@ export async function checkBlockchainReadiness(): Promise<{
   chainId?: number
   rpcReachable: boolean
   workTokenAddress?: string
+  tokenName?: string
   tokenSymbol?: string
   tokenDecimals?: number
+  contractOwner?: string
+  isOwnerMatched?: boolean
   treasuryAddress?: string
   treasuryEthBalance?: string
   treasuryWorkBalance?: string
+  codeExists?: boolean
   statusMessage: string
 }> {
   const rpcUrl = process.env.SEPOLIA_RPC_URL
@@ -143,6 +114,9 @@ export async function checkBlockchainReadiness(): Promise<{
     const network = await provider.getNetwork()
     const chainId = Number(network.chainId)
 
+    const code = await provider.getCode(tokenAddress)
+    const codeExists = Boolean(code && code !== "0x")
+
     const treasuryWallet = new ethers.Wallet(treasuryKey, provider)
     const treasuryAddress = treasuryWallet.address
 
@@ -150,25 +124,34 @@ export async function checkBlockchainReadiness(): Promise<{
     const treasuryEthBalance = ethers.formatEther(ethBalanceWei)
 
     const contract = new ethers.Contract(tokenAddress, WORK_TOKEN_ABI, provider)
-    const [symbol, decimals, tokenBalanceWei] = await Promise.all([
+    const [name, symbol, decimals, tokenBalanceWei, owner] = await Promise.all([
+      contract.name().catch(() => "WorkLedger Token"),
       contract.symbol().catch(() => "WORK"),
       contract.decimals().catch(() => 18),
       contract.balanceOf(treasuryAddress).catch(() => BigInt(0)),
+      contract.owner().catch(() => null),
     ])
 
     const treasuryWorkBalance = ethers.formatUnits(tokenBalanceWei, decimals)
+    const isOwnerMatched = owner ? owner.toLowerCase() === treasuryAddress.toLowerCase() : false
 
     return {
       configured: true,
       chainId,
       rpcReachable: true,
+      codeExists,
       workTokenAddress: tokenAddress,
+      tokenName: name,
       tokenSymbol: symbol,
       tokenDecimals: Number(decimals),
+      contractOwner: owner || undefined,
+      isOwnerMatched,
       treasuryAddress,
       treasuryEthBalance,
       treasuryWorkBalance,
-      statusMessage: "Sepolia testnet connection active and verified.",
+      statusMessage: codeExists
+        ? "Sepolia testnet connection active, contract bytecode verified, and treasury ready."
+        : "RPC connected, but no bytecode found at contract address (not deployed on this chain).",
     }
   } catch (error: any) {
     return {
@@ -180,9 +163,9 @@ export async function checkBlockchainReadiness(): Promise<{
 }
 
 /**
- * Execute real Sepolia ERC-20 salary settlement transfer
+ * Execute real Sepolia ERC-20 salary settlement mint/transfer
  */
-export async function executeSalaryTransfer(params: {
+export async function executeSalaryMint(params: {
   recipientAddress: string
   amount: number
 }): Promise<{
@@ -210,12 +193,20 @@ export async function executeSalaryTransfer(params: {
   const decimals = await contract.decimals().catch(() => 18)
   const amountWei = ethers.parseUnits(params.amount.toString(), decimals)
 
-  // Broadcast transfer
-  const tx = await contract.transfer(params.recipientAddress, amountWei)
+  // Call mint(to, amount) as owner
+  let tx
+  try {
+    tx = await contract.mint(params.recipientAddress, amountWei)
+  } catch (mintErr: any) {
+    // If contract does not have mint or caller is not owner, attempt transfer fallback
+    console.warn("[executeSalaryMint] mint failed, falling back to treasury transfer:", mintErr?.message)
+    tx = await contract.transfer(params.recipientAddress, amountWei)
+  }
+
   const receipt = await tx.wait(1)
 
   if (!receipt || receipt.status !== 1) {
-    throw new Error(`On-chain transfer failed or reverted. Tx hash: ${tx.hash}`)
+    throw new Error(`On-chain transaction failed or reverted. Tx hash: ${tx.hash}`)
   }
 
   return {
@@ -225,3 +216,5 @@ export async function executeSalaryTransfer(params: {
     etherscanUrl: getEtherscanTxUrl(tx.hash),
   }
 }
+
+export const executeSalaryTransfer = executeSalaryMint

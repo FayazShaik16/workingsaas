@@ -92,6 +92,11 @@ export function FinanceSalaryConsole({
     )
   }
 
+  const [mintModalOpen, setMintModalOpen] = useState(false)
+  const [mintTargetMember, setMintTargetMember] = useState<FinanceFacultyMember | null>(null)
+  const [mintAmount, setMintAmount] = useState<number>(10)
+  const [isMinting, setIsMinting] = useState(false)
+
   const handleExecuteBatchReversal = async (targetMemberIds: string[]) => {
     if (targetMemberIds.length === 0) return
 
@@ -137,6 +142,43 @@ export function FinanceSalaryConsole({
       })
     } finally {
       setIsReversing(false)
+    }
+  }
+
+  const handleExecuteSepoliaMint = async () => {
+    if (!mintTargetMember) return
+    setIsMinting(true)
+    setFeedback(null)
+
+    try {
+      const response = await fetch("/api/finance/settle-salary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          facultyId: mintTargetMember.id,
+          amount: mintAmount,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to mint WORK tokens on Sepolia.")
+      }
+
+      setMintModalOpen(false)
+      setFeedback({
+        type: "success",
+        text: data.message || `Minted ${mintAmount} WORK audit tokens to ${mintTargetMember.name} on Ethereum Sepolia.`,
+        txHash: data.txHash,
+      })
+      router.refresh()
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        text: err.message || "Sepolia mint settlement failed.",
+      })
+    } finally {
+      setIsMinting(false)
     }
   }
 
@@ -356,14 +398,28 @@ export function FinanceSalaryConsole({
                         {m.reversed || m.wallet_balance === 0 ? (
                           <span className="text-[11px] text-muted-foreground italic">Settled</span>
                         ) : isEligible ? (
-                          <Button
-                            size="xs"
-                            onClick={() => handleExecuteBatchReversal([m.id])}
-                            disabled={isReversing}
-                            className="rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
-                          >
-                            Sweep ({m.wallet_balance.toFixed(1)})
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              onClick={() => {
+                                setMintTargetMember(m)
+                                setMintModalOpen(true)
+                              }}
+                              className="rounded-lg text-[11px] font-semibold text-primary border-primary/30 hover:bg-primary/10 shadow-2xs gap-1"
+                            >
+                              <Sparkles className="h-3 w-3 text-primary" />
+                              Mint Sepolia
+                            </Button>
+                            <Button
+                              size="xs"
+                              onClick={() => handleExecuteBatchReversal([m.id])}
+                              disabled={isReversing}
+                              className="rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+                            >
+                              Sweep ({m.wallet_balance.toFixed(1)})
+                            </Button>
+                          </div>
                         ) : (
                           <span className="text-[11px] text-destructive font-semibold">Hold Payout</span>
                         )}
@@ -376,6 +432,89 @@ export function FinanceSalaryConsole({
           )}
         </CardContent>
       </Card>
+
+      {/* Sepolia ERC-20 Settlement Modal */}
+      <Dialog open={mintModalOpen} onOpenChange={setMintModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl p-6">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-primary/10 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div>
+                <DialogTitle className="text-lg font-bold">Mint WORK Tokens on Sepolia</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Ethereum Sepolia ERC-20 Capability Settlement
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {mintTargetMember && (
+            <div className="space-y-3 pt-2 text-xs">
+              <div className="p-3.5 rounded-xl border border-muted/80 bg-muted/20 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Recipient Faculty:</span>
+                  <span className="font-bold text-foreground">{mintTargetMember.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Department:</span>
+                  <span className="font-medium text-foreground">{mintTargetMember.org_unit_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Milestone Progress:</span>
+                  <span className="font-mono font-bold text-emerald-600">{mintTargetMember.progress_percentage}% (Eligible)</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">WORK Token Mint Amount (Audit Settlement)</label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={mintAmount}
+                  onChange={(e) => setMintAmount(Number(e.target.value) || 10)}
+                  className="h-9 rounded-xl text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-300 text-[11px] leading-relaxed">
+                <p className="font-semibold">Notice:</p>
+                This is a Sepolia WORK token eligibility/audit settlement, not bank payroll. The Treasury wallet pays the testnet gas and mints real ERC-20 WORK tokens to the faculty member's custodial audit address.
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMintModalOpen(false)}
+              disabled={isMinting}
+              className="rounded-xl text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleExecuteSepoliaMint}
+              disabled={isMinting || !mintTargetMember}
+              className="rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs gap-1.5"
+            >
+              {isMinting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Minting on Sepolia...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" /> Mint {mintAmount} WORK on Sepolia
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Batch Reversal Modal Confirmation */}
       <Dialog open={confirmModalOpen} onOpenChange={setConfirmModalOpen}>

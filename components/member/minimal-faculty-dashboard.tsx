@@ -22,6 +22,7 @@ import { ScheduledCompletionModal, ScheduledInstanceItem } from "./scheduled-com
 import { CircularProgressRing } from "./circular-progress-ring"
 import { MonthlyProgressView } from "@/lib/workledger/progress"
 import Link from "next/link"
+import { toast } from "sonner"
 
 export interface ScheduledInstanceRow {
   id: string
@@ -87,6 +88,8 @@ export function MinimalFacultyDashboard({
   const [instances, setInstances] = useState<ScheduledInstanceRow[]>(initialTodayInstances)
   const [assigned, setAssigned] = useState<AssignedAdHocTask[]>(initialAssignedTasks)
   const [progress, setProgress] = useState<MonthlyProgressView>(initialProgress)
+  const [claimingSalary, setClaimingSalary] = useState(false)
+  const [salaryClaimed, setSalaryClaimed] = useState(false)
 
   // 2-Step Completion Modal State
   const [selectedInstance, setSelectedInstance] = useState<ScheduledInstanceItem | null>(null)
@@ -313,11 +316,44 @@ export function MinimalFacultyDashboard({
                   </div>
 
                   {/* Status Hint */}
-                  <div className="text-xs">
+                  <div className="text-xs pt-1">
                     {progress.salaryEligible ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs font-normal">
-                        Eligible to request salary review from {progress.salaryRequestOpenDate ? new Date(progress.salaryRequestOpenDate).toLocaleDateString("en-US", { day: "numeric", month: "short" }) : "Day 26"}
-                      </Badge>
+                      <div className="space-y-2">
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs font-normal">
+                          Eligible to request salary review from {progress.salaryRequestOpenDate ? new Date(progress.salaryRequestOpenDate).toLocaleDateString("en-US", { day: "numeric", month: "short" }) : "Day 26"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              setClaimingSalary(true)
+                              const res = await fetch("/api/member/claim-salary", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({}),
+                              })
+                              const data = await res.json()
+                              if (!res.ok) throw new Error(data.error || "Failed to initiate salary review.")
+                              setSalaryClaimed(true)
+                              toast.success(data.message || "Salary review requested successfully!")
+                            } catch (err: any) {
+                              toast.error(err.message || "Could not initiate salary review.")
+                            } finally {
+                              setClaimingSalary(false)
+                            }
+                          }}
+                          disabled={claimingSalary || salaryClaimed}
+                          className="w-full text-xs font-semibold h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          {claimingSalary ? (
+                            "Submitting Review Request..."
+                          ) : salaryClaimed ? (
+                            "✓ Salary Review Pending HOD"
+                          ) : (
+                            "Initiate Salary Review"
+                          )}
+                        </Button>
+                      </div>
                     ) : (
                       <p className="text-muted-foreground">
                         <span className="font-bold font-mono text-foreground">{progress.creditsToThreshold?.toFixed(1)}</span> credits to salary-request eligibility

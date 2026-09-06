@@ -14,36 +14,39 @@ export default async function ConfigDepartmentsPage({ params }: PageProps) {
   const admin = createAdminClient()
   const db = admin as any
 
-  // 1. Fetch departments
-  const { data: deptData } = await db
+  // 1. Fetch departments safely without non-existent columns
+  const { data: deptData, error: deptErr } = await db
     .from("org_units")
-    .select(`
-      id,
-      name,
-      code,
-      unit_type,
-      lead_user_id,
-      created_at,
-      users!users_org_unit_id_fkey(id, name, email)
-    `)
+    .select("id, name, unit_type, lead_user_id, created_at")
     .eq("organization_id", orgId)
     .order("name", { ascending: true })
 
-  // 2. Fetch all users for lead assignment dropdown
+  if (deptErr) {
+    console.error("[ConfigDepartmentsPage] Error fetching departments:", deptErr)
+  }
+
+  // 2. Fetch all users for lead assignment dropdown and member counts
   const { data: allUsers } = await db
     .from("users")
-    .select("id, name, email, designation")
+    .select("id, name, email, designation, org_unit_id")
     .eq("organization_id", orgId)
     .order("name", { ascending: true })
 
   const departments = (deptData || []).map((d: any) => ({
     id: d.id,
     name: d.name,
-    code: d.code || d.name.slice(0, 4).toUpperCase(),
+    code: d.name.slice(0, 4).toUpperCase(),
     leadUserId: d.lead_user_id,
     leadName: (allUsers || []).find((u: any) => u.id === d.lead_user_id)?.name || "Unassigned",
-    memberCount: (d.users || []).length,
+    memberCount: (allUsers || []).filter((u: any) => u.org_unit_id === d.id).length,
     createdAt: d.created_at,
+  }))
+
+  const availableUsers = (allUsers || []).map((u: any) => ({
+    id: u.id,
+    name: u.name || "Member",
+    email: u.email,
+    designation: u.designation,
   }))
 
   return (
@@ -58,7 +61,7 @@ export default async function ConfigDepartmentsPage({ params }: PageProps) {
       <DepartmentManagerClient
         orgId={orgId}
         initialDepartments={departments}
-        availableUsers={allUsers || []}
+        availableUsers={availableUsers}
       />
     </div>
   )

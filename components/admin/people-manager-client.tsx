@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +54,7 @@ const ROLE_OPTIONS = [
 ]
 
 export function PeopleManagerClient({ orgId, initialUsers, departments }: Props) {
+  const router = useRouter()
   const [users, setUsers] = useState<PersonItem[]>(initialUsers)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -128,6 +130,7 @@ export function PeopleManagerClient({ orgId, initialUsers, departments }: Props)
       setOrgUnitId("")
       setSetAsPrimaryLead(false)
       setShowModal(false)
+      router.refresh()
     } catch (err: any) {
       toast.error(err.message || "Failed to provision user.")
     } finally {

@@ -97,10 +97,13 @@ export async function POST(req: Request) {
     const db = admin as any
     const orgId = user.organizationId
 
+    const isGlobalAdmin =
+      user.scopeLevels.includes("SYSTEM_ADMIN") || user.scopeLevels.includes("DIRECTOR")
+
     // 1. Fetch organization users for matching
     const { data: orgUsers } = await db
       .from("users")
-      .select("id, email, name, employee_id")
+      .select("id, email, name, employee_id, org_unit_id")
       .eq("organization_id", orgId)
 
     const userByEmail = new Map<string, any>()
@@ -145,6 +148,16 @@ export async function POST(req: Request) {
           rowNumber: rowNum,
           row,
           reason: `Faculty not found in organization (Email: ${row.faculty_email || "N/A"}, ID: ${row.faculty_id || "N/A"})`,
+        })
+        continue
+      }
+
+      // A2. Scoping check: verify faculty belongs to Dept Admin permitted department
+      if (!isGlobalAdmin && user.orgUnitId && matchedUser.org_unit_id && matchedUser.org_unit_id !== user.orgUnitId) {
+        rejectedRows.push({
+          rowNumber: rowNum,
+          row,
+          reason: `Faculty ${matchedUser.name} belongs to a different department and cannot be scheduled by this department admin.`,
         })
         continue
       }
