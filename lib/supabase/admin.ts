@@ -6,11 +6,13 @@ import { Database } from "@/lib/database.types"
  * Only use in secure server contexts (Route Handlers, Server Actions)
  */
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://bzgqvwqzbjqpfunnyfwe.supabase.co"
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "build-placeholder-key"
 
   return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
