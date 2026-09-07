@@ -3,33 +3,71 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 
 async function resolveAuthUser(req: Request) {
-  const sessionUser = await getSessionUser()
-  if (sessionUser) return sessionUser
+  // 1. Try standard getSessionUser() from cookies
+  try {
+    const sessionUser = await getSessionUser()
+    if (sessionUser) return sessionUser
+  } catch (e) {
+    console.warn("[hierarchy] getSessionUser error:", e)
+  }
 
+  const adminClient = createAdminClient()
+
+  // 2. Try Authorization: Bearer <token>
   const authHeader = req.headers.get("Authorization")
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.replace("Bearer ", "").trim()
-    const adminClient = createAdminClient()
-    const { data: authData } = await adminClient.auth.getUser(token)
-    if (authData?.user) {
-      const { data: userRec } = await (adminClient as any)
-        .from("users")
-        .select("id, email, name, organization_id, org_unit_id")
-        .eq("id", authData.user.id)
-        .maybeSingle()
-      if (userRec) {
-        return {
-          id: userRec.id,
-          email: userRec.email,
-          name: userRec.name,
-          organizationId: userRec.organization_id,
-          orgUnitId: userRec.org_unit_id,
-          roles: [] as string[],
-          scopeLevels: ["DIRECTOR", "SYSTEM_ADMIN"] as string[],
+  let token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "").trim() : null
+
+  // 3. Fallback: Parse Supabase session cookies if token not in Authorization header
+  if (!token) {
+    const cookieHeader = req.headers.get("cookie") || ""
+    const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/)
+    if (match) {
+      let tokenStr = decodeURIComponent(match[1])
+      try {
+        if (tokenStr.startsWith("base64-")) {
+          tokenStr = Buffer.from(tokenStr.slice(7), "base64").toString("utf-8")
         }
-      }
+        const parsed = JSON.parse(tokenStr)
+        token = parsed?.access_token || (Array.isArray(parsed) ? parsed[0] : null)
+      } catch {}
     }
   }
+
+  if (token) {
+    try {
+      const { data: authData } = await adminClient.auth.getUser(token)
+      if (authData?.user) {
+        const { data: userRec } = await (adminClient as any)
+          .from("users")
+          .select(`
+            id, email, name, organization_id, org_unit_id,
+            user_roles(
+              role_id,
+              roles(id, name, scope_level)
+            )
+          `)
+          .eq("id", authData.user.id)
+          .maybeSingle()
+
+        if (userRec) {
+          const roles = (userRec.user_roles as any[])?.map((ur: any) => ur.roles?.id).filter(Boolean) || []
+          const scopeLevels = (userRec.user_roles as any[])?.map((ur: any) => ur.roles?.scope_level).filter(Boolean) || []
+          return {
+            id: userRec.id,
+            email: userRec.email,
+            name: userRec.name,
+            organizationId: userRec.organization_id,
+            orgUnitId: userRec.org_unit_id,
+            roles,
+            scopeLevels: scopeLevels.length > 0 ? scopeLevels : ["DIRECTOR", "SYSTEM_ADMIN"],
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[hierarchy] token resolution error:", err)
+    }
+  }
+
   return null
 }
 
@@ -407,6 +445,8 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const {
       organizationId,
+      unitId,
+      leadUserId,
       memberId,
       name,
       employeeId,
@@ -417,25 +457,69 @@ export async function PATCH(req: Request) {
     } = body
 
     const orgId = organizationId || sessionUser.organizationId
-    if (!memberId) {
-      return NextResponse.json({ error: "Member ID is required." }, { status: 400 })
-    }
-
     const admin = createAdminClient()
     const db = admin as any
 
-    const effectiveUnitId = orgUnitId === "none" || !orgUnitId ? null : orgUnitId
+    // CASE A: Assign or change Department Lead for a specific unit directly
+    if (unitId && leadUserId !== undefined) {
+      // 1. Update org_units.lead_user_id
+      const { error: unitErr } = await db
+        .from("org_units")
+        .update({ lead_user_id: leadUserId || null, updated_at: new Date().toISOString() })
+        .eq("id", unitId)
+        .eq("organization_id", orgId)
+
+      if (unitErr) {
+        return NextResponse.json({ error: unitErr.message }, { status: 500 })
+      }
+
+      // 2. If a user was appointed, ensure they belong to this unit and have ORG_UNIT_LEAD role
+      if (leadUserId) {
+        await db
+          .from("users")
+          .update({ org_unit_id: unitId, updated_at: new Date().toISOString() })
+          .eq("id", leadUserId)
+
+        const { data: leadRole } = await db
+          .from("roles")
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("scope_level", "ORG_UNIT_LEAD")
+          .maybeSingle()
+
+        if (leadRole?.id) {
+          await db
+            .from("user_roles")
+            .upsert(
+              { user_id: leadUserId, role_id: leadRole.id },
+              { onConflict: "user_id,role_id" }
+            )
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Department lead updated successfully.",
+      })
+    }
+
+    // CASE B: Member update / role promotion
+    if (!memberId) {
+      return NextResponse.json({ error: "Member ID or Unit ID is required." }, { status: 400 })
+    }
+
+    const effectiveUnitId = orgUnitId === undefined ? undefined : (orgUnitId === "none" || !orgUnitId ? null : orgUnitId)
 
     // 1. Update user record
+    const userUpdatePayload: any = { updated_at: new Date().toISOString() }
+    if (name) userUpdatePayload.name = name.trim()
+    if (employeeId !== undefined) userUpdatePayload.employee_id = employeeId?.trim() || null
+    if (designation !== undefined) userUpdatePayload.designation = designation?.trim() || null
+    if (effectiveUnitId !== undefined) userUpdatePayload.org_unit_id = effectiveUnitId
+
     const { error: userUpdateErr } = await db
       .from("users")
-      .update({
-        name: name ? name.trim() : undefined,
-        employee_id: employeeId !== undefined ? (employeeId?.trim() || null) : undefined,
-        designation: designation !== undefined ? (designation?.trim() || null) : undefined,
-        org_unit_id: effectiveUnitId,
-        updated_at: new Date().toISOString(),
-      })
+      .update(userUpdatePayload)
       .eq("id", memberId)
       .eq("organization_id", orgId)
 
@@ -450,32 +534,35 @@ export async function PATCH(req: Request) {
         .from("roles")
         .select("scope_level")
         .eq("id", roleId)
-        .single()
+        .maybeSingle()
 
       isLeadRole = roleData?.scope_level === "ORG_UNIT_LEAD"
 
-      // Remove current roles and assign new primary role
-      await db.from("user_roles").delete().eq("user_id", memberId)
-      await db.from("user_roles").insert({
-        user_id: memberId,
-        role_id: roleId,
-      })
+      await db.from("user_roles").upsert(
+        { user_id: memberId, role_id: roleId },
+        { onConflict: "user_id,role_id" }
+      )
     }
 
     // 3. Atomically sync org_units lead_user_id
-    if (isLeadRole && effectiveUnitId) {
-      // Set as lead for this unit
+    if (isLeadRole) {
+      let targetUnit = effectiveUnitId
+      if (!targetUnit) {
+        const { data: curUser } = await db.from("users").select("org_unit_id").eq("id", memberId).maybeSingle()
+        targetUnit = curUser?.org_unit_id
+      }
+      if (targetUnit) {
+        await db
+          .from("org_units")
+          .update({ lead_user_id: memberId, updated_at: new Date().toISOString() })
+          .eq("id", targetUnit)
+      }
+    } else if (effectiveUnitId === null) {
+      // Cleared from department
       await db
         .from("org_units")
-        .update({ lead_user_id: memberId })
-        .eq("id", effectiveUnitId)
-    } else {
-      // If user is no longer lead of this unit or moved to none, clear them if they were previously the lead
-      await db
-        .from("org_units")
-        .update({ lead_user_id: null })
+        .update({ lead_user_id: null, updated_at: new Date().toISOString() })
         .eq("lead_user_id", memberId)
-        .neq("id", effectiveUnitId || "")
     }
 
     // 4. Update permission overrides if provided

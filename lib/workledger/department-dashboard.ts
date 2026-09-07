@@ -72,12 +72,41 @@ export interface DepartmentDashboardData {
 
 export async function getDepartmentDashboardData(
   organizationId: string,
-  hodOrgUnitId: string | null
+  hodOrgUnitId: string | null,
+  userId?: string
 ): Promise<DepartmentDashboardData> {
   const admin = createAdminClient()
   const db = admin as any
 
-  if (!hodOrgUnitId) {
+  let targetUnitId = hodOrgUnitId
+
+  // Auto-resolve unit if not directly passed in session
+  if (!targetUnitId && userId) {
+    // 1. Check if user is assigned as lead_user_id on any unit in this organization
+    const { data: leadUnit } = await db
+      .from("org_units")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("lead_user_id", userId)
+      .maybeSingle()
+
+    if (leadUnit?.id) {
+      targetUnitId = leadUnit.id
+    } else {
+      // 2. Fall back to user's assigned org_unit_id in public.users
+      const { data: userRec } = await db
+        .from("users")
+        .select("org_unit_id")
+        .eq("id", userId)
+        .maybeSingle()
+
+      if (userRec?.org_unit_id) {
+        targetUnitId = userRec.org_unit_id
+      }
+    }
+  }
+
+  if (!targetUnitId) {
     return {
       department: null,
       metrics: {
@@ -97,19 +126,19 @@ export async function getDepartmentDashboardData(
 
   const ctx = await getOrgCycleContext(organizationId)
 
-  // 1. Fetch Department Info
+  // 1. Fetch Department Info (org_units does not have a code column, use unit_type)
   const { data: deptInfo } = await db
     .from("org_units")
-    .select("id, name, code")
-    .eq("id", hodOrgUnitId)
-    .single()
+    .select("id, name, unit_type, lead_user_id")
+    .eq("id", targetUnitId)
+    .maybeSingle()
 
   // 2. Fetch Department Faculty Members
   const { data: deptMembers } = await db
     .from("users")
     .select("id, name, email, designation, status")
     .eq("organization_id", organizationId)
-    .eq("org_unit_id", hodOrgUnitId)
+    .eq("org_unit_id", targetUnitId)
     .eq("status", "ACTIVE")
     .order("name", { ascending: true })
 
@@ -264,7 +293,13 @@ export async function getDepartmentDashboardData(
   }
 
   return {
-    department: deptInfo ? { id: deptInfo.id, name: deptInfo.name, code: deptInfo.code } : null,
+    department: deptInfo
+      ? {
+          id: deptInfo.id,
+          name: deptInfo.name,
+          code: deptInfo.name?.slice(0, 4).toUpperCase() || "DEPT",
+        }
+      : null,
     metrics: {
       memberCount: members.length,
       todayScheduledExpected: todayExpected,

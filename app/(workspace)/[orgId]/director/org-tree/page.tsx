@@ -138,6 +138,18 @@ export default function OrgTreePage() {
   const [newMemberUnitId, setNewMemberUnitId] = useState<string>("none")
   const [newMemberRoleId, setNewMemberRoleId] = useState("")
 
+  // Helper to attach authorization header if available
+  const getAuthHeaders = useCallback(async () => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`
+      }
+    } catch {}
+    return headers
+  }, [supabase])
+
   // 1. Fetch Hierarchy from Server API
   const fetchHierarchy = useCallback(async (isBackgroundSync = false) => {
     try {
@@ -145,7 +157,8 @@ export default function OrgTreePage() {
       if (!isBackgroundSync) setLoading(true)
       else setSyncing(true)
 
-      const res = await fetch(`/api/org/hierarchy?orgId=${orgId}`)
+      const headers = await getAuthHeaders()
+      const res = await fetch(`/api/org/hierarchy?orgId=${orgId}`, { headers })
       const data = await res.json()
 
       if (!res.ok) {
@@ -310,10 +323,11 @@ export default function OrgTreePage() {
 
     try {
       const memberId = selectedNode.data.id
+      const headers = await getAuthHeaders()
 
       const res = await fetch("/api/org/hierarchy", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           organizationId: orgId,
           memberId,
@@ -344,10 +358,11 @@ export default function OrgTreePage() {
   const handlePromoteToLead = async (member: any, unitId: string) => {
     setActionLoading(true)
     try {
+      const headers = await getAuthHeaders()
       const leadRole = roles.find((r) => r.scope_level === "ORG_UNIT_LEAD")
       const res = await fetch("/api/org/hierarchy", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           organizationId: orgId,
           memberId: member.id,
@@ -366,6 +381,31 @@ export default function OrgTreePage() {
     }
   }
 
+  // Assign Unit Lead directly from Unit Inspector
+  const handleAssignUnitLead = async (unitId: string, memberId: string) => {
+    setActionLoading(true)
+    try {
+      const headers = await getAuthHeaders()
+      const res = await fetch("/api/org/hierarchy", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          organizationId: orgId,
+          unitId,
+          leadUserId: memberId === "none" ? null : memberId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to assign department lead.")
+      toast.success("Department lead updated successfully!")
+      await fetchHierarchy()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign lead")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   // Add Node (Unit or Member)
   const handleAddNodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -374,12 +414,14 @@ export default function OrgTreePage() {
     setActionLoading(true)
 
     try {
+      const headers = await getAuthHeaders()
+
       if (addNodeType === "unit") {
         if (!newUnitName.trim()) throw new Error("Department or unit name is required")
 
         const res = await fetch("/api/org/hierarchy", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             organizationId: orgId,
             name: newUnitName.trim(),
@@ -403,7 +445,7 @@ export default function OrgTreePage() {
 
         const res = await fetch("/api/director/invite-member", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             organizationId: orgId,
             name: newMemberName.trim(),
@@ -1253,7 +1295,7 @@ export default function OrgTreePage() {
                     <p>
                       <strong>Department Lead:</strong>{" "}
                       <span className="font-semibold text-foreground">
-                        {selectedNode.data.lead ? selectedNode.data.lead.name : "Unassigned (Click member to promote)"}
+                        {selectedNode.data.lead ? selectedNode.data.lead.name : "Unassigned"}
                       </span>
                     </p>
                     <p>
@@ -1268,6 +1310,36 @@ export default function OrgTreePage() {
                         {selectedNode.data.children?.length || 0} Nested Units
                       </span>
                     </p>
+                  </div>
+
+                  {/* Assign/Change Head of Department (HOD) directly */}
+                  <div className="pt-3 border-t space-y-1.5 text-left">
+                    <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Crown className="h-3.5 w-3.5 text-amber-500" />
+                      Assign Department Lead (HOD)
+                    </Label>
+                    <Select
+                      value={selectedNode.data.leadUserId || selectedNode.data.lead?.id || "none"}
+                      onValueChange={(memberId) => handleAssignUnitLead(selectedNode.data.id, memberId)}
+                      disabled={actionLoading}
+                    >
+                      <SelectTrigger className="h-8 text-xs rounded-lg bg-card">
+                        <SelectValue placeholder="Choose Head of Department..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Unassigned --</SelectItem>
+                        {selectedNode.data.members?.map((m: any) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name} {m.designation ? `(${m.designation})` : ""}
+                          </SelectItem>
+                        ))}
+                        {unassignedMembers.map((m: any) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name} (Unassigned Pool)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="pt-3 border-t space-y-2">

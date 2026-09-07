@@ -15,8 +15,8 @@ export default async function LeadDashboardPage({ params }: PageProps) {
   // Fetch unified personal data for HOD
   const personalData = await getMemberDashboardData(orgId, user.id)
 
-  // Fetch unified department data for HOD
-  const departmentData = await getDepartmentDashboardData(orgId, user.orgUnitId ?? null)
+  // Fetch unified department data for HOD (auto-resolves from orgUnitId or lead_user_id)
+  const departmentData = await getDepartmentDashboardData(orgId, user.orgUnitId ?? null, user.id)
 
   return (
     <LeadDashboardContainer
