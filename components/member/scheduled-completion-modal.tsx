@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Clock, Sparkles, Loader2, AlertCircle } from "lucide-react"
+import { CheckCircle2, Clock, Sparkles, Loader2, AlertCircle, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { checkSessionTiming } from "@/lib/utils"
 
 export interface ScheduledInstanceItem {
   id: string
@@ -45,6 +46,8 @@ export function ScheduledCompletionModal({
 
   if (!instance) return null
 
+  const timing = checkSessionTiming(instance.workDate, instance.startTime)
+
   const handleReset = () => {
     setStep(1)
     setErrorMsg(null)
@@ -54,6 +57,10 @@ export function ScheduledCompletionModal({
   }
 
   const handleStep1Proceed = () => {
+    if (!timing.canComplete) {
+      setErrorMsg(`Cannot complete session yet: ${timing.label}.`)
+      return
+    }
     setStep(2)
   }
 
@@ -151,7 +158,14 @@ export function ScheduledCompletionModal({
               </div>
             )}
 
-            {step === 1 && (
+            {step === 1 && !timing.canComplete && (
+              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                <Lock className="h-4 w-4 shrink-0" />
+                <span>This session cannot be confirmed yet: {timing.label}.</span>
+              </div>
+            )}
+
+            {step === 1 && timing.canComplete && (
               <div className="p-3 rounded-lg border bg-primary/5 text-xs text-foreground space-y-1">
                 <p className="font-medium">Self-Declaration Statement:</p>
                 <p className="text-muted-foreground">
@@ -178,8 +192,14 @@ export function ScheduledCompletionModal({
                 <Button type="button" variant="outline" onClick={handleReset} size="sm" className="text-xs">
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleStep1Proceed} size="sm" className="text-xs">
-                  Yes, I completed this session
+                <Button
+                  type="button"
+                  onClick={handleStep1Proceed}
+                  disabled={!timing.canComplete}
+                  size="sm"
+                  className="text-xs"
+                >
+                  {timing.canComplete ? "Yes, I completed this session" : timing.label}
                 </Button>
               </>
             ) : (

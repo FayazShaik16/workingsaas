@@ -18,10 +18,12 @@ import {
   FileCheck,
   Check,
   Coins,
+  Lock,
 } from "lucide-react"
 import { ScheduledCompletionModal, ScheduledInstanceItem } from "./scheduled-completion-modal"
 import { CircularProgressRing } from "./circular-progress-ring"
 import { MonthlyProgressView } from "@/lib/workledger/progress"
+import { checkSessionTiming } from "@/lib/utils"
 import Link from "next/link"
 import { toast } from "sonner"
 
@@ -237,6 +239,7 @@ export function MinimalFacultyDashboard({
               <div className="space-y-3">
                 {instances.map((inst) => {
                   const isDone = inst.status === "SELF_COMPLETED"
+                  const timing = checkSessionTiming(inst.workDate, inst.startTime)
 
                   return (
                     <div
@@ -254,9 +257,13 @@ export function MinimalFacultyDashboard({
                             <Badge variant="secondary" className="text-[10px] text-emerald-600 bg-emerald-500/10">
                               Completed
                             </Badge>
-                          ) : (
+                          ) : timing.canComplete ? (
                             <Badge variant="outline" className="text-[10px]">
                               Scheduled
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground font-mono bg-muted/40">
+                              {timing.label}
                             </Badge>
                           )}
                         </div>
@@ -274,13 +281,24 @@ export function MinimalFacultyDashboard({
                             <CheckCircle2 className="h-4 w-4" />
                             <span>Done</span>
                           </div>
-                        ) : (
+                        ) : timing.canComplete ? (
                           <Button
                             size="sm"
                             onClick={() => handleOpenCompletion(inst)}
                             className="text-xs h-8"
                           >
                             Complete
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled
+                            variant="outline"
+                            className="text-xs h-8 opacity-60 cursor-not-allowed font-normal text-muted-foreground gap-1"
+                            title={timing.label}
+                          >
+                            <Lock className="h-3 w-3" />
+                            <span>{timing.label}</span>
                           </Button>
                         )}
                       </div>

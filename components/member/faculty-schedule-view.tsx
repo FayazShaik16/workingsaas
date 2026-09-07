@@ -12,8 +12,10 @@ import {
   Sparkles,
   ArrowRight,
   Check,
+  Lock,
 } from "lucide-react"
 import { ScheduledCompletionModal, ScheduledInstanceItem } from "./scheduled-completion-modal"
+import { checkSessionTiming } from "@/lib/utils"
 
 export interface WeeklyTemplateItem {
   id: string
@@ -248,12 +250,17 @@ export function FacultyScheduleView({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {instances.map((inst) => {
               const isDone = inst.status === "SELF_COMPLETED"
+              const timing = checkSessionTiming(inst.workDate, inst.startTime)
 
               return (
                 <Card
                   key={inst.id}
                   className={`transition-colors ${
-                    isDone ? "bg-muted/30 border-muted" : "hover:border-primary/50"
+                    isDone
+                      ? "bg-muted/30 border-muted"
+                      : timing.canComplete
+                      ? "hover:border-primary/50 border-border/80"
+                      : "opacity-75 bg-muted/10 border-border/50"
                   }`}
                 >
                   <CardContent className="p-4 flex flex-col justify-between h-full space-y-3">
@@ -266,9 +273,13 @@ export function FacultyScheduleView({
                           <Badge variant="secondary" className="text-[10px] text-emerald-600 bg-emerald-500/10">
                             Completed
                           </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px]">
+                        ) : timing.canComplete ? (
+                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
                             Scheduled
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground font-mono bg-muted/40">
+                            {timing.label}
                           </Badge>
                         )}
                       </div>
@@ -287,13 +298,24 @@ export function FacultyScheduleView({
                           <CheckCircle2 className="h-4 w-4" />
                           <span>Self Completed</span>
                         </div>
-                      ) : (
+                      ) : timing.canComplete ? (
                         <Button
                           size="sm"
                           onClick={() => handleOpenCompletion(inst)}
-                          className="w-full text-xs"
+                          className="w-full text-xs font-semibold"
                         >
                           Complete Session
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled
+                          variant="outline"
+                          className="w-full text-xs opacity-60 cursor-not-allowed font-normal text-muted-foreground gap-1.5"
+                          title={timing.label}
+                        >
+                          <Lock className="h-3 w-3" />
+                          <span>{timing.label}</span>
                         </Button>
                       )}
                     </div>
