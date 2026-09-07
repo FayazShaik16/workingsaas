@@ -106,6 +106,7 @@ export function getNavItemsForRole(
     DIRECTOR: [
       { label: "Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "Org Structure", href: `${base}/org-tree`, icon: <GitBranch className="h-4 w-4" /> },
+      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet className="h-4 w-4" /> },
       { label: "Post Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Dept Reports", href: `${base}/reports`, icon: <BarChart3 className="h-4 w-4" /> },
       { label: "Treasury Vault", href: `${base}/wallet`, icon: <Wallet className="h-4 w-4" /> },
@@ -121,6 +122,7 @@ export function getNavItemsForRole(
     ORG_UNIT_LEAD: [
       { label: "Dept Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "Task Management", href: `${base}/tasks`, icon: <ClipboardList className="h-4 w-4" /> },
+      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet className="h-4 w-4" /> },
       { label: "New Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Salary Approvals", href: `${base}/salary`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.salary },
       { label: "Audit Wallet", href: `${base}/wallet`, icon: <Wallet className="h-4 w-4" /> },

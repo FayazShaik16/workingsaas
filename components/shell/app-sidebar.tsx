@@ -95,6 +95,7 @@ export function getNavItemsForRole(
     DIRECTOR: [
       { label: "Overview",         href: base,                    icon: <LayoutDashboard size={16} /> },
       { label: "Org Structure",    href: `${base}/org-tree`,      icon: <GitBranch size={16} /> },
+      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet size={16} /> },
       { label: "Post Task",        href: `${base}/tasks/new`,     icon: <Sparkles size={16} /> },
       { label: "Dept Reports",     href: `${base}/reports`,       icon: <BarChart3 size={16} /> },
       { label: "Treasury Vault",   href: `${base}/wallet`,        icon: <Wallet size={16} /> },
@@ -110,6 +111,7 @@ export function getNavItemsForRole(
     ORG_UNIT_LEAD: [
       { label: "Dept Overview",    href: base,                    icon: <LayoutDashboard size={16} /> },
       { label: "Task Management",  href: `${base}/tasks`,         icon: <ClipboardList size={16} /> },
+      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet size={16} /> },
       { label: "New Task",         href: `${base}/tasks/new`,     icon: <Sparkles size={16} /> },
       { label: "Salary Approvals", href: `${base}/salary`,        icon: <CreditCard size={16} />, badge: badges?.salary },
       { label: "Audit Wallet",     href: `${base}/wallet`,        icon: <Wallet size={16} /> },

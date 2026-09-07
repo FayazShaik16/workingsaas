@@ -44,6 +44,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
   UserCheck,
+  FileSpreadsheet,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -484,13 +485,21 @@ export function HODTaskManager({
           </p>
         </div>
 
-        {/* Primary Action Button */}
-        <Link href={`/${orgId}/lead/tasks/new`}>
-          <Button size="default" className="rounded-xl font-semibold gap-2 shadow-sm bg-primary hover:bg-primary/90 h-10 px-5">
-            <Plus className="h-4 w-4" />
-            Post New Task
-          </Button>
-        </Link>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link href={`/${orgId}/dept-admin/import`}>
+            <Button size="default" variant="outline" className="rounded-xl font-semibold gap-2 h-10 px-4">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
+              Import Timetable
+            </Button>
+          </Link>
+          <Link href={`/${orgId}/lead/tasks/new`}>
+            <Button size="default" className="rounded-xl font-semibold gap-2 shadow-sm bg-primary hover:bg-primary/90 h-10 px-5">
+              <Plus className="h-4 w-4" />
+              Post New Task
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
