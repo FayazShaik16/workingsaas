@@ -94,7 +94,12 @@ export function MinimalFacultyDashboard({
   const [assigned, setAssigned] = useState<AssignedAdHocTask[]>(initialAssignedTasks)
   const [progress, setProgress] = useState<MonthlyProgressView>(initialProgress)
   const [claimingSalary, setClaimingSalary] = useState(false)
-  const [salaryClaimed, setSalaryClaimed] = useState(false)
+  const [salaryClaimed, setSalaryClaimed] = useState(
+    Boolean(
+      initialProgress.salaryRequestStatus &&
+      !["REJECTED", "HOD_REJECTED"].includes(initialProgress.salaryRequestStatus)
+    )
+  )
 
   // 2-Step Completion Modal State
   const [selectedInstance, setSelectedInstance] = useState<ScheduledInstanceItem | null>(null)
@@ -358,7 +363,9 @@ export function MinimalFacultyDashboard({
                         >
                           {claimingSalary ? (
                             "Submitting Review Request..."
-                          ) : salaryClaimed ? (
+                          ) : progress.salaryRequestStatus === "HOD_APPROVED" || progress.salaryRequestStatus === "APPROVED_LEAD" ? (
+                            "✓ Salary Endorsed by HOD"
+                          ) : salaryClaimed || progress.salaryRequestStatus === "PENDING_HOD" || progress.salaryRequestStatus === "PENDING_LEAD" ? (
                             "✓ Salary Review Pending HOD"
                           ) : (
                             "Initiate Salary Review"
