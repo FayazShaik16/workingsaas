@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { formatDisplayDate } from "@/lib/utils"
 
 export interface DepartmentTask {
   id: string
@@ -887,25 +888,18 @@ export function HODTaskManager({
 
                       {/* Reward */}
                       <TableCell className="py-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        +{task.creditValue.toFixed(1)} WORK
+                        +{Number(task.creditValue || 0).toFixed(1)} WORK
                       </TableCell>
 
                       {/* Date */}
-                      <TableCell className="py-4 text-muted-foreground font-light">
+                      <TableCell className="py-4 text-muted-foreground font-light" suppressHydrationWarning>
                         {task.deadline ? (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1" suppressHydrationWarning>
                             <Clock className="h-3 w-3 text-primary/70" />
-                            {new Date(task.deadline).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatDisplayDate(task.deadline)}
                           </span>
                         ) : task.createdAt ? (
-                          new Date(task.createdAt).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                          })
+                          <span suppressHydrationWarning>{formatDisplayDate(task.createdAt)}</span>
                         ) : (
                           "—"
                         )}
@@ -1008,7 +1002,7 @@ export function HODTaskManager({
               <div className="flex justify-between text-muted-foreground">
                 <span>Reward Value:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
-                  +{inspectingTask?.creditValue.toFixed(1)} WORK
+                  +{Number(inspectingTask?.creditValue || 0).toFixed(1)} WORK
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
@@ -1116,7 +1110,7 @@ export function HODTaskManager({
               <UserCheck className="h-5 w-5 text-primary" /> Assign Task to Faculty
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Assign "{assigningTask?.title}" (+{assigningTask?.creditValue.toFixed(1)} WORK) with collision protection.
+              Assign "{assigningTask?.title}" (+{Number(assigningTask?.creditValue || 0).toFixed(1)} WORK) with collision protection.
             </DialogDescription>
           </DialogHeader>
 

@@ -185,7 +185,7 @@ export function MinimalFacultyDashboard({
         <div className="flex flex-wrap items-center gap-2.5">
           <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 flex items-center gap-1.5 py-1 px-3">
             <Coins className="h-3.5 w-3.5" />
-            <span>{walletBalance.toFixed(1)} WORK Credits Earned</span>
+            <span>{(walletBalance || 0).toFixed(1)} WORK Credits Earned</span>
           </Badge>
           <Button asChild size="sm" variant="outline">
             <Link href={`/${orgId}/member/schedule`} className="gap-1.5 text-xs">
@@ -262,7 +262,7 @@ export function MinimalFacultyDashboard({
                           {inst.title}
                         </p>
                         <p className="text-[11px] text-muted-foreground font-mono">
-                          +{inst.creditValue.toFixed(1)} WORK Credits
+                          +{(inst.creditValue || 1).toFixed(1)} WORK Credits
                         </p>
                       </div>
 
@@ -313,7 +313,7 @@ export function MinimalFacultyDashboard({
                     strokeWidth={10}
                   />
                   <div className="text-xs font-mono text-muted-foreground">
-                    <span className="font-bold text-foreground">{progress.rawEarnedCredits.toFixed(1)}</span> / {progress.totalTargetCredits.toFixed(1)} WORK credits
+                    <span className="font-bold text-foreground">{(progress.rawEarnedCredits || 0).toFixed(1)}</span> / {(progress.totalTargetCredits || 0).toFixed(1)} WORK credits
                   </div>
                 </div>
 
@@ -322,7 +322,7 @@ export function MinimalFacultyDashboard({
                   <div className="flex justify-between items-center text-muted-foreground font-mono">
                     <span>{progress.salaryThresholdPercentage || 85}% Threshold:</span>
                     <span className="font-semibold text-foreground">
-                      {thresholdRequiredCredits.toFixed(1)} / {progress.totalTargetCredits.toFixed(1)} cr
+                      {(thresholdRequiredCredits || 0).toFixed(1)} / {(progress.totalTargetCredits || 0).toFixed(1)} cr
                     </span>
                   </div>
 
@@ -367,7 +367,7 @@ export function MinimalFacultyDashboard({
                       </div>
                     ) : (
                       <p className="text-muted-foreground">
-                        <span className="font-bold font-mono text-foreground">{progress.creditsToThreshold?.toFixed(1)}</span> credits to salary-request eligibility
+                        <span className="font-bold font-mono text-foreground">{(progress.creditsToThreshold || 0).toFixed(1)}</span> credits to salary-request eligibility
                       </p>
                     )}
                   </div>
@@ -375,7 +375,7 @@ export function MinimalFacultyDashboard({
                   {progress.aboveTargetCredits > 0 && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1 pt-1">
                       <Sparkles className="h-3.5 w-3.5" />
-                      <span>+{progress.aboveTargetCredits.toFixed(1)} credits above target</span>
+                      <span>+{Number(progress.aboveTargetCredits || 0).toFixed(1)} credits above target</span>
                     </p>
                   )}
                 </div>
@@ -436,7 +436,7 @@ export function MinimalFacultyDashboard({
                       <div className="flex flex-wrap items-center gap-2">
                         {renderPriorityBadge(task.priority)}
                         <span className="text-xs font-mono font-bold text-primary">
-                          +{task.creditValue.toFixed(1)} cr
+                          +{Number(task.creditValue || 0).toFixed(1)} cr
                         </span>
                         {task.deadline && (
                           <span className="text-[11px] text-muted-foreground font-mono">
@@ -532,13 +532,13 @@ export function MinimalFacultyDashboard({
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{act.title}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">
+                      <p className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
                         {new Date(act.occurredAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                   </div>
                   <Badge variant="secondary" className="font-mono text-xs">
-                    +{act.credits.toFixed(1)} cr
+                    +{Number(act.credits || 0).toFixed(1)} cr
                   </Badge>
                 </div>
               ))}

@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   CheckSquare,
 } from "lucide-react"
+import { formatDisplayDate } from "@/lib/utils"
 
 interface PageProps {
   params: Promise<{ orgId: string; taskId: string }>
@@ -183,14 +184,8 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
                 <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-secondary">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-foreground">Submission Remarks</span>
-                    <span className="text-muted-foreground">
-                      {new Date(proof.submitted_at).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    <span className="text-muted-foreground" suppressHydrationWarning>
+                      {formatDisplayDate(proof.submitted_at)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -289,35 +284,21 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
             <CardContent className="space-y-2 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Created Date:</span>
-                <span className="font-medium text-foreground">
-                  {new Date(task.created_at).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                <span className="font-medium text-foreground" suppressHydrationWarning>
+                  {formatDisplayDate(task.created_at)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Deadline:</span>
-                <span className="font-medium text-foreground">
-                  {task.deadline
-                    ? new Date(task.deadline).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })
-                    : "Open Ended"}
+                <span className="font-medium text-foreground" suppressHydrationWarning>
+                  {task.deadline ? formatDisplayDate(task.deadline) : "Open Ended"}
                 </span>
               </div>
               {task.lead_signed_at && (
                 <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
                   <span>Completed:</span>
-                  <span>
-                    {new Date(task.lead_signed_at).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                  <span suppressHydrationWarning>
+                    {formatDisplayDate(task.lead_signed_at)}
                   </span>
                 </div>
               )}

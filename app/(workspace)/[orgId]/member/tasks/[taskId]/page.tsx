@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from "lucide-react"
+import { formatDisplayDate } from "@/lib/utils"
 
 export default function MemberTaskDetailPage() {
   const params = useParams()
@@ -369,8 +370,8 @@ export default function MemberTaskDetailPage() {
                           <span className={r.decision === "APPROVE" ? "text-emerald-600" : "text-rose-600"}>
                             {r.decision === "APPROVE" ? "Approved by Lead" : "Returned for Revision"}
                           </span>
-                          <span className="text-muted-foreground font-normal">
-                            {new Date(r.reviewed_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                          <span className="text-muted-foreground font-normal" suppressHydrationWarning>
+                            {formatDisplayDate(r.reviewed_at)}
                           </span>
                         </div>
                         {r.comment && <p className="text-muted-foreground pt-0.5">{r.comment}</p>}
@@ -413,20 +414,20 @@ export default function MemberTaskDetailPage() {
             <CardContent className="space-y-3 text-xs">
               <div className="flex justify-between border-b border-border/30 pb-2">
                 <span className="text-muted-foreground">Deadline</span>
-                <span className="font-medium text-foreground">
-                  {task.deadline ? new Date(task.deadline).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "Flexible"}
+                <span className="font-medium text-foreground" suppressHydrationWarning>
+                  {task.deadline ? formatDisplayDate(task.deadline) : "Flexible"}
                 </span>
               </div>
               <div className="flex justify-between border-b border-border/30 pb-2">
                 <span className="text-muted-foreground">Created</span>
-                <span className="font-medium text-foreground">
-                  {new Date(task.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                <span className="font-medium text-foreground" suppressHydrationWarning>
+                  {formatDisplayDate(task.created_at)}
                 </span>
               </div>
               {task.lead_signed_at && (
                 <div className="flex justify-between border-b border-border/30 pb-2 text-emerald-600 dark:text-emerald-400 font-medium">
                   <span>Approved At</span>
-                  <span>{new Date(task.lead_signed_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}</span>
+                  <span suppressHydrationWarning>{formatDisplayDate(task.lead_signed_at)}</span>
                 </div>
               )}
             </CardContent>
