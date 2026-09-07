@@ -10,6 +10,7 @@ export interface MemberDashboardData {
     designation: string
     departmentName: string
   }
+  walletBalance: number
   progress: MonthlyProgressView
   todayInstances: Array<{
     id: string
@@ -223,19 +224,29 @@ export async function getMemberDashboardData(
   // 6. Fetch recent activity (ledger entries + salary requests)
   const { data: recentEntries } = await db
     .from("credit_ledger_entries")
-    .select("id, credit_type, credit_amount, occurred_at, reference_id")
+    .select("id, credit_type, amount, created_at, metadata")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
-    .order("occurred_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(5)
 
   const recentActivity: MemberDashboardData["recentActivity"] = (recentEntries || []).map((e: any) => ({
     id: e.id,
     type: e.credit_type === "STRUCTURED_SELF_COMPLETION" ? "SCHEDULED_COMPLETION" : "INITIATIVE_APPROVED",
-    title: e.credit_type === "STRUCTURED_SELF_COMPLETION" ? "Completed Scheduled Session" : "Approved Institutional Initiative",
-    credits: Number(e.credit_amount || 0),
-    occurredAt: e.occurred_at,
+    title: e.metadata?.title || (e.credit_type === "STRUCTURED_SELF_COMPLETION" ? "Completed Scheduled Session" : "Approved Institutional Initiative"),
+    credits: Number(e.amount || 0),
+    occurredAt: e.created_at,
   }))
+
+  // 7. Fetch faculty member personal wallet balance
+  const { data: wallet } = await db
+    .from("wallets")
+    .select("balance")
+    .eq("owner_user_id", userId)
+    .eq("purpose", "PERSONAL")
+    .maybeSingle()
+
+  const walletBalance = Number(wallet?.balance || 0)
 
   return {
     user: {
@@ -245,6 +256,7 @@ export async function getMemberDashboardData(
       designation: userProfile?.designation || "Faculty / Member",
       departmentName,
     },
+    walletBalance,
     progress,
     todayInstances,
     nextUpcomingInstance,

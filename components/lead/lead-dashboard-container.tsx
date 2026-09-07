@@ -79,6 +79,7 @@ export function LeadDashboardContainer({
           userName={personalData.user.name}
           userDesignation={personalData.user.designation}
           departmentName={personalData.user.departmentName}
+          walletBalance={personalData.walletBalance || 0}
           progress={personalData.progress}
           todayInstances={personalData.todayInstances}
           nextUpcomingInstance={personalData.nextUpcomingInstance}

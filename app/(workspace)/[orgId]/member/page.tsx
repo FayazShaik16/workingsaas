@@ -20,6 +20,7 @@ export default async function MemberDashboardPage({ params }: PageProps) {
       userName={data.user.name}
       userDesignation={data.user.designation}
       departmentName={data.user.departmentName}
+      walletBalance={data.walletBalance}
       progress={data.progress}
       todayInstances={data.todayInstances}
       nextUpcomingInstance={data.nextUpcomingInstance}

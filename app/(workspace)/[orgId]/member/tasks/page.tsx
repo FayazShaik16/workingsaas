@@ -177,11 +177,17 @@ export default function MyTasksPage() {
     },
     {
       id: "actions",
-      cell: ({ row }) => (
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/${orgId}/member/tasks/${row.original.id}`}>View</Link>
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const isApproved = row.original.status === "LEAD_SIGNED" || row.original.status === "CLOSED"
+        const isReviewPending = row.original.status === "VERIFICATION_PENDING"
+        return (
+          <Button asChild size="sm" variant={isApproved ? "outline" : isReviewPending ? "secondary" : "default"}>
+            <Link href={`/${orgId}/member/tasks/${row.original.id}`}>
+              {isApproved ? "View Deliverable" : isReviewPending ? "In Review" : "Submit Proof"}
+            </Link>
+          </Button>
+        )
+      },
     },
   ]
 

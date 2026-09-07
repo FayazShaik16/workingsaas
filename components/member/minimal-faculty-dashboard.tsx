@@ -17,6 +17,7 @@ import {
   CalendarDays,
   FileCheck,
   Check,
+  Coins,
 } from "lucide-react"
 import { ScheduledCompletionModal, ScheduledInstanceItem } from "./scheduled-completion-modal"
 import { CircularProgressRing } from "./circular-progress-ring"
@@ -61,6 +62,7 @@ interface MinimalFacultyDashboardProps {
   userName: string
   userDesignation: string
   departmentName: string
+  walletBalance: number
   progress: MonthlyProgressView
   todayInstances: ScheduledInstanceRow[]
   nextUpcomingInstance: {
@@ -81,6 +83,7 @@ export function MinimalFacultyDashboard({
   userName,
   userDesignation,
   departmentName,
+  walletBalance,
   progress: initialProgress,
   todayInstances: initialTodayInstances,
   nextUpcomingInstance,
@@ -179,13 +182,19 @@ export function MinimalFacultyDashboard({
           </p>
         </div>
 
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/${orgId}/member/schedule`} className="gap-1.5 text-xs">
-            <Calendar className="h-3.5 w-3.5" />
-            <span>View Full Schedule</span>
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 flex items-center gap-1.5 py-1 px-3">
+            <Coins className="h-3.5 w-3.5" />
+            <span>{walletBalance.toFixed(1)} WORK Credits Earned</span>
+          </Badge>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/${orgId}/member/schedule`} className="gap-1.5 text-xs">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>View Full Schedule</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* 2. ROW 1: Responsive Two-Column Main Grid (Left ~60%, Right ~40%) */}
@@ -418,6 +427,8 @@ export function MinimalFacultyDashboard({
           ) : (
             <div className="divide-y">
               {assigned.map((task) => {
+                const isApproved = task.status === "LEAD_SIGNED" || task.status === "CLOSED"
+                const isReviewPending = task.status === "VERIFICATION_PENDING"
                 const isPendingNomination = task.nominationStatus === "PENDING" || task.status === "NOMINATED"
                 return (
                   <div key={task.id} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -432,7 +443,17 @@ export function MinimalFacultyDashboard({
                             Due: {task.deadline.includes("T") ? task.deadline.split("T")[0] : task.deadline}
                           </span>
                         )}
-                        {isPendingNomination ? (
+                        {isApproved ? (
+                          <Badge variant="secondary" className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300/40 font-semibold flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            <span>Approved & Signed</span>
+                          </Badge>
+                        ) : isReviewPending ? (
+                          <Badge variant="secondary" className="text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300/40 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>Proof Submitted · In HOD Review</span>
+                          </Badge>
+                        ) : isPendingNomination ? (
                           <Badge variant="secondary" className="text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300/40">
                             Nominated (Pending Review)
                           </Badge>
@@ -456,7 +477,21 @@ export function MinimalFacultyDashboard({
                       <Badge variant="outline" className="text-[10px]">
                         {task.verificationMode === "FILE_SUBMISSION" ? "File Evidence" : "Report"}
                       </Badge>
-                      {isPendingNomination ? (
+                      {isApproved ? (
+                        <Button asChild size="sm" variant="outline" className="text-xs h-8 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+                          <Link href={`/${orgId}/member/tasks/${task.id}`}>
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            <span>View Deliverable</span>
+                          </Link>
+                        </Button>
+                      ) : isReviewPending ? (
+                        <Button asChild size="sm" variant="outline" className="text-xs h-8 text-purple-600 dark:text-purple-400 border-purple-500/30">
+                          <Link href={`/${orgId}/member/tasks/${task.id}`}>
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            <span>In Review</span>
+                          </Link>
+                        </Button>
+                      ) : isPendingNomination ? (
                         <Button asChild size="sm" variant="outline" className="text-xs h-8">
                           <Link href={`/${orgId}/member/marketplace/${task.id}`}>
                             View Task
