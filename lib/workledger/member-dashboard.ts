@@ -37,6 +37,8 @@ export interface MemberDashboardData {
     status: string
     deadline?: string | null
     verificationMode: "MANUAL_REPORT" | "FILE_SUBMISSION"
+    isNominated?: boolean
+    nominationStatus?: string
   }>
   recentActivity: Array<{
     id: string
@@ -59,7 +61,7 @@ export async function getMemberDashboardData(
   // 1. Fetch user profile + department
   const { data: userProfile } = await db
     .from("users")
-    .select("id, name, email, designation, org_units(id, name)")
+    .select("id, name, email, designation, org_units:org_unit_id(id, name)")
     .eq("id", userId)
     .single()
 
@@ -71,21 +73,29 @@ export async function getMemberDashboardData(
   // 3. Fetch today's scheduled instances
   const { data: todayInsts } = await db
     .from("scheduled_work_instances")
-    .select("id, title, work_date, start_time, end_time, credit_value, status")
+    .select(`
+      id,
+      work_date,
+      scheduled_start,
+      scheduled_end,
+      credit_value,
+      status,
+      scheduled_work_templates:template_id ( title, start_time, end_time )
+    `)
     .eq("organization_id", organizationId)
     .eq("assigned_to_id", userId)
     .eq("work_date", ctx.todayStr)
     .neq("status", "CANCELLED")
-    .order("start_time", { ascending: true })
+    .order("scheduled_start", { ascending: true })
 
   const todayInstances = (todayInsts || []).map((i: any) => ({
     id: i.id,
-    title: i.title,
+    title: i.scheduled_work_templates?.title || "Scheduled Session",
     workDate: i.work_date,
-    startTime: i.start_time?.slice(0, 5) || "09:00",
-    endTime: i.end_time?.slice(0, 5) || "10:00",
+    startTime: i.scheduled_work_templates?.start_time?.slice(0, 5) || (i.scheduled_start ? new Date(i.scheduled_start).toISOString().slice(11, 16) : "09:00"),
+    endTime: i.scheduled_work_templates?.end_time?.slice(0, 5) || (i.scheduled_end ? new Date(i.scheduled_end).toISOString().slice(11, 16) : "10:00"),
     creditValue: Number(i.credit_value || 1.0),
-    status: i.status,
+    status: i.status === "UPCOMING" ? "SCHEDULED" : i.status,
   }))
 
   // 4. Fetch next upcoming session if today has 0
@@ -93,23 +103,30 @@ export async function getMemberDashboardData(
   if (todayInstances.length === 0) {
     const { data: nextInst } = await db
       .from("scheduled_work_instances")
-      .select("id, title, work_date, start_time, end_time, credit_value")
+      .select(`
+        id,
+        work_date,
+        scheduled_start,
+        scheduled_end,
+        credit_value,
+        scheduled_work_templates:template_id ( title, start_time, end_time )
+      `)
       .eq("organization_id", organizationId)
       .eq("assigned_to_id", userId)
       .gt("work_date", ctx.todayStr)
       .neq("status", "CANCELLED")
       .order("work_date", { ascending: true })
-      .order("start_time", { ascending: true })
+      .order("scheduled_start", { ascending: true })
       .limit(1)
       .maybeSingle()
 
     if (nextInst) {
       nextUpcomingInstance = {
         id: nextInst.id,
-        title: nextInst.title,
+        title: nextInst.scheduled_work_templates?.title || "Scheduled Session",
         workDate: nextInst.work_date,
-        startTime: nextInst.start_time?.slice(0, 5) || "09:00",
-        endTime: nextInst.end_time?.slice(0, 5) || "10:00",
+        startTime: nextInst.scheduled_work_templates?.start_time?.slice(0, 5) || (nextInst.scheduled_start ? new Date(nextInst.scheduled_start).toISOString().slice(11, 16) : "09:00"),
+        endTime: nextInst.scheduled_work_templates?.end_time?.slice(0, 5) || (nextInst.scheduled_end ? new Date(nextInst.scheduled_end).toISOString().slice(11, 16) : "10:00"),
         creditValue: Number(nextInst.credit_value || 1.0),
       }
     }
@@ -121,18 +138,36 @@ export async function getMemberDashboardData(
     .select("id, title, description, credit_value, priority, status, deadline, verification_mode")
     .eq("organization_id", organizationId)
     .eq("assigned_to_id", userId)
-    .neq("status", "COMPLETED")
+    .not("status", "in", '("CLOSED","CANCELLED","REJECTED")')
     .order("created_at", { ascending: false })
 
-  const priorityOrder: Record<string, number> = {
-    URGENT: 1,
-    HIGH: 2,
-    MEDIUM: 3,
-    LOW: 4,
-  }
+  // 5b. Fetch user nominations from Task Pool
+  const { data: userNominations } = await db
+    .from("nominations")
+    .select(`
+      id,
+      status,
+      message,
+      task:tasks (
+        id,
+        title,
+        description,
+        credit_value,
+        priority,
+        status,
+        deadline,
+        verification_mode,
+        organization_id,
+        assigned_to_id
+      )
+    `)
+    .eq("user_id", userId)
+    .in("status", ["PENDING", "ACCEPTED"])
 
-  const assignedTasks = (tasksData || [])
-    .map((t: any) => ({
+  const taskMap = new Map<string, MemberDashboardData["assignedTasks"][number]>()
+
+  for (const t of tasksData || []) {
+    taskMap.set(t.id, {
       id: t.id,
       title: t.title,
       description: t.description,
@@ -141,12 +176,49 @@ export async function getMemberDashboardData(
       status: t.status,
       deadline: t.deadline,
       verificationMode: (t.verification_mode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT") as any,
-    }))
-    .sort((a: any, b: any) => {
-      const pA = priorityOrder[a.priority] || 3
-      const pB = priorityOrder[b.priority] || 3
-      return pA - pB
+      isNominated: false,
+      nominationStatus: undefined,
     })
+  }
+
+  for (const nom of userNominations || []) {
+    const t = nom.task
+    if (!t || t.organization_id !== organizationId) continue
+
+    if (taskMap.has(t.id)) {
+      const existing = taskMap.get(t.id)!
+      existing.isNominated = true
+      existing.nominationStatus = nom.status
+    } else {
+      if (!["CLOSED", "CANCELLED", "REJECTED"].includes(t.status)) {
+        taskMap.set(t.id, {
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          creditValue: Number(t.credit_value || 1.0),
+          priority: (t.priority || "MEDIUM") as any,
+          status: nom.status === "PENDING" ? "NOMINATED" : t.status,
+          deadline: t.deadline,
+          verificationMode: (t.verification_mode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT") as any,
+          isNominated: true,
+          nominationStatus: nom.status,
+        })
+      }
+    }
+  }
+
+  const priorityOrder: Record<string, number> = {
+    URGENT: 1,
+    HIGH: 2,
+    MEDIUM: 3,
+    LOW: 4,
+  }
+
+  const assignedTasks = Array.from(taskMap.values()).sort((a: any, b: any) => {
+    const pA = priorityOrder[a.priority] || 3
+    const pB = priorityOrder[b.priority] || 3
+    return pA - pB
+  })
 
   // 6. Fetch recent activity (ledger entries + salary requests)
   const { data: recentEntries } = await db

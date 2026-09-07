@@ -18,6 +18,8 @@ interface AssignedTask {
   status: string
   deadline?: string
   category: string
+  isNominated?: boolean
+  nominationStatus?: string
 }
 
 export default function MyTasksPage() {
@@ -40,17 +42,19 @@ export default function MyTasksPage() {
           .select("id, title, credit_value, status, deadline, category, scheduled_date")
           .eq("organization_id", orgId)
           .eq("assigned_to_id", authData.user.id)
+          .not("status", "in", '("CLOSED","CANCELLED","REJECTED")')
           .order("deadline", { ascending: true })
 
         if (assignError) {
           console.warn("[my-tasks] assigned query note:", assignError.message || assignError)
         }
 
-        // 2. Get user's nominated tasks that were accepted
+        // 2. Get user's nominated tasks that are pending or accepted
         const { data: nominations, error: nomError } = await supabase
           .from("nominations")
           .select(
             `
+            status,
             tasks(
               id,
               title,
@@ -62,30 +66,40 @@ export default function MyTasksPage() {
           `
           )
           .eq("user_id", authData.user.id)
-          .eq("status", "ACCEPTED")
+          .in("status", ["PENDING", "ACCEPTED"])
 
         if (nomError) {
           console.warn("[my-tasks] nominations query note:", nomError.message || nomError)
         }
 
-        const directList = (assignedTasks || []).map((t: any) => ({
-          ...t,
-          credit_value: Number(t.credit_value || 0),
-        }))
-
-        const nominatedList =
-          nominations
-            ?.map((n: any) => n.tasks)
-            .filter(Boolean)
-            .map((t: any) => ({
-              ...t,
-              credit_value: Number(t.credit_value || 0),
-            })) || []
-
         // Merge & deduplicate
         const taskMap = new Map<string, AssignedTask>()
-        for (const t of [...directList, ...nominatedList]) {
-          if (t?.id) taskMap.set(t.id, t)
+
+        for (const t of assignedTasks || []) {
+          taskMap.set(t.id, {
+            ...t,
+            credit_value: Number(t.credit_value || 0),
+            isNominated: false,
+            nominationStatus: undefined,
+          })
+        }
+
+        for (const n of (nominations || []) as any[]) {
+          const t = n.tasks
+          if (!t) continue
+          if (taskMap.has(t.id)) {
+            const existing = taskMap.get(t.id)!
+            existing.isNominated = true
+            existing.nominationStatus = n.status
+          } else {
+            taskMap.set(t.id, {
+              ...t,
+              credit_value: Number(t.credit_value || 0),
+              status: n.status === "PENDING" ? "NOMINATED" : t.status,
+              isNominated: true,
+              nominationStatus: n.status,
+            })
+          }
         }
 
         setTasks(Array.from(taskMap.values()))
@@ -139,11 +153,21 @@ export default function MyTasksPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => (
-        <Badge className={statusColors[row.original.status] || ""}>
-          {row.original.status}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const isPendingNom = row.original.isNominated && row.original.nominationStatus === "PENDING"
+        if (isPendingNom) {
+          return (
+            <Badge className="bg-purple-50 text-purple-700 border border-purple-200">
+              NOMINATED (PENDING)
+            </Badge>
+          )
+        }
+        return (
+          <Badge className={statusColors[row.original.status] || ""}>
+            {row.original.status}
+          </Badge>
+        )
+      },
     },
     {
       accessorKey: "deadline",
@@ -185,23 +209,23 @@ export default function MyTasksPage() {
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">My Tasks</h1>
-        <p className="text-muted-foreground mt-2">Tasks you&apos;ve accepted and are working on</p>
+        <p className="text-muted-foreground mt-2">Tasks assigned to you or nominated from the Task Pool</p>
       </div>
 
       {tasks.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground mb-4">No accepted tasks yet</p>
+            <p className="text-muted-foreground mb-4">No assigned or nominated tasks yet</p>
             <Button asChild>
-              <Link href={`/${orgId}/member/marketplace`}>Browse Marketplace</Link>
+              <Link href={`/${orgId}/member/marketplace`}>Browse Task Pool</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Accepted Tasks ({tasks.length})</CardTitle>
-            <CardDescription>Track your work progress</CardDescription>
+            <CardTitle>Assigned & Nominated Tasks ({tasks.length})</CardTitle>
+            <CardDescription>Track your active assignments and pending nominations</CardDescription>
           </CardHeader>
           <CardContent>
             <DataTablePrimitive columns={columns} data={tasks} />

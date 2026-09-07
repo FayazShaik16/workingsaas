@@ -43,6 +43,8 @@ export interface AssignedAdHocTask {
   status: string
   deadline?: string | null
   verificationMode: "MANUAL_REPORT" | "FILE_SUBMISSION"
+  isNominated?: boolean
+  nominationStatus?: string
 }
 
 export interface RecentActivityItem {
@@ -391,7 +393,7 @@ export function MinimalFacultyDashboard({
               Assigned Work & Initiatives · {assigned.length} task{assigned.length === 1 ? "" : "s"}
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground mt-0.5">
-              Department tasks, committees, and ad-hoc initiatives assigned to you.
+              Department tasks, committees, and ad-hoc initiatives assigned to you or nominated from Task Pool.
             </CardDescription>
           </div>
           <Button asChild size="sm" variant="ghost" className="text-xs gap-1">
@@ -415,38 +417,62 @@ export function MinimalFacultyDashboard({
             </div>
           ) : (
             <div className="divide-y">
-              {assigned.map((task) => (
-                <div key={task.id} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      {renderPriorityBadge(task.priority)}
-                      <span className="text-xs font-mono font-bold text-primary">
-                        +{task.creditValue.toFixed(1)} cr
-                      </span>
-                      {task.deadline && (
-                        <span className="text-[11px] text-muted-foreground font-mono">
-                          Due: {task.deadline}
+              {assigned.map((task) => {
+                const isPendingNomination = task.nominationStatus === "PENDING" || task.status === "NOMINATED"
+                return (
+                  <div key={task.id} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {renderPriorityBadge(task.priority)}
+                        <span className="text-xs font-mono font-bold text-primary">
+                          +{task.creditValue.toFixed(1)} cr
                         </span>
+                        {task.deadline && (
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            Due: {task.deadline.includes("T") ? task.deadline.split("T")[0] : task.deadline}
+                          </span>
+                        )}
+                        {isPendingNomination ? (
+                          <Badge variant="secondary" className="text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-300/40">
+                            Nominated (Pending Review)
+                          </Badge>
+                        ) : task.isNominated ? (
+                          <Badge variant="secondary" className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300/40">
+                            Nomination Accepted
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300/40">
+                            Assigned
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="font-semibold text-sm text-foreground truncate">{task.title}</p>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
                       )}
                     </div>
-                    <p className="font-semibold text-sm text-foreground truncate">{task.title}</p>
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="outline" className="text-[10px]">
-                      {task.verificationMode === "FILE_SUBMISSION" ? "File Evidence" : "Report"}
-                    </Badge>
-                    <Button asChild size="sm" variant="default" className="text-xs h-8">
-                      <Link href={`/${orgId}/member/tasks`}>
-                        Submit Proof
-                      </Link>
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className="text-[10px]">
+                        {task.verificationMode === "FILE_SUBMISSION" ? "File Evidence" : "Report"}
+                      </Badge>
+                      {isPendingNomination ? (
+                        <Button asChild size="sm" variant="outline" className="text-xs h-8">
+                          <Link href={`/${orgId}/member/marketplace/${task.id}`}>
+                            View Task
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="default" className="text-xs h-8">
+                          <Link href={`/${orgId}/member/tasks/${task.id}`}>
+                            Submit Proof
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>

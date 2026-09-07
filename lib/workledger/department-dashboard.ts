@@ -252,11 +252,11 @@ export async function getDepartmentDashboardData(
       .select(`
         id,
         assigned_to_id,
-        title,
         work_date,
-        start_time,
-        end_time,
+        scheduled_start,
+        scheduled_end,
         credit_value,
+        scheduled_work_templates:template_id ( title, start_time, end_time ),
         users!assigned_to_id(name)
       `)
       .eq("organization_id", organizationId)
@@ -270,10 +270,10 @@ export async function getDepartmentDashboardData(
       instanceId: i.id,
       facultyId: i.assigned_to_id,
       facultyName: i.users?.name || "Faculty Member",
-      title: i.title,
+      title: i.scheduled_work_templates?.title || "Scheduled Session",
       workDate: i.work_date,
-      startTime: i.start_time?.slice(0, 5) || "09:00",
-      endTime: i.end_time?.slice(0, 5) || "10:00",
+      startTime: i.scheduled_work_templates?.start_time?.slice(0, 5) || (i.scheduled_start ? new Date(i.scheduled_start).toISOString().slice(11, 16) : "09:00"),
+      endTime: i.scheduled_work_templates?.end_time?.slice(0, 5) || (i.scheduled_end ? new Date(i.scheduled_end).toISOString().slice(11, 16) : "10:00"),
       creditValue: Number(i.credit_value || 1.0),
       isFlagged: false,
     }))
