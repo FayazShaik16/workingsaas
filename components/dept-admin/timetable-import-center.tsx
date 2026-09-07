@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,12 +26,14 @@ interface TimetableImportCenterProps {
 
 export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCenterProps) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedCycleId, setSelectedCycleId] = useState<string>(
     workCycles.find((c) => c.status === "ACTIVE")?.id || workCycles[0]?.id || ""
   )
 
   const [parsedRows, setParsedRows] = useState<any[]>([])
   const [fileName, setFileName] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [previewData, setPreviewData] = useState<any | null>(null)
@@ -57,11 +59,8 @@ export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCent
     document.body.removeChild(link)
   }
 
-  // Handle File Upload & Parse
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  // Process File (handles both input select and drag-and-drop)
+  const processFile = (file: File) => {
     setFileName(file.name)
     setErrorMsg(null)
     setPreviewData(null)
@@ -70,8 +69,8 @@ export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCent
     const reader = new FileReader()
     reader.onload = async (evt) => {
       try {
-        const bstr = evt.target?.result
-        const wb = XLSX.read(bstr, { type: "binary" })
+        const buffer = evt.target?.result as ArrayBuffer
+        const wb = XLSX.read(buffer, { type: "array" })
         const wsname = wb.SheetNames[0]
         const ws = wb.Sheets[wsname]
         const data = XLSX.utils.sheet_to_json(ws)
@@ -87,7 +86,7 @@ export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCent
         setErrorMsg(err.message || "Failed to parse file.")
       }
     }
-    reader.readAsBinaryString(file)
+    reader.readAsArrayBuffer(file)
   }
 
   // Dry Run Validation
@@ -227,24 +226,43 @@ export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCent
       </div>
 
       {/* 2. File Upload Box */}
-      <Card className="p-8 text-center border-dashed">
+      <Card
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setIsDragging(true)
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setIsDragging(false)
+          const file = e.dataTransfer.files?.[0]
+          if (file) processFile(file)
+        }}
+        className={`p-8 text-center border-2 border-dashed transition-all cursor-pointer select-none ${
+          isDragging
+            ? "border-primary bg-primary/10 scale-[1.01]"
+            : "border-border/70 hover:border-primary/60 hover:bg-muted/30"
+        }`}
+      >
         <input
+          ref={fileInputRef}
           type="file"
-          id="timetable-file-input"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileUpload}
+          accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xls,application/vnd.ms-excel"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) processFile(file)
+            e.target.value = ""
+          }}
           className="hidden"
         />
-        <label
-          htmlFor="timetable-file-input"
-          className="cursor-pointer flex flex-col items-center justify-center space-y-3"
-        >
+        <div className="flex flex-col items-center justify-center space-y-3">
           <div className="p-3 rounded-full bg-primary/10 text-primary">
             <Upload className="h-6 w-6" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">
-              {fileName ? `Selected: ${fileName}` : "Click to upload timetable (.xlsx or .csv)"}
+              {fileName ? `Selected: ${fileName}` : "Click to select or drag & drop timetable (.csv or .xlsx)"}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Supports normalized weekly timetables with faculty email / ID mapping.
@@ -253,11 +271,16 @@ export function TimetableImportCenter({ orgId, workCycles }: TimetableImportCent
           <Button
             size="sm"
             type="button"
-            className="text-xs mt-2"
+            onClick={(e) => {
+              e.stopPropagation()
+              fileInputRef.current?.click()
+            }}
+            className="text-xs mt-2 gap-1.5"
           >
-            Browse Files
+            <Upload className="h-3.5 w-3.5" />
+            <span>Browse Files</span>
           </Button>
-        </label>
+        </div>
       </Card>
 
       {errorMsg && (
