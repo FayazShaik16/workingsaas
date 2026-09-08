@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
     const { error: updateErr } = await db
       .from("nominations")
-      .update({ status: "REJECTED", updated_at: new Date().toISOString() })
+      .update({ status: "REJECTED" })
       .eq("id", nom.id)
 
     if (updateErr) {

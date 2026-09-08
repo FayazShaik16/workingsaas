@@ -57,7 +57,12 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
       assigned_user:assigned_to_id (id, name, email, designation),
       creator_user:creator_id (id, name, email),
       org_units (id, name),
-      task_proofs (id, description, file_url, submitted_at)
+      task_proofs (id, description, file_url, submitted_at),
+      nominations (
+        id,
+        status,
+        users:user_id (id, name, email, designation)
+      )
     `)
     .eq("id", taskId)
     .eq("organization_id", orgId)
@@ -72,6 +77,20 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
   const proof = Array.isArray(task.task_proofs) && task.task_proofs.length > 0 ? task.task_proofs[0] : null
   const tags = (task.custom_fields as any)?.tags || (task.custom_fields as any)?.skillTags || []
   const validationMode = (task.custom_fields as any)?.validationMode || "FILE_PROOF"
+  const requiredPeople = Math.max(1, parseInt(String((task.custom_fields as any)?.required_people || 1), 10))
+
+  const acceptedNominees = ((task.nominations as any) || [])
+    .filter((n: any) => n.status === "ACCEPTED" && n.users)
+    .map((n: any) => n.users)
+
+  const teamMap = new Map<string, any>()
+  if (assignedFaculty?.id) {
+    teamMap.set(assignedFaculty.id, assignedFaculty)
+  }
+  for (const u of acceptedNominees) {
+    if (u?.id) teamMap.set(u.id, u)
+  }
+  const assignedTeam = Array.from(teamMap.values())
 
   const renderPriorityBadge = (priorityVal?: string) => {
     const p = (priorityVal || "MEDIUM").toUpperCase()
@@ -241,27 +260,58 @@ export default async function LeadTaskDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Assigned Faculty Profile */}
+          {/* Assigned Faculty / Team Profile */}
           <Card className="rounded-2xl border-muted/60 bg-background/50 backdrop-blur-xs shadow-2xs">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" /> Assigned Faculty
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" /> Assigned Team
+                </CardTitle>
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] ${
+                    assignedTeam.length >= requiredPeople
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      : "bg-sky-500/10 text-sky-600 border-sky-500/30"
+                  }`}
+                >
+                  {assignedTeam.length}/{requiredPeople} Filled
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {assignedFaculty ? (
-                <div className="space-y-1 text-xs">
-                  <p className="text-sm font-semibold text-foreground">{assignedFaculty.name}</p>
-                  <p className="text-muted-foreground">{assignedFaculty.email}</p>
-                  {assignedFaculty.designation && (
-                    <Badge variant="secondary" className="text-[10px] mt-1 font-normal">
-                      {assignedFaculty.designation}
-                    </Badge>
+              {assignedTeam.length > 0 ? (
+                <div className="space-y-2.5 divide-y divide-border/30">
+                  {assignedTeam.map((fac: any, idx: number) => (
+                    <div key={fac.id || idx} className={`text-xs ${idx > 0 ? "pt-2" : ""}`}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">{fac.name}</p>
+                        <Badge variant="outline" className="text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20">
+                          Assigned
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground">{fac.email}</p>
+                      {fac.designation && (
+                        <Badge variant="secondary" className="text-[10px] mt-1 font-normal">
+                          {fac.designation}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                  {assignedTeam.length < requiredPeople && (
+                    <div className="pt-2 text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                      <span>⚡ {requiredPeople - assignedTeam.length} slot(s) open for nomination</span>
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                  Open Pool (Available for Self-Nomination)
+                <div className="space-y-1 text-xs">
+                  <div className="text-amber-600 dark:text-amber-400 font-medium">
+                    Open Pool (Available for Self-Nomination)
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Required Team Size: {requiredPeople} {requiredPeople === 1 ? "person" : "people"}
+                  </p>
                 </div>
               )}
 

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // 1. Fetch task
     const { data: task, error: taskError } = await db
       .from("tasks")
-      .select("id, title, organization_id, org_unit_id, visibility_scope, status, source_timetable_slot_id, deadline")
+      .select("id, title, organization_id, org_unit_id, visibility_scope, status, source_timetable_slot_id, deadline, assigned_to_id, custom_fields")
       .eq("id", taskId)
       .single()
 
@@ -171,13 +171,77 @@ export async function POST(req: Request) {
 
     const nowIso = new Date().toISOString()
 
-    // 5. Update task assignment
+    const requiredPeople = Math.max(1, parseInt(String(task.custom_fields?.required_people || 1), 10))
+
+    // 5. Update nomination states
+    // First, mark target faculty's nomination as ACCEPTED (or insert if direct assign)
+    const { data: existingNom } = await db
+      .from("nominations")
+      .select("id, status")
+      .eq("task_id", taskId)
+      .eq("user_id", targetFacultyId)
+      .maybeSingle()
+
+    if (existingNom) {
+      await db
+        .from("nominations")
+        .update({ status: "ACCEPTED" })
+        .eq("id", existingNom.id)
+    } else {
+      await db
+        .from("nominations")
+        .insert({
+          task_id: taskId,
+          user_id: targetFacultyId,
+          status: "ACCEPTED",
+          message: "Assigned by department lead / administrator.",
+          created_at: nowIso,
+        })
+    }
+
+    // Fetch all currently accepted nominations for this task
+    const { data: acceptedNoms } = await db
+      .from("nominations")
+      .select("user_id")
+      .eq("task_id", taskId)
+      .eq("status", "ACCEPTED")
+
+    const acceptedUserIds: string[] = Array.from(
+      new Set([
+        ...(task.custom_fields?.assigned_user_ids || []),
+        ...(acceptedNoms?.map((n: any) => n.user_id) || []),
+        targetFacultyId,
+      ])
+    )
+
+    const acceptedCount = acceptedUserIds.length
+    const isFullyAssigned = acceptedCount >= requiredPeople
+    const newStatus = isFullyAssigned ? "ASSIGNED" : "OPEN"
+
+    // If fully assigned, reject remaining pending nominations
+    if (isFullyAssigned) {
+      await db
+        .from("nominations")
+        .update({ status: "REJECTED" })
+        .eq("task_id", taskId)
+        .eq("status", "PENDING")
+    }
+
+    // Update task record with updated custom_fields and primary assignee
+    const primaryAssigneeId = task.assigned_to_id || targetFacultyId
+    const updatedCustomFields = {
+      ...(task.custom_fields || {}),
+      required_people: requiredPeople,
+      assigned_user_ids: acceptedUserIds,
+    }
+
     const { data: updatedTask, error: updateErr } = await db
       .from("tasks")
       .update({
-        assigned_to_id: targetFacultyId,
+        assigned_to_id: primaryAssigneeId,
         assigned_by_id: user.id,
-        status: "ASSIGNED",
+        status: newStatus,
+        custom_fields: updatedCustomFields,
         deadline: effectiveDeadline ? new Date(effectiveDeadline).toISOString() : task.deadline,
         updated_at: nowIso,
       })
@@ -190,23 +254,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to assign task: ${updateErr.message}` }, { status: 500 })
     }
 
-    // 5. Update nomination states if applicable
-    await db
-      .from("nominations")
-      .update({ status: "ACCEPTED" })
-      .eq("task_id", taskId)
-      .eq("user_id", targetFacultyId)
-
-    await db
-      .from("nominations")
-      .update({ status: "REJECTED" })
-      .eq("task_id", taskId)
-      .neq("user_id", targetFacultyId)
-
     return NextResponse.json({
       success: true,
       task: updatedTask,
-      message: `Task "${task.title}" successfully assigned to ${facultyUser.name}.`,
+      isFullyAssigned,
+      acceptedCount,
+      requiredPeople,
+      slotsRemaining: Math.max(0, requiredPeople - acceptedCount),
+      message: isFullyAssigned
+        ? `Task "${task.title}" successfully assigned to ${facultyUser.name}. All ${requiredPeople} position(s) are now filled!`
+        : `Assigned ${facultyUser.name} to "${task.title}". (${acceptedCount}/${requiredPeople} positions filled — ${requiredPeople - acceptedCount} slots remaining).`,
     })
   } catch (error: any) {
     console.error("[tasks/assign] Error:", error)

@@ -45,7 +45,8 @@ export default async function LeadNominationsPage({ params }: PageProps) {
         deadline,
         status,
         organization_id,
-        org_unit_id
+        org_unit_id,
+        custom_fields
       ),
       users!inner(
         id,
@@ -67,25 +68,51 @@ export default async function LeadNominationsPage({ params }: PageProps) {
     console.error("[LeadNominationsPage] Query error:", error)
   }
 
-  const nominations: NominationItem[] = (rawNominations || []).map((n: any) => ({
-    id: n.id,
-    taskId: n.task_id,
-    taskTitle: n.tasks?.title || "Untitled Task",
-    taskDescription: n.tasks?.description,
-    creditValue: Number(n.tasks?.credit_value || 0),
-    priority: n.tasks?.priority || "MEDIUM",
-    category: n.tasks?.category || "UNSTRUCTURED",
-    deadline: n.tasks?.deadline,
-    taskStatus: n.tasks?.status || "OPEN",
-    userId: n.user_id,
-    userName: n.users?.name || "Unknown Faculty",
-    userEmail: n.users?.email || "",
-    userDesignation: n.users?.designation,
-    deptName: deptName,
-    nominationStatus: n.status || "PENDING",
-    message: n.message,
-    createdAt: n.created_at,
-  }))
+  // Pre-calculate accepted counts per task from assigned_user_ids & rawNominations
+  const taskAcceptedMap = new Map<string, number>()
+  for (const n of rawNominations || []) {
+    const taskId = n.task_id
+    if (!taskAcceptedMap.has(taskId)) {
+      const assignedIds = Array.isArray(n.tasks?.custom_fields?.assigned_user_ids)
+        ? n.tasks.custom_fields.assigned_user_ids
+        : []
+      let count = assignedIds.length
+      if (count === 0) {
+        const acceptedInBatch = (rawNominations || []).filter(
+          (r: any) => r.task_id === taskId && r.status === "ACCEPTED"
+        ).length
+        count = acceptedInBatch
+      }
+      taskAcceptedMap.set(taskId, count)
+    }
+  }
+
+  const nominations: NominationItem[] = (rawNominations || []).map((n: any) => {
+    const requiredPeople = Math.max(1, parseInt(String(n.tasks?.custom_fields?.required_people || 1), 10))
+    const acceptedCount = taskAcceptedMap.get(n.task_id) || 0
+
+    return {
+      id: n.id,
+      taskId: n.task_id,
+      taskTitle: n.tasks?.title || "Untitled Task",
+      taskDescription: n.tasks?.description,
+      creditValue: Number(n.tasks?.credit_value || 0),
+      priority: n.tasks?.priority || "MEDIUM",
+      category: n.tasks?.category || "UNSTRUCTURED",
+      deadline: n.tasks?.deadline,
+      taskStatus: n.tasks?.status || "OPEN",
+      userId: n.user_id,
+      userName: n.users?.name || "Unknown Faculty",
+      userEmail: n.users?.email || "",
+      userDesignation: n.users?.designation,
+      deptName: deptName,
+      nominationStatus: n.status || "PENDING",
+      message: n.message,
+      createdAt: n.created_at,
+      requiredPeople,
+      acceptedCount,
+    }
+  })
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-6xl mx-auto">

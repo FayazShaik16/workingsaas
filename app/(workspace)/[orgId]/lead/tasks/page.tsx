@@ -58,7 +58,9 @@ export default async function LeadTasksPage({ params, searchParams }: PageProps)
       lead_signed_at,
       assigned_to_id,
       users:assigned_to_id (id, name, email),
-      task_proofs (id, description, file_url, submitted_at)
+      task_proofs (id, description, file_url, submitted_at),
+      custom_fields,
+      nominations (id, status)
     `)
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
@@ -72,6 +74,9 @@ export default async function LeadTasksPage({ params, searchParams }: PageProps)
   const formattedTasks: DepartmentTask[] = (rawTasks || []).map((t: any) => {
     const proof = Array.isArray(t.task_proofs) && t.task_proofs.length > 0 ? t.task_proofs[0] : null
     const assignedUser = t.users
+    const requiredPeople = Math.max(1, parseInt(String(t.custom_fields?.required_people || 1), 10))
+    const assignedIds = Array.isArray(t.custom_fields?.assigned_user_ids) ? t.custom_fields.assigned_user_ids : []
+    const acceptedCount = (t.nominations || []).filter((n: any) => n.status === "ACCEPTED").length || assignedIds.length
 
     return {
       id: t.id,
@@ -90,6 +95,8 @@ export default async function LeadTasksPage({ params, searchParams }: PageProps)
       assignedToEmail: assignedUser?.email || undefined,
       proofText: proof?.description || undefined,
       proofUrl: proof?.file_url || undefined,
+      requiredPeople,
+      acceptedCount,
     }
   })
 

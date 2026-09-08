@@ -23,6 +23,8 @@ export async function POST(req: Request) {
       assignedToId,
       verificationMode = "MANUAL_REPORT",
       allowNomination = true,
+      requiredPeople = 1,
+      custom_fields: extraCustomFields = {},
     } = await req.json()
 
     if (!title?.trim()) {
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
     const credits = parseFloat(rawCredits) || 1.0
     const validPriority = ["LOW", "MEDIUM", "HIGH", "URGENT"].includes(priority) ? priority : "MEDIUM"
     const validVerificationMode = verificationMode === "FILE_SUBMISSION" ? "FILE_SUBMISSION" : "MANUAL_REPORT"
+    const numRequiredPeople = Math.max(1, parseInt(String(requiredPeople), 10) || 1)
 
     const admin = createAdminClient()
     const db = admin as any
@@ -52,10 +55,16 @@ export async function POST(req: Request) {
       credit_value: credits,
       creator_id: user.id,
       assigned_to_id: assignedToId || null,
-      status: assignedToId ? "ASSIGNED" : "OPEN",
+      status: assignedToId && numRequiredPeople <= 1 ? "ASSIGNED" : "OPEN",
       visibility_scope: visibilityScope,
       verification_mode: validVerificationMode,
       allow_nomination: allowNomination,
+      custom_fields: {
+        ...(extraCustomFields || {}),
+        targetOrgUnitIds,
+        required_people: numRequiredPeople,
+        assigned_user_ids: assignedToId ? [assignedToId] : [],
+      },
       deadline: deadline ? new Date(deadline).toISOString() : null,
       created_at: nowIso,
       updated_at: nowIso,

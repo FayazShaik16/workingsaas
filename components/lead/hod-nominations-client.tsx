@@ -40,6 +40,8 @@ export interface NominationItem {
   nominationStatus: string
   message?: string
   createdAt: string
+  requiredPeople?: number
+  acceptedCount?: number
 }
 
 interface Props {
@@ -83,17 +85,36 @@ export function HODNominationsClient({ orgId, deptName, nominations: initialNomi
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to assign task.")
 
-      toast.success(`Assigned "${nom.taskTitle}" to ${nom.userName}!`)
+      const isFullyAssigned = data.isFullyAssigned ?? true
+      const newAcceptedCount = data.acceptedCount ?? ((nom.acceptedCount || 0) + 1)
+      const requiredPeople = data.requiredPeople ?? (nom.requiredPeople || 1)
+
+      if (isFullyAssigned) {
+        toast.success(data.message || `Assigned "${nom.taskTitle}" to ${nom.userName}! All ${requiredPeople} positions filled.`)
+      } else {
+        const remaining = Math.max(0, requiredPeople - newAcceptedCount)
+        toast.success(data.message || `Assigned ${nom.userName}! (${newAcceptedCount}/${requiredPeople} filled — ${remaining} slot(s) remaining)`)
+      }
+
       setNominations((prev) =>
-        prev.map((item) =>
-          item.taskId === nom.taskId
-            ? {
-                ...item,
-                nominationStatus: item.id === nom.id ? "ACCEPTED" : "REJECTED",
-                taskStatus: "ASSIGNED",
-              }
-            : item
-        )
+        prev.map((item) => {
+          if (item.taskId !== nom.taskId) return item
+          if (item.id === nom.id) {
+            return {
+              ...item,
+              nominationStatus: "ACCEPTED",
+              taskStatus: isFullyAssigned ? "ASSIGNED" : item.taskStatus,
+              acceptedCount: newAcceptedCount,
+              requiredPeople,
+            }
+          }
+          if (isFullyAssigned) {
+            return item.nominationStatus === "PENDING"
+              ? { ...item, nominationStatus: "REJECTED", acceptedCount: newAcceptedCount, requiredPeople }
+              : { ...item, acceptedCount: newAcceptedCount, requiredPeople }
+          }
+          return { ...item, acceptedCount: newAcceptedCount, requiredPeople }
+        })
       )
       router.refresh()
     } catch (err: any) {
@@ -229,6 +250,29 @@ export function HODNominationsClient({ orgId, deptName, nominations: initialNomi
                         ? "Rejected"
                         : "Awaiting Review"}
                     </Badge>
+
+                    {nom.requiredPeople && nom.requiredPeople > 1 ? (
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] gap-1 font-medium ${
+                          (nom.acceptedCount || 0) >= nom.requiredPeople
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                            : "bg-sky-500/10 text-sky-600 border border-sky-500/30"
+                        }`}
+                      >
+                        <Users className="h-3 w-3" />
+                        {nom.acceptedCount || 0}/{nom.requiredPeople} Positions Filled
+                        {(nom.acceptedCount || 0) < nom.requiredPeople && (
+                          <span className="opacity-80">
+                            ({nom.requiredPeople - (nom.acceptedCount || 0)} Open)
+                          </span>
+                        )}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] gap-1 font-medium text-muted-foreground">
+                        <Users className="h-3 w-3" /> 1 Person Task
+                      </Badge>
+                    )}
                   </div>
 
                   {nom.taskDescription && (

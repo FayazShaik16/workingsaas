@@ -69,6 +69,8 @@ export interface DepartmentTask {
   tags?: string[]
   proofUrl?: string
   proofText?: string
+  requiredPeople?: number
+  acceptedCount?: number
 }
 
 export interface DepartmentFacultyMember {
@@ -420,16 +422,20 @@ export function HODTaskManager({
       }
 
       const assignedFac = facultyMembers.find((f) => f.id === assignFacultyId)
+      const isFully = data.isFullyAssigned ?? true
+      const newCount = data.acceptedCount ?? ((assigningTask.acceptedCount || 0) + 1)
+
       setTasks((prev) =>
         prev.map((t) =>
           t.id === assigningTask.id
             ? {
                 ...t,
-                status: "ASSIGNED",
+                status: isFully ? "ASSIGNED" : t.status,
                 assignedToId: assignFacultyId,
                 assignedToName: assignedFac?.name,
                 assignedToEmail: assignedFac?.email,
                 deadline: assignDate,
+                acceptedCount: newCount,
               }
             : t
         )
@@ -437,7 +443,7 @@ export function HODTaskManager({
 
       setFeedback({
         type: "success",
-        text: `Task "${assigningTask.title}" successfully assigned to ${assignedFac?.name}.`,
+        text: data.message || `Task "${assigningTask.title}" successfully assigned to ${assignedFac?.name}.`,
       })
       setAssigningTask(null)
       router.refresh()
@@ -880,11 +886,23 @@ export function HODTaskManager({
                             {task.assignedToEmail && (
                               <p className="text-[10px] text-muted-foreground font-light">{task.assignedToEmail}</p>
                             )}
+                            {task.requiredPeople && task.requiredPeople > 1 && (
+                              <Badge variant="outline" className="text-[9px] mt-1 font-mono text-sky-600 bg-sky-500/10 border-sky-500/20">
+                                Team: {task.acceptedCount || 1}/{task.requiredPeople}
+                              </Badge>
+                            )}
                           </div>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] font-medium text-amber-600 bg-amber-500/10 border-amber-500/30">
-                            Open Task Pool
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="text-[10px] font-medium text-amber-600 bg-amber-500/10 border-amber-500/30">
+                              Open Task Pool
+                            </Badge>
+                            {task.requiredPeople && task.requiredPeople > 1 && (
+                              <p className="text-[10px] text-muted-foreground font-mono">
+                                {task.requiredPeople} people needed
+                              </p>
+                            )}
+                          </div>
                         )}
                       </TableCell>
 
@@ -1119,7 +1137,10 @@ export function HODTaskManager({
               <UserCheck className="h-5 w-5 text-primary" /> Assign Task to Faculty
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Assign "{assigningTask?.title}" (+{Number(assigningTask?.creditValue || 0).toFixed(1)} WORK) with collision protection.
+              Assign "{assigningTask?.title}" (+{Number(assigningTask?.creditValue || 0).toFixed(1)} WORK)
+              {assigningTask?.requiredPeople && assigningTask.requiredPeople > 1
+                ? ` • Position ${(assigningTask.acceptedCount || 0) + 1} of ${assigningTask.requiredPeople}`
+                : ""} with collision protection.
             </DialogDescription>
           </DialogHeader>
 

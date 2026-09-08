@@ -16,6 +16,8 @@ export interface TaskPoolItem {
   isNominatedByMe: boolean
   nominationStatus?: string | null
   nominationCount: number
+  requiredPeople?: number
+  acceptedCount?: number
 }
 
 export async function getScopedTaskPool(
@@ -85,6 +87,9 @@ export async function getScopedTaskPool(
     }
 
     const myNomination = (t.nominations || []).find((n: any) => n.user_id === userId)
+    const requiredPeople = Math.max(1, parseInt(String(t.custom_fields?.required_people || 1), 10))
+    const assignedIds = Array.isArray(t.custom_fields?.assigned_user_ids) ? t.custom_fields.assigned_user_ids : []
+    const acceptedCount = (t.nominations || []).filter((n: any) => n.status === "ACCEPTED").length || assignedIds.length
 
     filteredTasks.push({
       id: t.id,
@@ -101,6 +106,8 @@ export async function getScopedTaskPool(
       isNominatedByMe: Boolean(myNomination),
       nominationStatus: myNomination?.status || null,
       nominationCount: (t.nominations || []).length,
+      requiredPeople,
+      acceptedCount,
     })
   }
 

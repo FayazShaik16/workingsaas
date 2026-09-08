@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // 1. Fetch task to verify assignment
     const { data: task, error: taskErr } = await db
       .from("tasks")
-      .select("id, title, status, assigned_to_id, organization_id")
+      .select("id, title, status, assigned_to_id, organization_id, custom_fields")
       .eq("id", taskId)
       .single()
 
@@ -36,7 +36,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 })
     }
 
-    if (task.assigned_to_id !== user.id) {
+    const assignedUserIds: string[] = Array.isArray(task.custom_fields?.assigned_user_ids)
+      ? task.custom_fields.assigned_user_ids
+      : []
+
+    let isAssigned = task.assigned_to_id === user.id || assignedUserIds.includes(user.id)
+    if (!isAssigned) {
+      const { data: nom } = await db
+        .from("nominations")
+        .select("id")
+        .eq("task_id", taskId)
+        .eq("user_id", user.id)
+        .eq("status", "ACCEPTED")
+        .maybeSingle()
+      if (nom) {
+        isAssigned = true
+      }
+    }
+
+    if (!isAssigned) {
       return NextResponse.json(
         { error: "You can only submit deliverables for tasks assigned to you." },
         { status: 403 }
