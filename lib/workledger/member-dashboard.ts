@@ -12,6 +12,34 @@ export interface MemberDashboardData {
   }
   walletBalance: number
   progress: MonthlyProgressView
+  salaryComponent: {
+    baseSalary: number
+    currency: string
+    targetCredits: number
+    thresholdCredits: number
+    earnedCredits: number
+    unlockedSalaryAmount: number
+    remainingCreditsToThreshold: number
+    isEligible: boolean
+    isCustomConfigured: boolean
+  }
+  motivationalPacing: {
+    status: "BEHIND" | "ON_TRACK" | "THRESHOLD_MET" | "EXCEEDED"
+    headline: string
+    subtext: string
+    daysUntilSalaryReview: number
+    tokensToSafety: number
+  }
+  actionableSuggestions: Array<{
+    id: string
+    type: "SCHEDULED_SESSION" | "PENDING_PROOF" | "MARKETPLACE_INITIATIVE" | "PACING_NUDGE"
+    title: string
+    actionLabel: string
+    actionUrl: string
+    creditValue: number
+    priority: "URGENT" | "HIGH" | "MEDIUM"
+    reason: string
+  }>
   todayInstances: Array<{
     id: string
     title: string
@@ -59,10 +87,10 @@ export async function getMemberDashboardData(
 
   const ctx = await getOrgCycleContext(organizationId)
 
-  // 1. Fetch user profile + department
+  // 1. Fetch user profile + department + salary skills
   const { data: userProfile } = await db
     .from("users")
-    .select("id, name, email, designation, org_units:org_unit_id(id, name)")
+    .select("id, name, email, designation, skills, target_credits, org_units:org_unit_id(id, name)")
     .eq("id", userId)
     .single()
 
@@ -248,6 +276,121 @@ export async function getMemberDashboardData(
 
   const walletBalance = Number(wallet?.balance || 0)
 
+  // 8. Compute Salary Component Matrix
+  const skillsObj =
+    userProfile?.skills && typeof userProfile.skills === "object" && !Array.isArray(userProfile.skills)
+      ? userProfile.skills
+      : {}
+  const comp = skillsObj.salary_component || {}
+  const baseSalary = Number(comp.base_salary || 75000)
+  const currency = comp.currency || "INR"
+  const isCustomConfigured = Boolean(comp.base_salary)
+  const targetCredits = Number(progress.totalTargetCredits || userProfile?.target_credits || 20.0)
+  const thresholdPct = Number(progress.salaryThresholdPercentage || comp.threshold_percentage || 85.0)
+  const thresholdCredits = Math.round(((targetCredits * thresholdPct) / 100) * 10) / 10
+  const earnedCredits = Number(progress.rawEarnedCredits || 0)
+  const progressFraction = targetCredits > 0 ? Math.min(1.0, earnedCredits / targetCredits) : 0
+  const unlockedSalaryAmount = Math.round(baseSalary * progressFraction)
+  const remainingCreditsToThreshold = Math.max(0, Math.round((thresholdCredits - earnedCredits) * 10) / 10)
+
+  const salaryComponent: MemberDashboardData["salaryComponent"] = {
+    baseSalary,
+    currency,
+    targetCredits,
+    thresholdCredits,
+    earnedCredits,
+    unlockedSalaryAmount,
+    remainingCreditsToThreshold,
+    isEligible: progress.salaryEligible || earnedCredits >= thresholdCredits,
+    isCustomConfigured,
+  }
+
+  // 9. Psychological Pacing & Motivational State
+  const currentDay = new Date().getDate()
+  const openDay = Number(ctx.activeWorkCycle?.salary_request_open_day ?? (ctx.activeWorkCycle as any)?.salary_request_opens_day ?? 26)
+  const daysUntilSalaryReview = Math.max(0, openDay - currentDay)
+
+  let status: MemberDashboardData["motivationalPacing"]["status"] = "BEHIND"
+  let headline = ""
+  let subtext = ""
+
+  if ((progress.displayProgressPercentage || 0) >= 100) {
+    status = "EXCEEDED"
+    headline = "⭐ Outstanding Achievement: 100% Salary Target Reached!"
+    subtext = "Full monthly base salary is guaranteed! Surplus tokens earned accumulate directly to your token balance for rewards & recognition."
+  } else if (salaryComponent.isEligible) {
+    status = "THRESHOLD_MET"
+    headline = "🎉 85% Salary Clearance Threshold Met!"
+    subtext = `You have officially qualified for monthly salary clearance. Review unlocks on Day ${openDay} (${daysUntilSalaryReview === 0 ? "Today!" : `in ${daysUntilSalaryReview} days`}). Complete remaining classes to earn additional performance tokens!`
+  } else if ((progress.displayProgressPercentage || 0) >= 50) {
+    status = "ON_TRACK"
+    headline = `🔥 Final Sprint: Only ${remainingCreditsToThreshold.toFixed(1)} WORK Tokens to 85% Safety!`
+    subtext = daysUntilSalaryReview > 0
+      ? `Only ${daysUntilSalaryReview} days left until payroll review on Day ${openDay}. Completing 1 task or 2 classes locks in your monthly salary clearance!`
+      : "Payroll review is currently open! Complete your pending sessions to unlock salary endorsement."
+  } else {
+    status = "BEHIND"
+    headline = `🚀 Momentum Alert: Bank ${remainingCreditsToThreshold.toFixed(1)} WORK Tokens for Salary Clearance`
+    subtext = "Pacing checkpoint: Completing scheduled timetable sessions this week will boost your progress and protect your payroll clearance timeline."
+  }
+
+  const motivationalPacing: MemberDashboardData["motivationalPacing"] = {
+    status,
+    headline,
+    subtext,
+    daysUntilSalaryReview,
+    tokensToSafety: remainingCreditsToThreshold,
+  }
+
+  // 10. Generate Actionable Work Recommendations
+  const actionableSuggestions: MemberDashboardData["actionableSuggestions"] = []
+
+  // (a) Uncompleted Scheduled Sessions for Today
+  const pendingSessions = todayInstances.filter((inst: any) => inst.status !== "SELF_COMPLETED")
+  for (const session of pendingSessions.slice(0, 2)) {
+    actionableSuggestions.push({
+      id: `session-${session.id}`,
+      type: "SCHEDULED_SESSION",
+      title: `Complete Class: ${session.title} (${session.startTime}–${session.endTime})`,
+      actionLabel: "Complete Session",
+      actionUrl: `/${organizationId}/member/schedule`,
+      creditValue: session.creditValue,
+      priority: "HIGH",
+      reason: `Earn +${session.creditValue.toFixed(1)} WORK tokens instantly on trust towards your ${thresholdCredits.toFixed(1)} cr salary safety mark.`,
+    })
+  }
+
+  // (b) Assigned initiatives waiting for proof submission
+  const actionableTasks = assignedTasks.filter(
+    (t) => t.status === "ASSIGNED" || t.status === "IN_PROGRESS" || t.status === "OPEN"
+  )
+  for (const task of actionableTasks.slice(0, 2)) {
+    actionableSuggestions.push({
+      id: `task-${task.id}`,
+      type: "PENDING_PROOF",
+      title: `Submit Proof: "${task.title}"`,
+      actionLabel: "Submit Proof",
+      actionUrl: `/${organizationId}/member/tasks`,
+      creditValue: task.creditValue,
+      priority: task.priority === "URGENT" ? "URGENT" : "HIGH",
+      reason: `Unlocks +${task.creditValue.toFixed(1)} WORK tokens immediately upon HOD review and approval.`,
+    })
+  }
+
+  // (c) Marketplace task nomination suggestion if gap exists
+  if (remainingCreditsToThreshold > 0 && actionableSuggestions.length < 3) {
+    actionableSuggestions.push({
+      id: "marketplace-pool-suggestion",
+      type: "MARKETPLACE_INITIATIVE",
+      title: "Self-Nominate for Open Department Initiatives",
+      actionLabel: "Browse Task Pool",
+      actionUrl: `/${organizationId}/member/marketplace`,
+      creditValue: 2.5,
+      priority: "MEDIUM",
+      reason: `Select an available initiative in the Task Pool (+2.0 to +5.0 WORK) to bridge your token gap before Day ${openDay}.`,
+    })
+  }
+
   return {
     user: {
       id: userId,
@@ -258,6 +401,9 @@ export async function getMemberDashboardData(
     },
     walletBalance,
     progress,
+    salaryComponent,
+    motivationalPacing,
+    actionableSuggestions,
     todayInstances,
     nextUpcomingInstance,
     assignedTasks,

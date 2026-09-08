@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { requireAuth } from "@/lib/auth/protect"
+import { getSessionUser } from "@/lib/auth/session"
 
 export interface OrgCycleContext {
   userId: string
@@ -22,8 +22,15 @@ export interface OrgCycleContext {
 }
 
 export async function getOrgCycleContext(explicitOrgId?: string): Promise<OrgCycleContext> {
-  const user = await requireAuth()
-  const orgId = explicitOrgId || user.organizationId
+  let user: any = null
+  try {
+    user = await getSessionUser()
+  } catch {
+    // Called outside Next.js request store
+  }
+
+  const orgId = explicitOrgId || user?.organizationId || ""
+  const userId = user?.id || ""
 
   const admin = createAdminClient()
   const db = admin as any
@@ -33,13 +40,16 @@ export async function getOrgCycleContext(explicitOrgId?: string): Promise<OrgCyc
   const monthStart = `${todayStr.slice(0, 7)}-01`
 
   // 1. Fetch user's department org_unit_id
-  const { data: userProfile } = await db
-    .from("users")
-    .select("org_unit_id")
-    .eq("id", user.id)
-    .maybeSingle()
+  let userOrgUnitId: string | null = null
+  if (userId) {
+    const { data: userProfile } = await db
+      .from("users")
+      .select("org_unit_id")
+      .eq("id", userId)
+      .maybeSingle()
 
-  const userOrgUnitId = userProfile?.org_unit_id || user.orgUnitId || null
+    userOrgUnitId = userProfile?.org_unit_id || user?.orgUnitId || null
+  }
 
   // 2. Fetch active work cycle for this organization
   const { data: activeCycle } = await db
@@ -52,7 +62,7 @@ export async function getOrgCycleContext(explicitOrgId?: string): Promise<OrgCyc
     .maybeSingle()
 
   return {
-    userId: user.id,
+    userId,
     organizationId: orgId,
     userOrgUnitId,
     activeWorkCycle: activeCycle || null,

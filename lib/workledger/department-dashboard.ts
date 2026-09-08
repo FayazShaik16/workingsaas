@@ -8,6 +8,13 @@ export interface DepartmentDashboardData {
     name: string
     code?: string
   } | null
+  resources: {
+    allocatedBudget: number
+    spentBudget: number
+    remainingBudget: number
+    budgetCurrency: string
+    utilizationPercentage: number
+  }
   metrics: {
     memberCount: number
     todayScheduledExpected: number
@@ -32,6 +39,9 @@ export interface DepartmentDashboardData {
     targetCredits: number
     progressPercentage: number
     isSalaryEligible: boolean
+    baseSalary: number
+    currency: string
+    isCustomConfigured: boolean
   }>
   scheduledReviewList: Array<{
     instanceId: string
@@ -109,6 +119,13 @@ export async function getDepartmentDashboardData(
   if (!targetUnitId) {
     return {
       department: null,
+      resources: {
+        allocatedBudget: 0,
+        spentBudget: 0,
+        remainingBudget: 0,
+        budgetCurrency: "WORK",
+        utilizationPercentage: 0,
+      },
       metrics: {
         memberCount: 0,
         todayScheduledExpected: 0,
@@ -129,14 +146,14 @@ export async function getDepartmentDashboardData(
   // 1. Fetch Department Info (org_units does not have a code column, use unit_type)
   const { data: deptInfo } = await db
     .from("org_units")
-    .select("id, name, unit_type, lead_user_id")
+    .select("id, name, unit_type, lead_user_id, metadata")
     .eq("id", targetUnitId)
     .maybeSingle()
 
-  // 2. Fetch Department Faculty Members
+  // 2. Fetch Department Faculty Members with skills and target_credits
   const { data: deptMembers } = await db
     .from("users")
-    .select("id, name, email, designation, status")
+    .select("id, name, email, designation, status, skills, target_credits")
     .eq("organization_id", organizationId)
     .eq("org_unit_id", targetUnitId)
     .eq("status", "ACTIVE")
@@ -232,6 +249,13 @@ export async function getDepartmentDashboardData(
   const facultyProgressList: DepartmentDashboardData["facultyProgressList"] = []
   for (const m of members) {
     const p = await getMemberMonthlyProgress(organizationId, m.id, ctx.monthStart)
+    const skillsObj =
+      m.skills && typeof m.skills === "object" && !Array.isArray(m.skills) ? m.skills : {}
+    const comp = skillsObj.salary_component || {}
+    const baseSalary = Number(comp.base_salary || 75000)
+    const currency = comp.currency || "INR"
+    const isCustomConfigured = Boolean(comp.base_salary)
+
     facultyProgressList.push({
       userId: m.id,
       name: m.name,
@@ -241,6 +265,9 @@ export async function getDepartmentDashboardData(
       targetCredits: p.totalTargetCredits,
       progressPercentage: p.displayProgressPercentage || 0,
       isSalaryEligible: p.salaryEligible,
+      baseSalary,
+      currency,
+      isCustomConfigured,
     })
   }
 
@@ -292,6 +319,15 @@ export async function getDepartmentDashboardData(
     })
   }
 
+  // 9. Department Resource Allocation and Spend
+  const meta = deptInfo?.metadata && typeof deptInfo.metadata === "object" ? deptInfo.metadata : {}
+  const allocatedBudget = Number(meta.allocated_budget || 0)
+  const budgetCurrency = meta.budget_currency || "WORK"
+  // Total rewarded credits to faculty in this department this month
+  const spentBudget = facultyProgressList.reduce((acc, f) => acc + (f.earnedCredits || 0), 0)
+  const remainingBudget = Math.max(0, allocatedBudget - spentBudget)
+  const utilizationPercentage = allocatedBudget > 0 ? Math.min(100, Math.round((spentBudget / allocatedBudget) * 100)) : 0
+
   return {
     department: deptInfo
       ? {
@@ -300,6 +336,13 @@ export async function getDepartmentDashboardData(
           code: deptInfo.name?.slice(0, 4).toUpperCase() || "DEPT",
         }
       : null,
+    resources: {
+      allocatedBudget,
+      spentBudget: Math.round(spentBudget * 10) / 10,
+      remainingBudget: Math.round(remainingBudget * 10) / 10,
+      budgetCurrency,
+      utilizationPercentage,
+    },
     metrics: {
       memberCount: members.length,
       todayScheduledExpected: todayExpected,

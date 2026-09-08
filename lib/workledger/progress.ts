@@ -110,8 +110,17 @@ export async function getMemberMonthlyProgress(
 
   const rawEarnedCredits = Math.round((scheduledEarned + unscheduledEarned) * 100) / 100
 
-  // 4. Determine configuration and target credits
-  const isConfigured = scheduledTargetCredits > 0 || rawEarnedCredits > 0
+  // 4. Check if user has an explicitly configured target_credits
+  const { data: userRec } = await db
+    .from("users")
+    .select("target_credits")
+    .eq("id", userId)
+    .maybeSingle()
+
+  const configuredTarget = Number(userRec?.target_credits || 0)
+
+  // 5. Determine configuration and target credits
+  const isConfigured = scheduledTargetCredits > 0 || rawEarnedCredits > 0 || configuredTarget > 0
   if (!isConfigured) {
     return {
       configured: false,
@@ -133,8 +142,10 @@ export async function getMemberMonthlyProgress(
     }
   }
 
-  // 5. Compute total target based on scheduled work weight percentage (e.g. 75%)
-  const totalTargetCredits = scheduledTargetCredits > 0
+  // 6. Compute total target: configured user target > computed scheduled weight > default 20.0
+  const totalTargetCredits = configuredTarget > 0
+    ? configuredTarget
+    : scheduledTargetCredits > 0
     ? Math.round((scheduledTargetCredits / (scheduledWeight / 100)) * 100) / 100
     : 20.0
 
