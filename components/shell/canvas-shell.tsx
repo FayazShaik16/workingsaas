@@ -28,6 +28,7 @@ import {
   Sparkles,
   Mail,
   ShieldAlert,
+  HeartHandshake,
 } from "lucide-react"
 
 interface NavItem {
@@ -108,6 +109,7 @@ export function getNavItemsForRole(
       { label: "Org Structure", href: `${base}/org-tree`, icon: <GitBranch className="h-4 w-4" /> },
       { label: "Post Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Dept Reports", href: `${base}/reports`, icon: <BarChart3 className="h-4 w-4" /> },
+      { label: "General Tasks", href: `${base}/general-tasks`, icon: <HeartHandshake className="h-4 w-4" /> },
       { label: "Treasury Vault", href: `${base}/wallet`, icon: <Wallet className="h-4 w-4" /> },
       { label: "Announcements", href: `${base}/notifications`, icon: <Bell className="h-4 w-4" /> },
       { label: "Settings", href: `${base}/settings`, icon: <Settings className="h-4 w-4" /> },
@@ -121,6 +123,7 @@ export function getNavItemsForRole(
     ORG_UNIT_LEAD: [
       { label: "Dept Overview", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "Task Management", href: `${base}/tasks`, icon: <ClipboardList className="h-4 w-4" /> },
+      { label: "General Tasks", href: `${base}/general-tasks`, icon: <HeartHandshake className="h-4 w-4" /> },
       { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet className="h-4 w-4" /> },
       { label: "New Task", href: `${base}/tasks/new`, icon: <Sparkles className="h-4 w-4" /> },
       { label: "Salary Approvals", href: `${base}/salary`, icon: <CreditCard className="h-4 w-4" />, badge: badges?.salary },
@@ -130,6 +133,7 @@ export function getNavItemsForRole(
     DEPT_ADMIN: [
       { label: "Faculty", href: `${base}/faculty`, icon: <Users className="h-4 w-4" /> },
       { label: "Schedules", href: `${base}/schedules`, icon: <CalendarDays className="h-4 w-4" /> },
+      { label: "General Tasks", href: `${base}/general-tasks`, icon: <HeartHandshake className="h-4 w-4" /> },
       { label: "Work Cycles", href: `${base}/work-cycles`, icon: <Clock className="h-4 w-4" /> },
       { label: "Import Center", href: `${base}/import`, icon: <FileSpreadsheet className="h-4 w-4" /> },
       { label: "Settings", href: `/${orgId}/settings`, icon: <Settings className="h-4 w-4" /> },
@@ -138,6 +142,7 @@ export function getNavItemsForRole(
       { label: "Dashboard", href: base, icon: <LayoutDashboard className="h-4 w-4" /> },
       { label: "My Schedule", href: `${base}/schedule`, icon: <CalendarDays className="h-4 w-4" /> },
       { label: "Task Pool", href: `${base}/marketplace`, icon: <ShoppingBag className="h-4 w-4" /> },
+      { label: "General Tasks", href: `${base}/general-tasks`, icon: <HeartHandshake className="h-4 w-4" /> },
       { label: "Audit Wallet", href: `${base}/wallet`, icon: <Wallet className="h-4 w-4" /> },
       { label: "Settings", href: `${base}/settings`, icon: <Settings className="h-4 w-4" /> },
     ],

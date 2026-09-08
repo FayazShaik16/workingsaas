@@ -59,7 +59,7 @@ export default async function LeadExistingTasksPage({ params }: PageProps) {
       users:assigned_to_id (id, name, email),
       task_proofs (id, description, file_url, submitted_at),
       custom_fields,
-      nominations (id, status)
+      nominations (id, status, user_id, message, created_at, users:user_id(id, name, email, designation))
     `)
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
@@ -76,6 +76,17 @@ export default async function LeadExistingTasksPage({ params }: PageProps) {
     const requiredPeople = Math.max(1, parseInt(String(t.custom_fields?.required_people || 1), 10))
     const assignedIds = Array.isArray(t.custom_fields?.assigned_user_ids) ? t.custom_fields.assigned_user_ids : []
     const acceptedCount = (t.nominations || []).filter((n: any) => n.status === "ACCEPTED").length || assignedIds.length
+
+    const nominationsList = (t.nominations || []).map((n: any) => ({
+      id: n.id,
+      userId: n.user_id,
+      userName: n.users?.name || "Faculty Member",
+      userEmail: n.users?.email || "",
+      designation: n.users?.designation || null,
+      status: n.status,
+      message: n.message || undefined,
+      createdAt: n.created_at,
+    }))
 
     return {
       id: t.id,
@@ -96,6 +107,7 @@ export default async function LeadExistingTasksPage({ params }: PageProps) {
       proofUrl: proof?.file_url || undefined,
       requiredPeople,
       acceptedCount,
+      nominationsList,
     }
   })
 
