@@ -137,6 +137,22 @@ export async function POST(req: Request) {
         .eq("id", finalOrgUnitId)
     }
 
+    // 5. Ensure appropriate wallets exist
+    if (scopeLevel === "DIRECTOR") {
+      const wallets = ["SALARY_POOL", "LOAN_POOL", "PERSONAL"]
+      for (const purpose of wallets) {
+        await db.from("wallets").upsert(
+          { organization_id: orgId, owner_user_id: authUserId, purpose, balance: 0 },
+          { onConflict: "owner_user_id,purpose" }
+        )
+      }
+    } else {
+      await db.from("wallets").upsert(
+        { organization_id: orgId, owner_user_id: authUserId, purpose: "PERSONAL", balance: 0 },
+        { onConflict: "owner_user_id,purpose" }
+      )
+    }
+
     return NextResponse.json({
       success: true,
       user: {

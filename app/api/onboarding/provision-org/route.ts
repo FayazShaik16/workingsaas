@@ -133,29 +133,25 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", user.id)
 
-    // 5. Assign DIRECTOR and SYSTEM_ADMIN roles to user
-    const rolesToAssign = [adminRole?.id, directorRole?.id].filter(Boolean)
-    for (const rId of rolesToAssign) {
+    // 5. Assign ONLY SYSTEM_ADMIN role to creator
+    if (adminRole?.id) {
       await db
         .from("user_roles")
         .upsert(
-          { user_id: user.id, role_id: rId },
+          { user_id: user.id, role_id: adminRole.id },
           { onConflict: "user_id,role_id" }
         )
     }
 
-    // 6. Ensure Director's three wallets: SALARY_POOL, LOAN_POOL, PERSONAL
-    const wallets = ["SALARY_POOL", "LOAN_POOL", "PERSONAL"]
-    for (const purpose of wallets) {
-      await db
-        .from("wallets")
-        .upsert({
-          organization_id: orgId,
-          owner_user_id: user.id,
-          purpose: purpose,
-          balance: 0,
-        }, { onConflict: "owner_user_id,purpose" })
-    }
+    // 6. Ensure user's PERSONAL wallet exists
+    await db
+      .from("wallets")
+      .upsert({
+        organization_id: orgId,
+        owner_user_id: user.id,
+        purpose: "PERSONAL",
+        balance: 0,
+      }, { onConflict: "owner_user_id,purpose" })
 
     return NextResponse.json({
       success: true,

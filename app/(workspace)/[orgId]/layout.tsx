@@ -67,17 +67,19 @@ async function getWorkspaceContext(orgId: string) {
   // Get cached organization metadata
   const org = await getCachedOrg(orgId)
 
-  // Institutional roles: only SYSTEM_ADMIN gets universal preview switcher
-  const isSysAdmin = (user.scopeLevels || []).includes("SYSTEM_ADMIN")
-  const ALL_INSTITUTIONAL_ROLES = [
-    "SYSTEM_ADMIN",
-    "DIRECTOR",
-    "ORG_UNIT_LEAD",
-    "DEPT_ADMIN",
-    "MEMBER",
-    "FINANCE_ADMIN",
-  ]
-  const availableRoles = isSysAdmin ? ALL_INSTITUTIONAL_ROLES : (user.scopeLevels || ["MEMBER"])
+  // Institutional roles: strictly reflect the roles assigned to the user
+  const scopePriority: Record<string, number> = {
+    SYSTEM_ADMIN: 0,
+    DIRECTOR: 1,
+    ORG_UNIT_LEAD: 2,
+    FINANCE_ADMIN: 3,
+    DEPT_ADMIN: 4,
+    MEMBER: 5,
+  }
+  const userScopes = user.scopeLevels && user.scopeLevels.length > 0 ? user.scopeLevels : ["MEMBER"]
+  const availableRoles = [...new Set(userScopes)].sort(
+    (a, b) => (scopePriority[a] ?? 999) - (scopePriority[b] ?? 999)
+  )
 
   return {
     user: {
