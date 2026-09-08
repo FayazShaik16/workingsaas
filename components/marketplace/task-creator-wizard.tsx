@@ -28,6 +28,7 @@ import {
   ArrowLeft,
   Tag,
   AlertCircle,
+  Building2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -218,26 +219,39 @@ export function TaskCreatorWizard({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="orgUnit" className="text-xs font-semibold">
-                  Hosting Department
+                <Label htmlFor="orgUnit" className="text-xs font-semibold flex items-center justify-between">
+                  <span>Hosting Department</span>
+                  {role === "LEAD" && (
+                    <span className="text-[10px] text-muted-foreground font-normal">Department Scoped</span>
+                  )}
                 </Label>
-                <Select value={orgUnitId} onValueChange={setOrgUnitId} disabled={isSubmitting}>
-                  <SelectTrigger id="orgUnit" className="rounded-xl text-xs">
-                    <SelectValue placeholder="Select department..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {role === "DIRECTOR" && (
+                {role === "LEAD" ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-muted/80 bg-muted/30 text-xs font-semibold text-foreground">
+                    <Building2 className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">
+                      {formatDepartment(orgUnits.find((u) => u.id === orgUnitId)?.name || orgUnits[0]?.name || "Your Department")}
+                    </span>
+                    <Badge variant="outline" className="ml-auto text-[10px] shrink-0 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-medium">
+                      Your Department
+                    </Badge>
+                  </div>
+                ) : (
+                  <Select value={orgUnitId} onValueChange={setOrgUnitId} disabled={isSubmitting}>
+                    <SelectTrigger id="orgUnit" className="rounded-xl text-xs">
+                      <SelectValue placeholder="Select department..." />
+                    </SelectTrigger>
+                    <SelectContent>
                       <SelectItem value="INSTITUTION_WIDE" className="font-bold text-primary">
                         🏛️ Institution-Wide (All Faculty)
                       </SelectItem>
-                    )}
-                    {orgUnits.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {formatDepartment(u.name)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {orgUnits.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {formatDepartment(u.name)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

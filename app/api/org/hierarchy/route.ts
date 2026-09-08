@@ -162,8 +162,17 @@ export async function GET(req: Request) {
     const { data: permissionsData } = await db.from("permissions").select("*")
     const permissions = permissionsData || []
 
-    // 8. Map roles to members with role hierarchy priority
-    // Priority: DIRECTOR > ORG_UNIT_LEAD > DEPT_ADMIN > FINANCE_ADMIN > SYSTEM_ADMIN > MEMBER
+    // 8. Identify all users holding the SYSTEM_ADMIN role
+    // Even if the System admin has director role it should not be visible in the organization Tree or structure
+    // He should be a different separate entity on his own
+    const sysAdminUserIds = new Set<string>()
+    for (const ur of userRoles) {
+      const roleObj = ur.roles || roleById.get(ur.role_id)
+      if (roleObj?.scope_level === "SYSTEM_ADMIN") {
+        sysAdminUserIds.add(ur.user_id)
+      }
+    }
+
     const rolePriorityOrder: Record<string, number> = {
       DIRECTOR: 100,
       ORG_UNIT_LEAD: 80,
@@ -188,7 +197,10 @@ export async function GET(req: Request) {
       allUnits.map((u: any) => u.lead_user_id).filter(Boolean)
     )
 
-    const formattedMembers = allUsers.map((u: any) => {
+    // Filter out all system admin users from tree hierarchy
+    const treeUsers = allUsers.filter((u: any) => !sysAdminUserIds.has(u.id))
+
+    const formattedMembers = treeUsers.map((u: any) => {
       const assignedRoles = userRolesMap.get(u.id) || []
       assignedRoles.sort((a, b) => {
         const pA = rolePriorityOrder[a.scope_level] || 0
@@ -206,7 +218,7 @@ export async function GET(req: Request) {
             name: "HOD / Dept Lead",
             scope_level: "ORG_UNIT_LEAD",
           }
-        } else if (u.designation?.toLowerCase().includes("director") || (!u.org_unit_id && u.id === sessionUser.id)) {
+        } else if (u.designation?.toLowerCase().includes("director")) {
           primaryRole = roles.find((r: any) => r.scope_level === "DIRECTOR") || {
             id: "director-role",
             name: "Director",
@@ -236,11 +248,9 @@ export async function GET(req: Request) {
       }
     })
 
-    // 9. Identify Primary Director
+    // 9. Identify Primary Director (Institutional Director only, never System Admin)
     const director =
       formattedMembers.find((m: any) => m.role?.scope_level === "DIRECTOR") ||
-      formattedMembers.find((m: any) => !m.org_unit_id) ||
-      formattedMembers[0] ||
       null
 
     // 10. Filter out empty default seed unit "Main" if other real departments exist

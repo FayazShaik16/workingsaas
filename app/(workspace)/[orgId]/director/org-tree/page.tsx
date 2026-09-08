@@ -174,9 +174,11 @@ export default function OrgTreePage() {
       setPermissions(data.permissions || [])
       setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
 
-      // Select director as initial node if none selected
+      // Select director as initial node if none selected, or fallback to first unit
       if (!selectedNode && data.director) {
         handleSelectMember(data.director, false)
+      } else if (!selectedNode && data.tree && data.tree.length > 0) {
+        handleSelectUnit(data.tree[0], false)
       }
     } catch (err: any) {
       console.error("Fetch hierarchy error:", err)
@@ -845,6 +847,9 @@ export default function OrgTreePage() {
             <Badge variant="outline" className="text-[10px] uppercase font-mono ml-1 shrink-0">
               {organization?.type || "INSTITUTION"}
             </Badge>
+            <Badge variant="secondary" className="text-[10px] text-muted-foreground font-mono hidden md:inline-flex items-center gap-1 shrink-0">
+              <Shield className="h-3 w-3 text-amber-500" /> Admin: External Platform Entity
+            </Badge>
           </div>
 
           <div className="flex items-center gap-3">
@@ -945,7 +950,7 @@ export default function OrgTreePage() {
               {/* ------------------------------------------------------------- */}
               {/* LEVEL 0: EXECUTIVE ROOT NODE (DIRECTOR & ORGANIZATION) */}
               {/* ------------------------------------------------------------- */}
-              {director && (
+              {director ? (
                 <div className="flex flex-col items-center relative">
                   <div
                     onClick={() => handleSelectMember(director, false)}
@@ -989,6 +994,42 @@ export default function OrgTreePage() {
 
                   {/* Trunk Stem Line Down to Root Units */}
                   {tree.length > 0 && <div className="w-0.5 h-8 bg-primary shadow-xs" />}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center relative">
+                  <div className="w-80 p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-card/80 shadow-md text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl shadow-xs shrink-0">
+                        <Building2 className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-sm text-foreground truncate block">
+                            {organization?.name || "Executive Directorate"}
+                          </span>
+                          <Badge variant="outline" className="text-[9px] font-bold py-0 px-1.5 uppercase">
+                            Directorate
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                          Director Position Unassigned
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70">
+                          System Admin operates as an external entity
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] font-semibold">
+                      <span className="text-muted-foreground">Institutional Root</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        {totalDepartmentCount} Units &bull; {totalStaffCount} Members
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Trunk Stem Line Down to Root Units */}
+                  {tree.length > 0 && <div className="w-0.5 h-8 bg-primary/50 shadow-xs" />}
                 </div>
               )}
 

@@ -14,22 +14,41 @@ export default async function LeadNewTaskPage({ params }: PageProps) {
   const supabase = await createClient()
   const db = supabase as any
 
-  // Fetch departments in this organization
-  const { data: orgUnits } = await db
+  // Resolve department for HOD / Dept Admin: strictly scoped to own department
+  let userDeptId = user.orgUnitId
+  if (!userDeptId) {
+    const { data: leadUnit } = await db
+      .from("org_units")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("lead_user_id", user.id)
+      .maybeSingle()
+    if (leadUnit) {
+      userDeptId = leadUnit.id
+    }
+  }
+
+  // Dept admin / HOD should NOT have scope to create tasks for other departments
+  let orgUnitsQuery = db
     .from("org_units")
     .select("id, name")
     .eq("organization_id", orgId)
-    .order("name", { ascending: true })
 
-  // Fetch teaching staff for this department
+  if (userDeptId) {
+    orgUnitsQuery = orgUnitsQuery.eq("id", userDeptId)
+  }
+
+  const { data: orgUnits } = await orgUnitsQuery.order("name", { ascending: true })
+
+  // Fetch teaching staff strictly for this department
   let facultyMembersQuery = db
     .from("users")
     .select("id, name, email")
     .eq("organization_id", orgId)
     .order("name", { ascending: true })
 
-  if (user.orgUnitId) {
-    facultyMembersQuery = facultyMembersQuery.eq("org_unit_id", user.orgUnitId)
+  if (userDeptId) {
+    facultyMembersQuery = facultyMembersQuery.eq("org_unit_id", userDeptId)
   }
 
   const { data: facultyMembers } = await facultyMembersQuery
@@ -40,7 +59,7 @@ export default async function LeadNewTaskPage({ params }: PageProps) {
         orgId={orgId}
         role="LEAD"
         orgUnits={orgUnits || []}
-        defaultOrgUnitId={user.orgUnitId || undefined}
+        defaultOrgUnitId={userDeptId || undefined}
         facultyMembers={facultyMembers || []}
       />
     </div>

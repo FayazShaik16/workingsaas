@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const numRequiredPeople = Math.max(1, parseInt(String(requiredPeople), 10) || 1)
 
     const isDirectorOrAdmin = hasScope(user.scopeLevels, "DIRECTOR") || hasScope(user.scopeLevels, "SYSTEM_ADMIN")
-    const isHOD = hasScope(user.scopeLevels, "ORG_UNIT_LEAD")
+    const isHOD = hasScope(user.scopeLevels, "ORG_UNIT_LEAD") || hasScope(user.scopeLevels, "DEPT_ADMIN")
 
     if (!isDirectorOrAdmin && !isHOD) {
       return NextResponse.json({ error: "Only HOD, Director, or System Admin can create unstructured initiatives." }, { status: 403 })
@@ -68,20 +68,39 @@ export async function POST(req: Request) {
     let finalVisibilityScope: "ORGANIZATION" | "ORG_UNIT" = "ORGANIZATION"
 
     if (isHOD && !isDirectorOrAdmin) {
-      // HOD can only create tasks for their own department
-      if (!user.orgUnitId) {
+      // HOD and Dept Admin can ONLY create tasks for their own department
+      let deptId = user.orgUnitId
+      if (!deptId) {
+        const { data: leadUnit } = await db
+          .from("org_units")
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("lead_user_id", user.id)
+          .maybeSingle()
+        deptId = leadUnit?.id || null
+      }
+
+      if (!deptId) {
         return NextResponse.json({ error: "Your account is not assigned to a department." }, { status: 403 })
       }
-      finalOrgUnitId = user.orgUnitId
+
+      if (orgUnitId && orgUnitId !== "INSTITUTION_WIDE" && orgUnitId !== deptId) {
+        return NextResponse.json(
+          { error: "Forbidden: Department leads and administrators cannot create tasks for other departments." },
+          { status: 403 }
+        )
+      }
+
+      finalOrgUnitId = deptId
       finalVisibilityScope = "ORG_UNIT"
     } else {
       // Director or System Admin
-      if (reqVisibilityScope === "ORG_UNIT" && orgUnitId) {
+      if (reqVisibilityScope === "ORG_UNIT" && orgUnitId && orgUnitId !== "INSTITUTION_WIDE") {
         finalOrgUnitId = orgUnitId
         finalVisibilityScope = "ORG_UNIT"
       } else {
         finalVisibilityScope = "ORGANIZATION"
-        finalOrgUnitId = orgUnitId || null
+        finalOrgUnitId = orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null)
       }
     }
 
