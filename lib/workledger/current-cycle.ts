@@ -52,7 +52,7 @@ export async function getOrgCycleContext(explicitOrgId?: string): Promise<OrgCyc
   }
 
   // 2. Fetch active work cycle for this organization
-  const { data: activeCycle } = await db
+  let { data: activeCycle } = await db
     .from("work_cycles")
     .select("*")
     .eq("organization_id", orgId)
@@ -60,6 +60,47 @@ export async function getOrgCycleContext(explicitOrgId?: string): Promise<OrgCyc
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  // Fallback: any cycle for this org
+  if (!activeCycle && orgId) {
+    const { data: existingCycle } = await db
+      .from("work_cycles")
+      .select("*")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (existingCycle) {
+      activeCycle = existingCycle
+    } else {
+      // Auto-provision initial cycle for org
+      try {
+        const cycleStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0]
+        const cycleEnd = new Date(today.getFullYear(), today.getMonth() + 3, 0).toISOString().split("T")[0]
+        const { data: createdCycle } = await db
+          .from("work_cycles")
+          .insert({
+            organization_id: orgId,
+            name: `${today.toLocaleString("default", { month: "long" })} ${today.getFullYear()} Academic Cycle`,
+            starts_on: cycleStart,
+            ends_on: cycleEnd,
+            scheduled_weight_percentage: 75,
+            salary_threshold_percentage: 85,
+            salary_request_opens_day: 26,
+            status: "ACTIVE",
+          })
+          .select()
+          .single()
+
+        if (createdCycle) {
+          activeCycle = createdCycle
+        }
+      } catch (e) {
+        console.warn("[getOrgCycleContext] Auto-provisioning cycle warning:", e)
+      }
+    }
+  }
 
   return {
     userId,
