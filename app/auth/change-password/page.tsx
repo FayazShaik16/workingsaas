@@ -85,8 +85,8 @@ export default function ChangePasswordPage() {
           const orgId = profile.organization_id
           const roles = ((profile.user_roles as any) || []).map((ur: any) => ur.roles?.scope_level).filter(Boolean)
           
-          if (roles.includes("DIRECTOR")) router.push(`/${orgId}/director`)
-          else if (roles.includes("SYSTEM_ADMIN")) router.push(`/${orgId}/config`)
+          if (roles.includes("SYSTEM_ADMIN")) router.push(`/${orgId}/config`)
+          else if (roles.includes("DIRECTOR")) router.push(`/${orgId}/director`)
           else if (roles.includes("ORG_UNIT_LEAD")) router.push(`/${orgId}/lead`)
           else if (roles.includes("FINANCE_ADMIN")) router.push(`/${orgId}/finance`)
           else if (roles.includes("DEPT_ADMIN")) router.push(`/${orgId}/dept-admin`)

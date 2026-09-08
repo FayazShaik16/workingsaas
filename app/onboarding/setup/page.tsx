@@ -71,8 +71,8 @@ export default function SetupPage() {
         throw new Error(data.error || "Failed to setup organization")
       }
 
-      // Redirect to director dashboard dynamically
-      router.push(data.redirectPath || `/${data.organizationId}/director`)
+      // Redirect to system admin dashboard dynamically
+      router.push(data.redirectPath || `/${data.organizationId}/config`)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to setup organization"
       setError(message)

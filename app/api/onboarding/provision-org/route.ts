@@ -87,18 +87,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Get or create DIRECTOR role
-    const { data: directorRole } = await db
+    // 3. Ensure DIRECTOR and SYSTEM_ADMIN roles exist in the organization
+    const { data: existingRoles } = await db
       .from("roles")
-      .select("id")
+      .select("id, scope_level")
       .eq("organization_id", orgId)
-      .eq("scope_level", "DIRECTOR")
-      .limit(1)
-      .maybeSingle()
 
-    let roleId = directorRole?.id
+    let directorRole = existingRoles?.find((r: any) => r.scope_level === "DIRECTOR")
+    let adminRole = existingRoles?.find((r: any) => r.scope_level === "SYSTEM_ADMIN")
 
-    if (!roleId) {
+    if (!directorRole) {
       const { data: newRole } = await db
         .from("roles")
         .insert({
@@ -107,10 +105,23 @@ export async function POST(request: NextRequest) {
           scope_level: "DIRECTOR",
           is_system_role: true,
         })
-        .select("id")
+        .select("id, scope_level")
         .single()
+      directorRole = newRole
+    }
 
-      roleId = newRole?.id
+    if (!adminRole) {
+      const { data: newRole } = await db
+        .from("roles")
+        .insert({
+          organization_id: orgId,
+          name: "System Administrator",
+          scope_level: "SYSTEM_ADMIN",
+          is_system_role: true,
+        })
+        .select("id, scope_level")
+        .single()
+      adminRole = newRole
     }
 
     // 4. Link user to organization
@@ -122,14 +133,15 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", user.id)
 
-    // 5. Assign DIRECTOR role to user
-    if (roleId) {
+    // 5. Assign DIRECTOR and SYSTEM_ADMIN roles to user
+    const rolesToAssign = [adminRole?.id, directorRole?.id].filter(Boolean)
+    for (const rId of rolesToAssign) {
       await db
         .from("user_roles")
-        .upsert({
-          user_id: user.id,
-          role_id: roleId,
-        }, { onConflict: "user_id,role_id" })
+        .upsert(
+          { user_id: user.id, role_id: rId },
+          { onConflict: "user_id,role_id" }
+        )
     }
 
     // 6. Ensure Director's three wallets: SALARY_POOL, LOAN_POOL, PERSONAL
@@ -149,7 +161,7 @@ export async function POST(request: NextRequest) {
       success: true,
       organizationId: orgId,
       unitId: rootUnitId,
-      redirectPath: `/${orgId}/director`,
+      redirectPath: `/${orgId}/config`,
     })
   } catch (error) {
     console.error("[provision-org] Error:", error)

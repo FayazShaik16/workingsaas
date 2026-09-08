@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       organizationId: orgId,
-      redirectPath: `/${orgId}/director`,
+      redirectPath: `/${orgId}/config`,
     })
   } catch (error) {
     console.error("[onboarding/setup] Error:", error)
