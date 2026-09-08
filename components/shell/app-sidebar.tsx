@@ -95,7 +95,6 @@ export function getNavItemsForRole(
     DIRECTOR: [
       { label: "Overview",         href: base,                    icon: <LayoutDashboard size={16} /> },
       { label: "Org Structure",    href: `${base}/org-tree`,      icon: <GitBranch size={16} /> },
-      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet size={16} /> },
       { label: "Post Task",        href: `${base}/tasks/new`,     icon: <Sparkles size={16} /> },
       { label: "Dept Reports",     href: `${base}/reports`,       icon: <BarChart3 size={16} /> },
       { label: "Treasury Vault",   href: `${base}/wallet`,        icon: <Wallet size={16} /> },
