@@ -1,16 +1,16 @@
 # Active Context (Sprint Execution Layer)
 
 ## Current Micro-Task
-- **Task**: Complete Workflow Verification (Org Provisioning, Bulk People & Timetable Import, Task Completion, HOD Management, Vercel Build Validation).
-- **Status**: Verified & Clean (57/57 routes generated, 0 TypeScript errors, synchronized default passwords, live DB sync active).
-- **Target Files Checked & Synced**:
-  - `app/api/admin/bulk-import-users/route.ts` & `components/admin/bulk-import-client.tsx` (Default password unified to `Welcome@WorkLedger2026!`, CSV templates, dry-run preview, dynamic department creation).
-  - `app/api/admin/provision-user/route.ts` & `components/admin/people-manager-client.tsx` (Default password unified to `Welcome@WorkLedger2026!`, department validation).
-  - `app/api/onboarding/setup/route.ts` & `app/onboarding/setup/page.tsx` & `app/api/org/hierarchy/route.ts` (Dynamic organization provisioning and live hierarchy tree sync).
-  - `app/api/dept-admin/import-schedule/route.ts` & `components/dept-admin/timetable-importer.tsx` (Weekly recurring schedule import with conflict detection and monthly instance generation).
-  - `components/member/minimal-faculty-dashboard.tsx` & `components/member/scheduled-completion-modal.tsx` (2-step confirmation modal and monthly progress ring).
-  - `app/(workspace)/[orgId]/lead/tasks/page.tsx` & `components/lead/hod-task-manager.tsx` (HOD review feed and task management with status filters).
+- **Task**: Upstream Fork Merge & Multi-Repo Synchronization (`FayazShaik16/workingsaas` $\leftrightarrow$ `mithileshkumarrattu/saas`).
+- **Status**: Merged & Cleanly Deployed (All 18 commits from friend integrated, 0 TypeScript errors, 67/67 routes compiled in Next.js, pushed to origin/main).
+- **Integrated Features**:
+  - General Tasks voluntary productivity system (`lib/workledger/general-tasks.ts`, `/general-tasks` views for all roles).
+  - Faculty self-tasking with HOD review & Director anti-favoritism audit (`lib/workledger/self-tasks.ts`, `/self-tasks` views).
+  - Faculty salary-to-token motivation engine & salary component governance (`components/compensation/faculty-salary-dialog.tsx`, `director-faculty-salary-console.tsx`).
+  - Task capacity (required people) & multi-nomination assignment support (`/api/tasks/assign`, `/api/tasks/nominate`).
+  - Director transactions export engine (`lib/workledger/transactions-export.ts`, `/director/transactions`).
+  - Retained all Edge Middleware resilience fixes, Supabase SSR prerender safe fallbacks, password unification, and Sepolia ERC-20 contract demo suites.
 
 ## Next Operational Action
-- Deploy to Vercel and verify live production demo accounts.
+- Have friend run `git pull upstream main && git push origin main` to synchronize his fork.
 
