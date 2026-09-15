@@ -1,9 +1,12 @@
 import { requireAuth, requireScope } from "@/lib/auth/protect"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getTeachingStaff } from "@/lib/queries/teaching-staff"
+import { getDirectorSelfTasksAudit } from "@/lib/workledger/self-tasks"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import Link from "next/link"
 import {
   BarChart3,
   Building2,
@@ -12,6 +15,10 @@ import {
   AlertTriangle,
   Award,
   Layers,
+  Lightbulb,
+  CheckCircle2,
+  ExternalLink,
+  Coins,
 } from "lucide-react"
 
 interface PageProps {
@@ -28,12 +35,13 @@ export default async function DirectorReportsPage({ params }: PageProps) {
   const todayStr = new Date().toISOString().split("T")[0]
   const currentMonthStart = `${todayStr.slice(0, 7)}-01`
 
-  // Fetch departments, canonical teaching staff, progress records, and tasks in parallel
+  // Fetch departments, canonical teaching staff, progress records, tasks, and self-tasks audit in parallel
   const [
     { data: orgUnits },
     teachingStaff,
     { data: tasks },
     { data: progressRecords },
+    selfTasksAudit,
   ] = await Promise.all([
     admin.from("org_units").select("*").eq("organization_id", orgId),
     getTeachingStaff(admin, orgId),
@@ -46,12 +54,53 @@ export default async function DirectorReportsPage({ params }: PageProps) {
       .select("user_id, display_progress_percentage, salary_eligible")
       .eq("organization_id", orgId)
       .eq("month_start", currentMonthStart),
+    getDirectorSelfTasksAudit(orgId),
   ])
 
   const allUnits = orgUnits || []
   const allTeachingStaff = teachingStaff || []
   const allTasks = tasks || []
   const progressMap = new Map<string, number>((progressRecords || []).map((p: any) => [p.user_id, Number(p.display_progress_percentage || 0)]))
+
+  // Aggregate faculty self-tasks initiatives for director report
+  const facultyInitiativesMap = new Map<
+    string,
+    {
+      id: string
+      name: string
+      email: string
+      department: string
+      proposed: number
+      completed: number
+      tokensEarned: number
+      areas: Set<string>
+    }
+  >()
+
+  ;(selfTasksAudit?.allTasks || []).forEach((t: any) => {
+    const key = t.facultyId || t.facultyEmail || t.facultyName
+    const existing = facultyInitiativesMap.get(key) || {
+      id: t.facultyId,
+      name: t.facultyName,
+      email: t.facultyEmail,
+      department: t.departmentName,
+      proposed: 0,
+      completed: 0,
+      tokensEarned: 0,
+      areas: new Set<string>(),
+    }
+    existing.proposed += 1
+    if (t.taskStatus === "LEAD_SIGNED" || t.taskStatus === "CLOSED") {
+      existing.completed += 1
+      existing.tokensEarned += t.approvedCredits
+    }
+    if (t.interestArea) existing.areas.add(t.interestArea)
+    facultyInitiativesMap.set(key, existing)
+  })
+
+  const topFacultyInitiatives = Array.from(facultyInitiativesMap.values()).sort(
+    (a, b) => b.tokensEarned - a.tokensEarned || b.proposed - a.proposed
+  )
 
   // Compute departmental statistics dynamically over teaching staff only
   const deptStats = allUnits.map((unit: any) => {
@@ -337,6 +386,153 @@ export default async function DirectorReportsPage({ params }: PageProps) {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 2. FACULTY SELF-ADDED TASKS & INITIATIVES REPORT */}
+      <Card className="rounded-2xl border-2 shadow-xs">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-semibold mb-1">
+              <Lightbulb className="h-3 w-3" />
+              <span>Bottom-Up Academic Innovation</span>
+            </div>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              Faculty Self-Added Tasks & Initiatives Report
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Executive audit report on voluntary, self-proposed initiatives across faculties and departments.
+            </CardDescription>
+          </div>
+          <Link href={`/${orgId}/director/self-tasks`}>
+            <Button variant="outline" size="sm" className="gap-1.5 font-bold shadow-xs">
+              <Lightbulb className="h-4 w-4 text-amber-500" />
+              <span>Full Self-Tasks Audit Center</span>
+              <ExternalLink className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+            </Button>
+          </Link>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* 4 Summary Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-xl border bg-card/60">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">
+                Total Initiatives Logged
+              </span>
+              <span className="text-xl font-black text-foreground">
+                {selfTasksAudit.summary.totalProposals}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider block">
+                Verified & Completed
+              </span>
+              <span className="text-xl font-black text-emerald-500">
+                {selfTasksAudit.summary.verifiedCompleted}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5">
+              <span className="text-[10px] text-primary font-bold uppercase tracking-wider block">
+                Tokens Disbursed
+              </span>
+              <span className="text-xl font-black text-primary">
+                +{selfTasksAudit.summary.totalTokensDisbursed.toFixed(1)} WORK
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl border bg-card/60">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block">
+                Contributing Faculty
+              </span>
+              <span className="text-xl font-black text-foreground">
+                {topFacultyInitiatives.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Faculty League Table */}
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent bg-muted/40">
+                  <TableHead className="font-bold text-xs">Faculty Member</TableHead>
+                  <TableHead className="font-bold text-xs">Department</TableHead>
+                  <TableHead className="font-bold text-xs text-center">Initiatives Proposed</TableHead>
+                  <TableHead className="font-bold text-xs text-center">Verified & Credited</TableHead>
+                  <TableHead className="font-bold text-xs text-center">Completion Rate</TableHead>
+                  <TableHead className="font-bold text-xs text-right">Tokens Earned</TableHead>
+                  <TableHead className="font-bold text-xs">Primary Interest Areas</TableHead>
+                  <TableHead className="font-bold text-xs text-right">Audit Trail</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topFacultyInitiatives.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-xs">
+                      No self-proposed initiatives logged yet across departments.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  topFacultyInitiatives.map((fac) => {
+                    const completionRate = fac.proposed > 0 ? Math.round((fac.completed / fac.proposed) * 100) : 0
+                    return (
+                      <TableRow key={fac.id} className="hover:bg-muted/20 transition">
+                        <TableCell className="font-bold text-xs">
+                          <div>
+                            <span className="text-foreground block">{fac.name}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                              {fac.email}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {fac.department}
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-center">
+                          {fac.proposed}
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-center text-emerald-500">
+                          {fac.completed}
+                        </TableCell>
+                        <TableCell className="text-xs text-center">
+                          <Badge variant="outline" className="text-[10px] font-mono">
+                            {completionRate}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-right text-emerald-400 font-mono">
+                          +{fac.tokensEarned.toFixed(1)} WORK
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(fac.areas).slice(0, 2).map((a) => (
+                              <Badge key={a} variant="secondary" className="text-[9px] px-1.5 py-0">
+                                {a}
+                              </Badge>
+                            ))}
+                            {fac.areas.size > 2 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                +{fac.areas.size - 2}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/${orgId}/director/self-tasks`}>
+                            <Button size="xs" variant="ghost" className="rounded-xl text-xs gap-1">
+                              View Tasks
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

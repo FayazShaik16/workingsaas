@@ -1,0 +1,9 @@
+faculty_id,faculty_name,faculty_email,day,start_time,end_time,task_name,credits,description
+,Dr. B. Rajesh Kumar,rajesh.cse@lendi.in,MON,09:15,10:15,Data Structures & Algorithms Lecture,1.0,Lecture Hall 201 - CSE Block
+,Dr. B. Rajesh Kumar,rajesh.cse@lendi.in,TUE,10:15,12:15,Operating Systems Laboratory,2.0,Computing Lab 3 - Systems Lab
+,Dr. B. Rajesh Kumar,rajesh.cse@lendi.in,WED,11:15,12:15,Database Management Systems,1.0,Classroom 104 - CSE Block
+,Dr. B. Rajesh Kumar,rajesh.cse@lendi.in,THU,14:00,15:30,Department Accreditation Review & Documentation,1.5,Department Seminar Hall
+,Dr. B. Rajesh Kumar,rajesh.cse@lendi.in,FRI,09:15,10:15,Advanced Algorithm Design,1.0,Lecture Hall 201 - CSE Block
+,M. Haritha,haritha.cse@lendi.in,MON,11:15,12:15,Web Development & Frameworks,1.0,Classroom 102 - CSE Block
+,M. Haritha,haritha.cse@lendi.in,TUE,14:00,15:30,AI & Machine Learning Seminar,1.5,Seminar Hall 2
+,M. Haritha,haritha.cse@lendi.in,THU,10:15,12:15,Cloud Computing Laboratory,2.0,Cloud Computing Lab - Tech Tower

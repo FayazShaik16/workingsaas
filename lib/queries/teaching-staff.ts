@@ -8,6 +8,7 @@ export interface TeachingStaffUser {
   progress_percentage?: number | null
   target_credits?: number | null
   quality_score?: number | null
+  skills?: any
   status?: string | null
   roles?: {
     id: string
@@ -63,6 +64,7 @@ export async function getTeachingStaff(
       progress_percentage,
       target_credits,
       quality_score,
+      skills,
       status,
       user_roles (
         role_id,

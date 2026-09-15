@@ -28,6 +28,7 @@ import {
   ArrowLeft,
   Tag,
   AlertCircle,
+  Building2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -80,6 +81,7 @@ export function TaskCreatorWizard({
   const [validationMode, setValidationMode] = useState("FILE_PROOF")
   const [selectedTags, setSelectedTags] = useState<string[]>(["NBA / NAAC Audit"])
   const [customTagInput, setCustomTagInput] = useState("")
+  const [requiredPeople, setRequiredPeople] = useState("1")
   const [requiresPeerReview, setRequiresPeerReview] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -118,6 +120,7 @@ export function TaskCreatorWizard({
           creditValue: parseFloat(tokenValue) || 1.0,
           priority,
           deadline,
+          requiredPeople: Math.max(1, parseInt(requiredPeople, 10) || 1),
           assignedToId: assignedFacultyId !== "NONE" ? assignedFacultyId : undefined,
           orgUnitId: orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null),
           visibilityScope: orgUnitId === "INSTITUTION_WIDE" ? "ORGANIZATION" : "ORG_UNIT",
@@ -216,26 +219,39 @@ export function TaskCreatorWizard({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="orgUnit" className="text-xs font-semibold">
-                  Hosting Department
+                <Label htmlFor="orgUnit" className="text-xs font-semibold flex items-center justify-between">
+                  <span>Hosting Department</span>
+                  {role === "LEAD" && (
+                    <span className="text-[10px] text-muted-foreground font-normal">Department Scoped</span>
+                  )}
                 </Label>
-                <Select value={orgUnitId} onValueChange={setOrgUnitId} disabled={isSubmitting}>
-                  <SelectTrigger id="orgUnit" className="rounded-xl text-xs">
-                    <SelectValue placeholder="Select department..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {role === "DIRECTOR" && (
+                {role === "LEAD" ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-muted/80 bg-muted/30 text-xs font-semibold text-foreground">
+                    <Building2 className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">
+                      {formatDepartment(orgUnits.find((u) => u.id === orgUnitId)?.name || orgUnits[0]?.name || "Your Department")}
+                    </span>
+                    <Badge variant="outline" className="ml-auto text-[10px] shrink-0 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-medium">
+                      Your Department
+                    </Badge>
+                  </div>
+                ) : (
+                  <Select value={orgUnitId} onValueChange={setOrgUnitId} disabled={isSubmitting}>
+                    <SelectTrigger id="orgUnit" className="rounded-xl text-xs">
+                      <SelectValue placeholder="Select department..." />
+                    </SelectTrigger>
+                    <SelectContent>
                       <SelectItem value="INSTITUTION_WIDE" className="font-bold text-primary">
                         🏛️ Institution-Wide (All Faculty)
                       </SelectItem>
-                    )}
-                    {orgUnits.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {formatDepartment(u.name)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {orgUnits.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {formatDepartment(u.name)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -344,6 +360,58 @@ export function TaskCreatorWizard({
                   Task will display a real-time countdown on the marketplace.
                 </p>
               </div>
+            </div>
+
+            {/* Number of People Needed / Faculty Capacity */}
+            <div className="space-y-2.5 p-4 rounded-xl border border-muted/80 bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <Label htmlFor="requiredPeople" className="text-xs font-semibold flex items-center gap-1.5 text-primary">
+                  <Users className="h-4 w-4 text-primary" /> Number of People Needed (Faculty Capacity)
+                </Label>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {parseInt(requiredPeople, 10) > 1
+                    ? `Team Task: up to ${requiredPeople} faculty can be chosen from nominations`
+                    : "Individual Task: 1 faculty member"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="requiredPeople"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={requiredPeople}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === "" || parseInt(val, 10) >= 1) {
+                      setRequiredPeople(val)
+                    }
+                  }}
+                  required
+                  disabled={isSubmitting}
+                  className="rounded-xl text-sm font-mono font-bold w-24 text-center"
+                />
+                <div className="flex gap-1.5 flex-wrap">
+                  {["1", "2", "3", "4", "5"].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setRequiredPeople(val)}
+                      disabled={isSubmitting}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        requiredPeople === val
+                          ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                          : "bg-background border border-muted/80 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {val === "1" ? "1 Person" : `${val} People`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Specify how many people are needed. You will be able to approve up to this number of candidates from nominations before the task is filled.
+              </p>
             </div>
 
             {/* Direct Faculty Assignment (Optional) */}

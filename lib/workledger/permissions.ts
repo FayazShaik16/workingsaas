@@ -90,8 +90,12 @@ export function assertTaskAccess(
 
   // 3. Action: SUBMIT_PROOF (requires assigned faculty member)
   if (action === "SUBMIT_PROOF") {
-    if (task.assigned_to_id && task.assigned_to_id !== actor.id) {
-      throw new AuthorizationError("Access denied: You are not the assigned faculty member for this task.", 403)
+    const assignedIds: string[] = Array.isArray((task as any).custom_fields?.assigned_user_ids)
+      ? (task as any).custom_fields.assigned_user_ids
+      : []
+    const isAssigned = task.assigned_to_id === actor.id || assignedIds.includes(actor.id)
+    if (task.assigned_to_id && !isAssigned) {
+      throw new AuthorizationError("Access denied: You are not an assigned faculty member for this task.", 403)
     }
   }
 

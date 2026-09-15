@@ -32,6 +32,8 @@ import {
   Layers,
   Mail,
   ShieldAlert,
+  HeartHandshake,
+  Lightbulb,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SignOutButton } from "@/components/auth/sign-out-button"
@@ -97,6 +99,9 @@ export function getNavItemsForRole(
       { label: "Org Structure",    href: `${base}/org-tree`,      icon: <GitBranch size={16} /> },
       { label: "Post Task",        href: `${base}/tasks/new`,     icon: <Sparkles size={16} /> },
       { label: "Dept Reports",     href: `${base}/reports`,       icon: <BarChart3 size={16} /> },
+      { label: "General Tasks",    href: `${base}/general-tasks`, icon: <HeartHandshake size={16} /> },
+      { label: "Self-Task Audit",  href: `${base}/self-tasks`,    icon: <Lightbulb size={16} /> },
+      { label: "Transaction Logs", href: `${base}/transactions`,  icon: <ScrollText size={16} /> },
       { label: "Treasury Vault",   href: `${base}/wallet`,        icon: <Wallet size={16} /> },
       { label: "Announcements",    href: `${base}/notifications`, icon: <Bell size={16} /> },
       { label: "Settings",         href: `${base}/settings`,      icon: <Settings size={16} /> },
@@ -110,6 +115,9 @@ export function getNavItemsForRole(
     ORG_UNIT_LEAD: [
       { label: "Dept Overview",    href: base,                    icon: <LayoutDashboard size={16} /> },
       { label: "Task Management",  href: `${base}/tasks`,         icon: <ClipboardList size={16} /> },
+      { label: "Self-Task Proposals", href: `${base}/self-tasks`, icon: <Lightbulb size={16} /> },
+      { label: "General Tasks",    href: `${base}/general-tasks`, icon: <HeartHandshake size={16} /> },
+      { label: "Timetable Import", href: `/${orgId}/dept-admin/import`, icon: <FileSpreadsheet size={16} /> },
       { label: "New Task",         href: `${base}/tasks/new`,     icon: <Sparkles size={16} /> },
       { label: "Salary Approvals", href: `${base}/salary`,        icon: <CreditCard size={16} />, badge: badges?.salary },
       { label: "Audit Wallet",     href: `${base}/wallet`,        icon: <Wallet size={16} /> },
@@ -118,6 +126,7 @@ export function getNavItemsForRole(
     DEPT_ADMIN: [
       { label: "Faculty",          href: `${base}/faculty`,       icon: <Users size={16} /> },
       { label: "Schedules",        href: `${base}/schedules`,     icon: <CalendarDays size={16} /> },
+      { label: "General Tasks",    href: `${base}/general-tasks`, icon: <HeartHandshake size={16} /> },
       { label: "Work Cycles",      href: `${base}/work-cycles`,   icon: <Clock size={16} /> },
       { label: "Import Center",    href: `${base}/import`,        icon: <FileSpreadsheet size={16} /> },
       { label: "Settings",         href: `/${orgId}/settings`,    icon: <Settings size={16} /> },
@@ -126,6 +135,8 @@ export function getNavItemsForRole(
       { label: "Dashboard",        href: base,                    icon: <LayoutDashboard size={16} /> },
       { label: "My Schedule",      href: `${base}/schedule`,      icon: <CalendarDays size={16} /> },
       { label: "Task Pool",        href: `${base}/marketplace`,   icon: <ShoppingBag size={16} /> },
+      { label: "Self Tasking",     href: `${base}/self-tasks`,    icon: <Lightbulb size={16} /> },
+      { label: "General Tasks",    href: `${base}/general-tasks`, icon: <HeartHandshake size={16} /> },
       { label: "Audit Wallet",     href: `${base}/wallet`,        icon: <Wallet size={16} /> },
       { label: "Settings",         href: `${base}/settings`,      icon: <Settings size={16} /> },
     ],

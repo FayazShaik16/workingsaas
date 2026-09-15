@@ -33,6 +33,8 @@ export default async function MemberMarketplacePage({ params }: PageProps) {
     org_unit_name: t.orgUnitName || undefined,
     org_unit_id: t.orgUnitId || undefined,
     applied_by_user: t.isNominatedByMe,
+    requiredPeople: t.requiredPeople,
+    acceptedCount: t.acceptedCount,
   }))
 
   return (

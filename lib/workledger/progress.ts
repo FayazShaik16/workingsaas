@@ -88,31 +88,7 @@ export async function getMemberMonthlyProgress(
     85.0
   )
 
-  if (scheduledTargetCredits <= 0) {
-    return {
-      configured: false,
-      workCycleId: activeCycle.id,
-      workCycleName: activeCycle.name,
-      monthStart,
-      scheduledTargetCredits: 0,
-      totalTargetCredits: 0,
-      scheduledEarnedCredits: 0,
-      unscheduledEarnedCredits: 0,
-      rawEarnedCredits: 0,
-      displayProgressPercentage: null,
-      aboveTargetCredits: 0,
-      salaryThresholdPercentage: thresholdPct,
-      creditsToThreshold: null,
-      salaryEligible: false,
-      salaryRequestOpenDate: null,
-      salaryRequestStatus: null,
-    }
-  }
-
-  // 3. Compute total target based on scheduled work weight percentage (e.g. 75%)
-  const totalTargetCredits = Math.round((scheduledTargetCredits / (scheduledWeight / 100)) * 100) / 100
-
-  // 4. Query credit ledger entries for this month
+  // 3. Query credit ledger entries for this month
   const { data: ledgerEntries } = await db
     .from("credit_ledger_entries")
     .select("credit_type, amount")
@@ -133,6 +109,46 @@ export async function getMemberMonthlyProgress(
   }
 
   const rawEarnedCredits = Math.round((scheduledEarned + unscheduledEarned) * 100) / 100
+
+  // 4. Check if user has an explicitly configured target_credits
+  const { data: userRec } = await db
+    .from("users")
+    .select("target_credits")
+    .eq("id", userId)
+    .maybeSingle()
+
+  const configuredTarget = Number(userRec?.target_credits || 0)
+
+  // 5. Determine configuration and target credits
+  const isConfigured = scheduledTargetCredits > 0 || rawEarnedCredits > 0 || configuredTarget > 0
+  if (!isConfigured) {
+    return {
+      configured: false,
+      workCycleId: activeCycle.id,
+      workCycleName: activeCycle.name,
+      monthStart,
+      scheduledTargetCredits: 0,
+      totalTargetCredits: 0,
+      scheduledEarnedCredits: 0,
+      unscheduledEarnedCredits: 0,
+      rawEarnedCredits: 0,
+      displayProgressPercentage: null,
+      aboveTargetCredits: 0,
+      salaryThresholdPercentage: thresholdPct,
+      creditsToThreshold: null,
+      salaryEligible: false,
+      salaryRequestOpenDate: null,
+      salaryRequestStatus: null,
+    }
+  }
+
+  // 6. Compute total target: configured user target > computed scheduled weight > default 20.0
+  const totalTargetCredits = configuredTarget > 0
+    ? configuredTarget
+    : scheduledTargetCredits > 0
+    ? Math.round((scheduledTargetCredits / (scheduledWeight / 100)) * 100) / 100
+    : 20.0
+
   const displayProgressPercentage = totalTargetCredits > 0
     ? Math.min(100, Math.round((rawEarnedCredits / totalTargetCredits) * 10000) / 100)
     : 0

@@ -25,6 +25,9 @@ export async function POST(req: Request) {
       verificationMode = "MANUAL_REPORT",
       allowNomination = true,
       assignedToId = null,
+      requiredPeople = 1,
+      skillTags = [],
+      custom_fields: extraCustomFields = {},
     } = await req.json()
 
     if (!title?.trim()) {
@@ -41,8 +44,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Credit value must be a positive number greater than 0." }, { status: 400 })
     }
 
+    const numRequiredPeople = Math.max(1, parseInt(String(requiredPeople), 10) || 1)
+
     const isDirectorOrAdmin = hasScope(user.scopeLevels, "DIRECTOR") || hasScope(user.scopeLevels, "SYSTEM_ADMIN")
-    const isHOD = hasScope(user.scopeLevels, "ORG_UNIT_LEAD")
+    const isHOD = hasScope(user.scopeLevels, "ORG_UNIT_LEAD") || hasScope(user.scopeLevels, "DEPT_ADMIN")
 
     if (!isDirectorOrAdmin && !isHOD) {
       return NextResponse.json({ error: "Only HOD, Director, or System Admin can create unstructured initiatives." }, { status: 403 })
@@ -63,20 +68,39 @@ export async function POST(req: Request) {
     let finalVisibilityScope: "ORGANIZATION" | "ORG_UNIT" = "ORGANIZATION"
 
     if (isHOD && !isDirectorOrAdmin) {
-      // HOD can only create tasks for their own department
-      if (!user.orgUnitId) {
+      // HOD and Dept Admin can ONLY create tasks for their own department
+      let deptId = user.orgUnitId
+      if (!deptId) {
+        const { data: leadUnit } = await db
+          .from("org_units")
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("lead_user_id", user.id)
+          .maybeSingle()
+        deptId = leadUnit?.id || null
+      }
+
+      if (!deptId) {
         return NextResponse.json({ error: "Your account is not assigned to a department." }, { status: 403 })
       }
-      finalOrgUnitId = user.orgUnitId
+
+      if (orgUnitId && orgUnitId !== "INSTITUTION_WIDE" && orgUnitId !== deptId) {
+        return NextResponse.json(
+          { error: "Forbidden: Department leads and administrators cannot create tasks for other departments." },
+          { status: 403 }
+        )
+      }
+
+      finalOrgUnitId = deptId
       finalVisibilityScope = "ORG_UNIT"
     } else {
       // Director or System Admin
-      if (reqVisibilityScope === "ORG_UNIT" && orgUnitId) {
+      if (reqVisibilityScope === "ORG_UNIT" && orgUnitId && orgUnitId !== "INSTITUTION_WIDE") {
         finalOrgUnitId = orgUnitId
         finalVisibilityScope = "ORG_UNIT"
       } else {
         finalVisibilityScope = "ORGANIZATION"
-        finalOrgUnitId = orgUnitId || null
+        finalOrgUnitId = orgUnitId === "INSTITUTION_WIDE" ? null : (orgUnitId || null)
       }
     }
 
@@ -96,11 +120,17 @@ export async function POST(req: Request) {
       credit_value: credits,
       creator_id: user.id,
       assigned_to_id: assignedToId || null,
-      status: assignedToId ? "ASSIGNED" : "OPEN",
+      status: assignedToId && numRequiredPeople <= 1 ? "ASSIGNED" : "OPEN",
       visibility_scope: finalVisibilityScope,
       verification_mode: validVerificationMode,
       allow_nomination: allowNomination,
-      custom_fields: { targetOrgUnitIds },
+      custom_fields: {
+        ...(extraCustomFields || {}),
+        targetOrgUnitIds,
+        skillTags,
+        required_people: numRequiredPeople,
+        assigned_user_ids: assignedToId ? [assignedToId] : [],
+      },
       deadline: deadline ? new Date(deadline).toISOString() : null,
       created_at: nowIso,
       updated_at: nowIso,
@@ -139,6 +169,19 @@ export async function POST(req: Request) {
     if (insertErr || !newTask) {
       console.error("[create-unstructured] insert error:", insertErr)
       return NextResponse.json({ error: `Failed to create task: ${insertErr?.message}` }, { status: 500 })
+    }
+
+    if (assignedToId) {
+      try {
+        await db.from("nominations").insert({
+          task_id: newTask.id,
+          user_id: assignedToId,
+          status: "ACCEPTED",
+          message: "Directly assigned upon task creation.",
+        })
+      } catch (nomErr: any) {
+        console.warn("[create-unstructured] initial assignee nomination record note:", nomErr?.message)
+      }
     }
 
     // 4. If Director specified targeted departments, insert into task_target_org_units if available

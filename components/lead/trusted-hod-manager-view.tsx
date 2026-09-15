@@ -29,8 +29,12 @@ import {
   Check,
   X,
   CreditCard,
+  Coins,
+  Edit3,
+  Layers,
 } from "lucide-react"
 import { DepartmentDashboardData } from "@/lib/workledger/department-dashboard"
+import { FacultySalaryDialog } from "@/components/compensation/faculty-salary-dialog"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -41,6 +45,9 @@ interface TrustedHODManagerViewProps {
 
 export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProps) {
   const router = useRouter()
+
+  // State for Faculty Salary Component Modal
+  const [selectedFacultyForSalary, setSelectedFacultyForSalary] = useState<any | null>(null)
 
   // State for Proof Review
   const [selectedProof, setSelectedProof] = useState<any | null>(null)
@@ -199,6 +206,102 @@ export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProp
         </Card>
       </div>
 
+      {/* Department Resource Allocation & Faculty Spend Card */}
+      <Card className="rounded-2xl border-2 shadow-xs overflow-hidden">
+        <CardHeader className="pb-3 border-b bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Coins className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-foreground">
+                Department Resource Allocation & Spend
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Central Treasury pool allocated to {data.department?.name} vs rewards distributed to faculty.
+              </CardDescription>
+            </div>
+          </div>
+          <Badge variant="outline" className="font-mono text-xs font-semibold w-fit">
+            {data.resources?.budgetCurrency || "WORK"} Liquidity Pool
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Allocated Resources */}
+            <div className="p-3.5 rounded-xl bg-muted/30 border space-y-1">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Allocated Resources
+              </span>
+              <div className="text-2xl font-black text-foreground font-mono">
+                {(data.resources?.allocatedBudget || 0).toLocaleString()}{" "}
+                <span className="text-xs font-sans text-muted-foreground font-medium">
+                  {data.resources?.budgetCurrency || "WORK"}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Department operating reserve</p>
+            </div>
+
+            {/* Spent / Rewarded to Faculty */}
+            <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-1">
+              <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wider block">
+                Spent / Rewarded to Faculty
+              </span>
+              <div className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                {(data.resources?.spentBudget || 0).toLocaleString()}{" "}
+                <span className="text-xs font-sans text-blue-600/70 font-medium">
+                  {data.resources?.budgetCurrency || "WORK"}
+                </span>
+              </div>
+              <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80">
+                {data.resources?.utilizationPercentage || 0}% of allocated budget disbursed
+              </p>
+            </div>
+
+            {/* Remaining Available Pool */}
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
+              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">
+                Remaining Department Pool
+              </span>
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {(data.resources?.remainingBudget || 0).toLocaleString()}{" "}
+                <span className="text-xs font-sans text-emerald-600/70 font-medium">
+                  {data.resources?.budgetCurrency || "WORK"}
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">
+                Available to reward upcoming initiatives & classes
+              </p>
+            </div>
+          </div>
+
+          {/* Utilization Progress Bar */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground font-medium">
+                Pool Utilization: <strong className="font-mono text-foreground">{data.resources?.utilizationPercentage || 0}%</strong>
+              </span>
+              <span className="text-xs font-mono text-muted-foreground">
+                {(data.resources?.spentBudget || 0).toLocaleString()} / {(data.resources?.allocatedBudget || 0).toLocaleString()} {data.resources?.budgetCurrency || "WORK"}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-2.5 rounded-full transition-all duration-500 ${
+                  (data.resources?.utilizationPercentage || 0) > 90
+                    ? "bg-destructive"
+                    : (data.resources?.utilizationPercentage || 0) > 70
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }`}
+                style={{ width: `${Math.min(100, data.resources?.utilizationPercentage || 0)}%` }}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {flagSuccess && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -345,9 +448,11 @@ export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProp
                   <tr className="border-b bg-muted/40 text-muted-foreground font-mono text-[11px]">
                     <th className="py-3 px-4 font-semibold">Faculty Member</th>
                     <th className="py-3 px-4 font-semibold">Designation</th>
+                    <th className="py-3 px-4 font-semibold">Base Salary</th>
                     <th className="py-3 px-4 font-semibold">Credits Earned / Target</th>
                     <th className="py-3 px-4 font-semibold">Progress</th>
                     <th className="py-3 px-4 font-semibold">Salary Status</th>
+                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -358,6 +463,12 @@ export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProp
                         <span className="block text-[11px] text-muted-foreground font-mono">{f.email}</span>
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">{f.designation}</td>
+                      <td className="py-3 px-4 font-mono font-medium text-foreground">
+                        {f.currency === "INR" ? "₹" : f.currency} {f.baseSalary.toLocaleString()}
+                        <span className="block text-[10px] text-muted-foreground font-sans">
+                          {f.isCustomConfigured ? "Configured" : "Default"}
+                        </span>
+                      </td>
                       <td className="py-3 px-4 font-mono font-semibold text-foreground">
                         {f.earnedCredits.toFixed(1)} / {f.targetCredits.toFixed(1)} cr
                       </td>
@@ -374,6 +485,29 @@ export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProp
                             In Progress
                           </Badge>
                         )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs font-semibold gap-1"
+                          onClick={() =>
+                            setSelectedFacultyForSalary({
+                              id: f.userId,
+                              name: f.name,
+                              email: f.email,
+                              designation: f.designation,
+                              departmentName: data.department?.name,
+                              currentBaseSalary: f.baseSalary,
+                              currentCurrency: f.currency,
+                              currentTargetCredits: f.targetCredits,
+                              currentThresholdPercentage: 85,
+                            })
+                          }
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          <span>Configure Salary</span>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -503,6 +637,17 @@ export function TrustedHODManagerView({ orgId, data }: TrustedHODManagerViewProp
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Faculty Salary Component Modal Dialog */}
+      <FacultySalaryDialog
+        isOpen={Boolean(selectedFacultyForSalary)}
+        onClose={() => setSelectedFacultyForSalary(null)}
+        faculty={selectedFacultyForSalary}
+        onSuccess={() => {
+          setSelectedFacultyForSalary(null)
+          router.refresh()
+        }}
+      />
     </div>
   )
 }

@@ -138,6 +138,18 @@ export default function OrgTreePage() {
   const [newMemberUnitId, setNewMemberUnitId] = useState<string>("none")
   const [newMemberRoleId, setNewMemberRoleId] = useState("")
 
+  // Helper to attach authorization header if available
+  const getAuthHeaders = useCallback(async () => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`
+      }
+    } catch {}
+    return headers
+  }, [supabase])
+
   // 1. Fetch Hierarchy from Server API
   const fetchHierarchy = useCallback(async (isBackgroundSync = false) => {
     try {
@@ -145,7 +157,8 @@ export default function OrgTreePage() {
       if (!isBackgroundSync) setLoading(true)
       else setSyncing(true)
 
-      const res = await fetch(`/api/org/hierarchy?orgId=${orgId}`)
+      const headers = await getAuthHeaders()
+      const res = await fetch(`/api/org/hierarchy?orgId=${orgId}`, { headers })
       const data = await res.json()
 
       if (!res.ok) {
@@ -161,9 +174,11 @@ export default function OrgTreePage() {
       setPermissions(data.permissions || [])
       setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
 
-      // Select director as initial node if none selected
+      // Select director as initial node if none selected, or fallback to first unit
       if (!selectedNode && data.director) {
         handleSelectMember(data.director, false)
+      } else if (!selectedNode && data.tree && data.tree.length > 0) {
+        handleSelectUnit(data.tree[0], false)
       }
     } catch (err: any) {
       console.error("Fetch hierarchy error:", err)
@@ -310,10 +325,11 @@ export default function OrgTreePage() {
 
     try {
       const memberId = selectedNode.data.id
+      const headers = await getAuthHeaders()
 
       const res = await fetch("/api/org/hierarchy", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           organizationId: orgId,
           memberId,
@@ -344,10 +360,11 @@ export default function OrgTreePage() {
   const handlePromoteToLead = async (member: any, unitId: string) => {
     setActionLoading(true)
     try {
+      const headers = await getAuthHeaders()
       const leadRole = roles.find((r) => r.scope_level === "ORG_UNIT_LEAD")
       const res = await fetch("/api/org/hierarchy", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           organizationId: orgId,
           memberId: member.id,
@@ -366,6 +383,31 @@ export default function OrgTreePage() {
     }
   }
 
+  // Assign Unit Lead directly from Unit Inspector
+  const handleAssignUnitLead = async (unitId: string, memberId: string) => {
+    setActionLoading(true)
+    try {
+      const headers = await getAuthHeaders()
+      const res = await fetch("/api/org/hierarchy", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          organizationId: orgId,
+          unitId,
+          leadUserId: memberId === "none" ? null : memberId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to assign department lead.")
+      toast.success("Department lead updated successfully!")
+      await fetchHierarchy()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign lead")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   // Add Node (Unit or Member)
   const handleAddNodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -374,12 +416,14 @@ export default function OrgTreePage() {
     setActionLoading(true)
 
     try {
+      const headers = await getAuthHeaders()
+
       if (addNodeType === "unit") {
         if (!newUnitName.trim()) throw new Error("Department or unit name is required")
 
         const res = await fetch("/api/org/hierarchy", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             organizationId: orgId,
             name: newUnitName.trim(),
@@ -403,7 +447,7 @@ export default function OrgTreePage() {
 
         const res = await fetch("/api/director/invite-member", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             organizationId: orgId,
             name: newMemberName.trim(),
@@ -713,96 +757,43 @@ export default function OrgTreePage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-[1800px] mx-auto flex flex-col h-[calc(100vh-80px)]">
-      {/* Top Header & Interactive Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+      {/* Top Header & Clean Primary Actions (Always perfectly aligned, never wraps clumsily) */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shrink-0 pb-1">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3 text-foreground">
-              <GitBranch className="h-7 w-7 text-primary" />
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 text-foreground whitespace-nowrap">
+              <GitBranch className="h-6 w-6 text-primary shrink-0" />
               Organization Hierarchy Tree
             </h1>
-            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1 font-semibold">
+            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30 gap-1 font-semibold shrink-0">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Live DB Synced
             </Badge>
           </div>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 font-medium">
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1 font-medium">
             Multi-tier executive hierarchy &bull; Real-time dynamic synchronization with database
           </p>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Sync Button */}
+        {/* Primary Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0 self-start lg:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => fetchHierarchy(false)}
             disabled={syncing || loading}
-            className="h-8 text-xs font-semibold gap-1.5 bg-card"
+            className="h-8 text-xs font-semibold gap-1.5 bg-card shadow-2xs"
             title={`Last synced: ${lastSynced}`}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin text-primary" : ""}`} />
             {syncing ? "Syncing..." : "Sync DB"}
           </Button>
 
-          {/* Search */}
-          <div className="relative w-48">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search people & units..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs bg-card"
-            />
-          </div>
-
-          {/* Zoom / Pan Bar */}
-          <div className="flex items-center border rounded-lg bg-card p-0.5 shadow-xs">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setZoom((prev) => Math.max(0.35, Number((prev - 0.1).toFixed(2))))}
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-3.5 w-3.5" />
-            </Button>
-            <span className="text-xs font-mono px-2 font-bold select-none">{Math.round(zoom * 100)}%</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setZoom((prev) => Math.min(1.6, Number((prev + 0.1).toFixed(2))))}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleFitView}
-              title="Fit to Screen"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleResetView}
-              title="Reset View"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowInspector(!showInspector)}
-            className="gap-1.5 h-8 text-xs font-bold"
+            className="gap-1.5 h-8 text-xs font-bold shadow-2xs"
           >
             {showInspector ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
             {showInspector ? "Hide Inspector" : "Inspector"}
@@ -815,7 +806,7 @@ export default function OrgTreePage() {
               setAddNodeType("unit")
               setShowAddModal(true)
             }}
-            className="gap-1.5 h-8 text-xs font-bold"
+            className="gap-1.5 h-8 text-xs font-bold shadow-xs"
           >
             <Plus className="h-3.5 w-3.5" /> Add Node
           </Button>
@@ -848,26 +839,87 @@ export default function OrgTreePage() {
 
       {/* Main Canvas Viewport with Overlay Inspector */}
       <div className="flex-1 relative rounded-2xl border-2 border-border bg-card shadow-md flex flex-col min-h-0 overflow-hidden">
-        {/* Canvas Sub-header */}
-        <div className="px-4 py-2 border-b bg-muted/40 flex items-center justify-between shrink-0 z-10">
+        {/* Canvas Sub-header with Search & Info */}
+        <div className="px-4 py-2 border-b bg-muted/40 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
-            <Building2 className="h-4 w-4 text-primary" />
-            <span>{organization?.name || "Organization Workspace"}</span>
-            <Badge variant="outline" className="text-[10px] uppercase font-mono ml-1">
+            <Building2 className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate max-w-[200px] sm:max-w-none">{organization?.name || "Organization Workspace"}</span>
+            <Badge variant="outline" className="text-[10px] uppercase font-mono ml-1 shrink-0">
               {organization?.type || "INSTITUTION"}
             </Badge>
+            <Badge variant="secondary" className="text-[10px] text-muted-foreground font-mono hidden md:inline-flex items-center gap-1 shrink-0">
+              <Shield className="h-3 w-3 text-amber-500" /> Admin: External Platform Entity
+            </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-              <User className="h-3.5 w-3.5" /> {totalStaffCount} Members
-            </span>
-            <span className="text-muted-foreground font-bold">|</span>
-            <span className="flex items-center gap-1 font-bold text-primary">
-              <Building2 className="h-3.5 w-3.5" /> {totalDepartmentCount} Units
-            </span>
-            <span className="text-muted-foreground font-bold">|</span>
-            <span className="text-muted-foreground text-[11px]">Synced: {lastSynced}</span>
+
+          <div className="flex items-center gap-3">
+            {/* Dedicated Search Input */}
+            <div className="relative w-44 sm:w-56">
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search people & units..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-xs bg-background rounded-lg border-border/80"
+              />
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                <User className="h-3.5 w-3.5" /> {totalStaffCount} Members
+              </span>
+              <span className="text-muted-foreground font-bold">|</span>
+              <span className="flex items-center gap-1 font-bold text-primary">
+                <Building2 className="h-3.5 w-3.5" /> {totalDepartmentCount} Units
+              </span>
+              <span className="text-muted-foreground font-bold">|</span>
+              <span className="text-muted-foreground text-[11px] font-mono">Synced: {lastSynced}</span>
+            </div>
           </div>
+        </div>
+
+        {/* Floating Zoom / Pan Toolbar (Bottom-Left of Canvas, Clean & Unobtrusive) */}
+        <div className="absolute bottom-4 left-4 z-20 flex items-center gap-0.5 p-1 bg-background/90 backdrop-blur-md border border-border/80 rounded-xl shadow-lg select-none">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-lg"
+            onClick={() => setZoom((prev) => Math.max(0.35, Number((prev - 0.1).toFixed(2))))}
+            title="Zoom Out"
+          >
+            <ZoomOut className="h-3.5 w-3.5" />
+          </Button>
+          <span className="text-[11px] font-mono font-bold px-1.5 select-none min-w-[42px] text-center text-foreground">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-lg"
+            onClick={() => setZoom((prev) => Math.min(1.6, Number((prev + 0.1).toFixed(2))))}
+            title="Zoom In"
+          >
+            <ZoomIn className="h-3.5 w-3.5" />
+          </Button>
+          <div className="h-4 w-px bg-border/80 my-auto mx-0.5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-lg"
+            onClick={handleFitView}
+            title="Fit to Screen"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-lg"
+            onClick={handleResetView}
+            title="Reset View"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {/* Interactive Drag/Pan/Zoom Canvas */}
@@ -898,7 +950,7 @@ export default function OrgTreePage() {
               {/* ------------------------------------------------------------- */}
               {/* LEVEL 0: EXECUTIVE ROOT NODE (DIRECTOR & ORGANIZATION) */}
               {/* ------------------------------------------------------------- */}
-              {director && (
+              {director ? (
                 <div className="flex flex-col items-center relative">
                   <div
                     onClick={() => handleSelectMember(director, false)}
@@ -942,6 +994,42 @@ export default function OrgTreePage() {
 
                   {/* Trunk Stem Line Down to Root Units */}
                   {tree.length > 0 && <div className="w-0.5 h-8 bg-primary shadow-xs" />}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center relative">
+                  <div className="w-80 p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-card/80 shadow-md text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl shadow-xs shrink-0">
+                        <Building2 className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-sm text-foreground truncate block">
+                            {organization?.name || "Executive Directorate"}
+                          </span>
+                          <Badge variant="outline" className="text-[9px] font-bold py-0 px-1.5 uppercase">
+                            Directorate
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                          Director Position Unassigned
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70">
+                          System Admin operates as an external entity
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] font-semibold">
+                      <span className="text-muted-foreground">Institutional Root</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        {totalDepartmentCount} Units &bull; {totalStaffCount} Members
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Trunk Stem Line Down to Root Units */}
+                  {tree.length > 0 && <div className="w-0.5 h-8 bg-primary/50 shadow-xs" />}
                 </div>
               )}
 
@@ -1253,7 +1341,7 @@ export default function OrgTreePage() {
                     <p>
                       <strong>Department Lead:</strong>{" "}
                       <span className="font-semibold text-foreground">
-                        {selectedNode.data.lead ? selectedNode.data.lead.name : "Unassigned (Click member to promote)"}
+                        {selectedNode.data.lead ? selectedNode.data.lead.name : "Unassigned"}
                       </span>
                     </p>
                     <p>
@@ -1268,6 +1356,36 @@ export default function OrgTreePage() {
                         {selectedNode.data.children?.length || 0} Nested Units
                       </span>
                     </p>
+                  </div>
+
+                  {/* Assign/Change Head of Department (HOD) directly */}
+                  <div className="pt-3 border-t space-y-1.5 text-left">
+                    <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Crown className="h-3.5 w-3.5 text-amber-500" />
+                      Assign Department Lead (HOD)
+                    </Label>
+                    <Select
+                      value={selectedNode.data.leadUserId || selectedNode.data.lead?.id || "none"}
+                      onValueChange={(memberId) => handleAssignUnitLead(selectedNode.data.id, memberId)}
+                      disabled={actionLoading}
+                    >
+                      <SelectTrigger className="h-8 text-xs rounded-lg bg-card">
+                        <SelectValue placeholder="Choose Head of Department..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Unassigned --</SelectItem>
+                        {selectedNode.data.members?.map((m: any) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name} {m.designation ? `(${m.designation})` : ""}
+                          </SelectItem>
+                        ))}
+                        {unassignedMembers.map((m: any) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name} (Unassigned Pool)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="pt-3 border-t space-y-2">

@@ -42,6 +42,7 @@ interface Props {
   orgId: string
   initialUsers: PersonItem[]
   departments: DeptItem[]
+  currentUserId?: string
 }
 
 const ROLE_OPTIONS = [
@@ -53,12 +54,70 @@ const ROLE_OPTIONS = [
   { value: "SYSTEM_ADMIN", label: "System Administrator (Tenant Operator)", deptRequired: false },
 ]
 
-export function PeopleManagerClient({ orgId, initialUsers, departments }: Props) {
+export function PeopleManagerClient({ orgId, initialUsers, departments, currentUserId }: Props) {
   const router = useRouter()
   const [users, setUsers] = useState<PersonItem[]>(initialUsers)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState("")
+  const [assigningDirectorId, setAssigningDirectorId] = useState<string | null>(null)
+
+  // Find if current user has DIRECTOR role
+  const currentAdminUser = users.find((u) => u.id === currentUserId)
+  const currentAdminHasDirector = currentAdminUser?.scopeLevels.includes("DIRECTOR") || false
+
+  // Find any director in the org
+  const directorUsers = users.filter((u) => u.scopeLevels.includes("DIRECTOR"))
+  const externalDirector = directorUsers.find((u) => u.id !== currentUserId)
+
+  const handleToggleDirectorRole = async (targetUserId?: string, specificAction?: "grant" | "revoke") => {
+    const uid = targetUserId || currentUserId
+    if (!uid) return
+
+    setAssigningDirectorId(uid)
+    try {
+      const res = await fetch("/api/admin/assign-director-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: uid,
+          action: specificAction,
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to update Director role.")
+      }
+
+      toast.success(json.message)
+
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (u.id === uid) {
+            const newScopes = json.hasDirectorRole
+              ? [...new Set([...u.scopeLevels, "DIRECTOR"])]
+              : u.scopeLevels.filter((s) => s !== "DIRECTOR")
+            const newPrimary = json.hasDirectorRole
+              ? (u.scopeLevels.includes("SYSTEM_ADMIN") ? "System Admin & Director" : "Director")
+              : (u.scopeLevels.includes("SYSTEM_ADMIN") ? "System Administrator" : "Faculty / Member")
+            return {
+              ...u,
+              scopeLevels: newScopes,
+              primaryRole: newPrimary,
+            }
+          }
+          return u
+        })
+      )
+
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update Director role.")
+    } finally {
+      setAssigningDirectorId(null)
+    }
+  }
 
   // Form states
   const [name, setName] = useState("")
@@ -150,6 +209,96 @@ export function PeopleManagerClient({ orgId, initialUsers, departments }: Props)
 
   return (
     <div className="space-y-6">
+      {/* ── Executive Leadership & Director Governance Card ── */}
+      <Card className="border-border/60 bg-linear-to-r from-card to-card/50 shadow-xs">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">Executive Leadership Governance</CardTitle>
+                <CardDescription className="text-xs">
+                  Independent Executive Director vs. Administrator dual-role configuration
+                </CardDescription>
+              </div>
+            </div>
+
+            {currentAdminHasDirector ? (
+              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[11px] px-2.5 py-0.5 font-medium">
+                Dual Role: System Admin &amp; Director
+              </Badge>
+            ) : externalDirector ? (
+              <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[11px] px-2.5 py-0.5 font-medium">
+                Director Appointed: {externalDirector.name}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground text-[11px] px-2.5 py-0.5">
+                Director Account: Not Appointed
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 rounded-xl border border-border/50 bg-muted/20">
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">
+                {currentAdminHasDirector
+                  ? "Your account currently holds both System Administrator and Director roles."
+                  : externalDirector
+                  ? `Dedicated Executive Director account provisioned (${externalDirector.email}).`
+                  : "Your account is currently configured purely as System Administrator without default Director privileges."}
+              </p>
+              <p className="text-muted-foreground text-[11px]">
+                {currentAdminHasDirector
+                  ? "You have full access to both the Admin Panel and Director dashboards (Treasury, Org Tree, Reports). You can switch between them in the sidebar."
+                  : "System Admins configure organization infrastructure and manage users. You can provision a separate Director account or enable Director role for yourself below."}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {currentAdminHasDirector ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={assigningDirectorId === currentUserId}
+                  onClick={() => handleToggleDirectorRole(currentUserId, "revoke")}
+                  className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20 h-8 gap-1.5"
+                >
+                  {assigningDirectorId === currentUserId && <RefreshCw className="h-3 w-3 animate-spin" />}
+                  Relinquish Director Role
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={assigningDirectorId === currentUserId}
+                  onClick={() => handleToggleDirectorRole(currentUserId, "grant")}
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 h-8 gap-1.5 font-medium"
+                >
+                  {assigningDirectorId === currentUserId && <RefreshCw className="h-3 w-3 animate-spin" />}
+                  Assign Director Role to Myself
+                </Button>
+              )}
+
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => {
+                  setScopeLevel("DIRECTOR")
+                  setShowModal(true)
+                }}
+                className="text-xs h-8 gap-1.5"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Provision Director Account
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* ── Action Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -329,7 +478,8 @@ export function PeopleManagerClient({ orgId, initialUsers, departments }: Props)
                   <th className="py-2.5 px-3">Department</th>
                   <th className="py-2.5 px-3">Designation</th>
                   <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3 text-right">Created</th>
+                  <th className="py-2.5 px-3">Created</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -357,8 +507,33 @@ export function PeopleManagerClient({ orgId, initialUsers, departments }: Props)
                         Active
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-right text-muted-foreground font-mono">
+                    <td className="py-2.5 px-3 text-muted-foreground font-mono">
                       {u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : "Recent"}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      {u.scopeLevels.includes("DIRECTOR") ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={assigningDirectorId === u.id}
+                          onClick={() => handleToggleDirectorRole(u.id, "revoke")}
+                          className="text-[11px] h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          title="Remove Director role"
+                        >
+                          {assigningDirectorId === u.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Revoke Director"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={assigningDirectorId === u.id}
+                          onClick={() => handleToggleDirectorRole(u.id, "grant")}
+                          className="text-[11px] h-7 px-2 text-muted-foreground hover:text-foreground"
+                          title="Grant Director role"
+                        >
+                          {assigningDirectorId === u.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "+ Director Role"}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

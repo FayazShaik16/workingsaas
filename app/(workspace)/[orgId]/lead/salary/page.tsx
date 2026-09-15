@@ -13,7 +13,7 @@ export default async function LeadSalaryApprovePage({ params }: PageProps) {
   const user = await requireAuth()
   await requireScope("ORG_UNIT_LEAD", "DIRECTOR", "SYSTEM_ADMIN")
 
-  const deptData = await getDepartmentDashboardData(orgId, user.orgUnitId ?? null)
+  const deptData = await getDepartmentDashboardData(orgId, user.orgUnitId ?? null, user.id)
 
   if (!deptData.department) {
     return (

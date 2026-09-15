@@ -64,7 +64,7 @@ export default function TaskDetailPage() {
           .select("id, status")
           .eq("task_id", taskId)
           .eq("user_id", authData.user.id)
-          .single()
+          .maybeSingle()
 
         if (nomination) {
           setHasNominated(true)

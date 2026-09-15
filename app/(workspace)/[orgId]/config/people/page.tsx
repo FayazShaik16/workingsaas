@@ -8,7 +8,7 @@ interface PageProps {
 
 export default async function ConfigPeoplePage({ params }: PageProps) {
   const { orgId } = await params
-  await requireAuth()
+  const user = await requireAuth()
   await requireRole("SYSTEM_ADMIN")
 
   const admin = createAdminClient()
@@ -70,6 +70,7 @@ export default async function ConfigPeoplePage({ params }: PageProps) {
         orgId={orgId}
         initialUsers={formattedUsers}
         departments={allDepts}
+        currentUserId={user.id}
       />
     </div>
   )

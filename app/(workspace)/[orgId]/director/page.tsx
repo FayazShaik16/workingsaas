@@ -23,6 +23,7 @@ import {
 import { DirectorActions } from "@/components/director/director-actions"
 import { WalletCard } from "@/components/blockchain/wallet-card"
 import { DirectorBudgetAllocator, DepartmentBudgetInfo } from "@/components/director/director-budget-allocator"
+import { DirectorFacultySalaryConsole, DirectorFacultySalaryItem } from "@/components/director/director-faculty-salary-console"
 
 interface PageProps {
   params: Promise<{ orgId: string }>
@@ -202,6 +203,38 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
       }
     })
 
+  // 8. Department Resource Allocation Aggregates & Director Faculty List
+  const totalDeptAllocated = departmentsBudgetInfo.reduce((sum, d) => sum + (d.allocatedBudget || 0), 0)
+  const totalDeptSpent = departmentsBudgetInfo.reduce((sum, d) => sum + (d.spentBudget || 0), 0)
+  const availableTreasuryReserve = Math.max(0, salaryPool - totalDeptAllocated)
+  const deptAllocationRate = salaryPool > 0 ? Math.min(100, Math.round((totalDeptAllocated / salaryPool) * 100)) : 0
+
+  const directorFacultyList: DirectorFacultySalaryItem[] = allTeachingStaff.map((u: any) => {
+    const unit = allUnits.find((un: any) => un.id === u.org_unit_id)
+    const skillsObj = u.skills && typeof u.skills === "object" && !Array.isArray(u.skills) ? u.skills : {}
+    const comp = skillsObj.salary_component || {}
+    const baseSalary = Number(comp.base_salary || 75000)
+    const currency = comp.currency || "INR"
+    const isCustomConfigured = Boolean(comp.base_salary)
+    const targetCredits = Number(u.target_credits || comp.target_credits || 20.0)
+    const progressPct = progressMap.get(u.id) || 0
+
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      designation: u.designation || "Faculty Member",
+      departmentId: u.org_unit_id || undefined,
+      departmentName: unit?.name || "Unassigned",
+      baseSalary,
+      currency,
+      targetCredits,
+      progressPercentage: progressPct,
+      isEligible: progressPct >= 85,
+      isCustomConfigured,
+    }
+  })
+
   // Dynamic Chart Calculations
   const totalTokensNonZero = Math.max(totalTokens, 1)
   const personalPercent = Math.round((personalPool / totalTokensNonZero) * 100)
@@ -307,6 +340,97 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground mt-1 font-medium">
               {eligibleCount} of {totalEmployees} Faculty Eligible
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Department Allocated & Available Resources Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="rounded-2xl border-2 shadow-xs bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Department Allocated Resources
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Total WORK tokens allocated across {allUnits.length} functional departments
+              </CardDescription>
+            </div>
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600">
+              <Building2 className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <div className="text-3xl font-black text-foreground font-mono">
+                {totalDeptAllocated.toLocaleString()}{" "}
+                <span className="text-xs font-sans text-muted-foreground font-medium">WORK</span>
+              </div>
+              <Badge variant="outline" className="text-xs font-mono font-bold text-blue-600 border-blue-500/30">
+                {totalDeptSpent.toLocaleString()} Spent / Rewarded
+              </Badge>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Disbursed by Departments</span>
+                <span className="font-mono font-semibold text-foreground">
+                  {totalDeptAllocated > 0 ? Math.min(100, Math.round((totalDeptSpent / totalDeptAllocated) * 100)) : 0}% utilized
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-blue-500 transition-all"
+                  style={{
+                    width: `${totalDeptAllocated > 0 ? Math.min(100, Math.round((totalDeptSpent / totalDeptAllocated) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-2 shadow-xs bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Available Resources (Unallocated Reserve)
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Liquid Central Treasury balance available for department allocation
+              </CardDescription>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600">
+              <Coins className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {availableTreasuryReserve.toLocaleString()}{" "}
+                <span className="text-xs font-sans text-emerald-600/70 font-medium">WORK</span>
+              </div>
+              <Badge variant="outline" className="text-xs font-mono font-bold text-emerald-600 border-emerald-500/30">
+                {salaryPool > 0 ? Math.max(0, 100 - deptAllocationRate) : 100}% Liquid Reserve
+              </Badge>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Allocation Capacity</span>
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  Ready for Department Distribution
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-emerald-500 transition-all"
+                  style={{
+                    width: `${salaryPool > 0 ? Math.max(0, 100 - deptAllocationRate) : 100}%`,
+                  }}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -585,6 +709,13 @@ export default async function DirectorDashboardPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Institutional Faculty Salary Governance Console */}
+      <DirectorFacultySalaryConsole
+        orgId={orgId}
+        facultyList={directorFacultyList}
+        departments={allUnits.map((u: any) => ({ id: u.id, name: u.name }))}
+      />
 
       {/* Department Budget Allocation Console */}
       <DirectorBudgetAllocator

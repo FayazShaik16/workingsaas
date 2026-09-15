@@ -44,9 +44,22 @@ import {
   SlidersHorizontal,
   RotateCcw,
   UserCheck,
+  FileSpreadsheet,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { formatDisplayDate } from "@/lib/utils"
+
+export interface TaskNominationInfo {
+  id: string
+  userId: string
+  userName: string
+  userEmail: string
+  designation?: string | null
+  status: string
+  message?: string
+  createdAt: string
+}
 
 export interface DepartmentTask {
   id: string
@@ -67,6 +80,9 @@ export interface DepartmentTask {
   tags?: string[]
   proofUrl?: string
   proofText?: string
+  requiredPeople?: number
+  acceptedCount?: number
+  nominationsList?: TaskNominationInfo[]
 }
 
 export interface DepartmentFacultyMember {
@@ -369,7 +385,13 @@ export function HODTaskManager({
   // Open assign modal
   const handleOpenAssignModal = (task: DepartmentTask) => {
     setAssigningTask(task)
-    setAssignFacultyId(task.assignedToId || facultyMembers[0]?.id || "")
+    // Priority: First pending or accepted self-nominated applicant, else existing assignee, else first faculty
+    const nominatedApplicants = (task.nominationsList || []).filter(
+      (n) => n.status === "PENDING" || n.status === "ACCEPTED"
+    )
+    const defaultFacultyId =
+      nominatedApplicants[0]?.userId || task.assignedToId || facultyMembers[0]?.id || ""
+    setAssignFacultyId(defaultFacultyId)
     setAssignDate(task.deadline ? task.deadline.slice(0, 10) : new Date().toISOString().slice(0, 10))
     setAssignError(null)
   }
@@ -418,16 +440,20 @@ export function HODTaskManager({
       }
 
       const assignedFac = facultyMembers.find((f) => f.id === assignFacultyId)
+      const isFully = data.isFullyAssigned ?? true
+      const newCount = data.acceptedCount ?? ((assigningTask.acceptedCount || 0) + 1)
+
       setTasks((prev) =>
         prev.map((t) =>
           t.id === assigningTask.id
             ? {
                 ...t,
-                status: "ASSIGNED",
+                status: isFully ? "ASSIGNED" : t.status,
                 assignedToId: assignFacultyId,
                 assignedToName: assignedFac?.name,
                 assignedToEmail: assignedFac?.email,
                 deadline: assignDate,
+                acceptedCount: newCount,
               }
             : t
         )
@@ -435,7 +461,7 @@ export function HODTaskManager({
 
       setFeedback({
         type: "success",
-        text: `Task "${assigningTask.title}" successfully assigned to ${assignedFac?.name}.`,
+        text: data.message || `Task "${assigningTask.title}" successfully assigned to ${assignedFac?.name}.`,
       })
       setAssigningTask(null)
       router.refresh()
@@ -483,13 +509,21 @@ export function HODTaskManager({
           </p>
         </div>
 
-        {/* Primary Action Button */}
-        <Link href={`/${orgId}/lead/tasks/new`}>
-          <Button size="default" className="rounded-xl font-semibold gap-2 shadow-sm bg-primary hover:bg-primary/90 h-10 px-5">
-            <Plus className="h-4 w-4" />
-            Post New Task
-          </Button>
-        </Link>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link href={`/${orgId}/dept-admin/import`}>
+            <Button size="default" variant="outline" className="rounded-xl font-semibold gap-2 h-10 px-4">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
+              Import Timetable
+            </Button>
+          </Link>
+          <Link href={`/${orgId}/lead/tasks/new`}>
+            <Button size="default" className="rounded-xl font-semibold gap-2 shadow-sm bg-primary hover:bg-primary/90 h-10 px-5">
+              <Plus className="h-4 w-4" />
+              Post New Task
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
@@ -870,11 +904,23 @@ export function HODTaskManager({
                             {task.assignedToEmail && (
                               <p className="text-[10px] text-muted-foreground font-light">{task.assignedToEmail}</p>
                             )}
+                            {task.requiredPeople && task.requiredPeople > 1 && (
+                              <Badge variant="outline" className="text-[9px] mt-1 font-mono text-sky-600 bg-sky-500/10 border-sky-500/20">
+                                Team: {task.acceptedCount || 1}/{task.requiredPeople}
+                              </Badge>
+                            )}
                           </div>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] font-medium text-amber-600 bg-amber-500/10 border-amber-500/30">
-                            Open Task Pool
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="text-[10px] font-medium text-amber-600 bg-amber-500/10 border-amber-500/30">
+                              Open Task Pool
+                            </Badge>
+                            {task.requiredPeople && task.requiredPeople > 1 && (
+                              <p className="text-[10px] text-muted-foreground font-mono">
+                                {task.requiredPeople} people needed
+                              </p>
+                            )}
+                          </div>
                         )}
                       </TableCell>
 
@@ -887,25 +933,18 @@ export function HODTaskManager({
 
                       {/* Reward */}
                       <TableCell className="py-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        +{task.creditValue.toFixed(1)} WORK
+                        +{Number(task.creditValue || 0).toFixed(1)} WORK
                       </TableCell>
 
                       {/* Date */}
-                      <TableCell className="py-4 text-muted-foreground font-light">
+                      <TableCell className="py-4 text-muted-foreground font-light" suppressHydrationWarning>
                         {task.deadline ? (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1" suppressHydrationWarning>
                             <Clock className="h-3 w-3 text-primary/70" />
-                            {new Date(task.deadline).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatDisplayDate(task.deadline)}
                           </span>
                         ) : task.createdAt ? (
-                          new Date(task.createdAt).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                          })
+                          <span suppressHydrationWarning>{formatDisplayDate(task.createdAt)}</span>
                         ) : (
                           "—"
                         )}
@@ -1008,7 +1047,7 @@ export function HODTaskManager({
               <div className="flex justify-between text-muted-foreground">
                 <span>Reward Value:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
-                  +{inspectingTask?.creditValue.toFixed(1)} WORK
+                  +{Number(inspectingTask?.creditValue || 0).toFixed(1)} WORK
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
@@ -1116,7 +1155,10 @@ export function HODTaskManager({
               <UserCheck className="h-5 w-5 text-primary" /> Assign Task to Faculty
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Assign "{assigningTask?.title}" (+{assigningTask?.creditValue.toFixed(1)} WORK) with collision protection.
+              Assign "{assigningTask?.title}" (+{Number(assigningTask?.creditValue || 0).toFixed(1)} WORK)
+              {assigningTask?.requiredPeople && assigningTask.requiredPeople > 1
+                ? ` • Position ${(assigningTask.acceptedCount || 0) + 1} of ${assigningTask.requiredPeople}`
+                : ""} with collision protection.
             </DialogDescription>
           </DialogHeader>
 
@@ -1128,22 +1170,130 @@ export function HODTaskManager({
           )}
 
           <div className="space-y-4 py-2">
+            {/* 1. SELF-NOMINATED APPLICANTS (HIGH PRIORITY) */}
+            {(() => {
+              const nominatedApplicants = (assigningTask?.nominationsList || []).filter(
+                (n) => n.status === "PENDING" || n.status === "ACCEPTED"
+              )
+
+              if (nominatedApplicants.length > 0) {
+                return (
+                  <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>Self-Nominated Applicants (Priority)</span>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] font-semibold bg-primary/20 text-primary border-primary/30">
+                        {nominatedApplicants.length} Applied
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      These faculty proactively applied for this specific task. Department policy prioritizes self-nominations.
+                    </p>
+                    <Select
+                      value={nominatedApplicants.some((n) => n.userId === assignFacultyId) ? assignFacultyId : ""}
+                      onValueChange={(val) => {
+                        setAssignFacultyId(val)
+                        setAssignError(null)
+                      }}
+                    >
+                      <SelectTrigger className="rounded-xl text-xs bg-background/90 border-primary/40 focus:ring-primary font-medium">
+                        <SelectValue placeholder="Choose from self-nominated applicants..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nominatedApplicants.map((n) => (
+                          <SelectItem key={n.userId} value={n.userId} className="text-xs">
+                            <div className="flex items-center justify-between gap-2 w-full py-0.5">
+                              <span className="font-semibold text-foreground">{n.userName}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {n.designation ? `${n.designation} • ` : ""}Status: {n.status}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              }
+
+              return (
+                <div className="p-3 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground/70 shrink-0" />
+                  <span>No faculty have self-nominated for this task yet. You can assign directly from the department roster below.</span>
+                </div>
+              )
+            })()}
+
+            {/* 2. ALL DEPARTMENT FACULTY (DIRECT ASSIGNMENT) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Select Faculty Member</Label>
-              <Select value={assignFacultyId} onValueChange={setAssignFacultyId}>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground">
+                  All Department Faculty (Direct Assignment)
+                </Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {facultyMembers.length} available
+                </span>
+              </div>
+              <Select
+                value={assignFacultyId}
+                onValueChange={(val) => {
+                  setAssignFacultyId(val)
+                  setAssignError(null)
+                }}
+              >
                 <SelectTrigger className="rounded-xl text-xs">
-                  <SelectValue placeholder="Select faculty member" />
+                  <SelectValue placeholder="Select faculty member from department roster..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {facultyMembers.map((fac) => (
-                    <SelectItem key={fac.id} value={fac.id} className="text-xs">
-                      {fac.name} {fac.designation ? `(${fac.designation})` : ""}
-                    </SelectItem>
-                  ))}
+                  {facultyMembers.map((fac) => {
+                    const isNominated = (assigningTask?.nominationsList || []).some(
+                      (n) => n.userId === fac.id && (n.status === "PENDING" || n.status === "ACCEPTED")
+                    )
+                    return (
+                      <SelectItem key={fac.id} value={fac.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{fac.name}</span>
+                          {fac.designation && <span className="text-muted-foreground">({fac.designation})</span>}
+                          {isNominated && (
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/15 text-primary border-0 font-medium">
+                              Self-Nominated
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* SELECTED RECIPIENT PREVIEW CARD */}
+            {assignFacultyId && (
+              <div className="px-3.5 py-2.5 rounded-xl bg-card border text-xs flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Assigned Recipient</span>
+                    <strong className="text-foreground text-xs font-bold">
+                      {facultyMembers.find((f) => f.id === assignFacultyId)?.name || "Faculty Member"}
+                    </strong>
+                  </div>
+                </div>
+                {(assigningTask?.nominationsList || []).some((n) => n.userId === assignFacultyId) ? (
+                  <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30 font-semibold">
+                    ✓ Self-Nominated
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    Direct Assignment
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* 3. SCHEDULED DATE / DEADLINE */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Scheduled Date / Deadline</Label>
               <Input

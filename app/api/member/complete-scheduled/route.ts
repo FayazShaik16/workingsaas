@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSessionUser } from "@/lib/auth/session"
 import { getMemberMonthlyProgress } from "@/lib/workledger/progress"
+import { checkSessionTiming } from "@/lib/utils"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     // 1. Fetch instance first to validate assignment, status, and prevent duplicate slot payouts
     const { data: instance, error: instErr } = await db
       .from("scheduled_work_instances")
-      .select("*, work_cycles(*), scheduled_work_templates(title)")
+      .select("*, work_cycles(*), scheduled_work_templates(title, start_time, end_time)")
       .eq("id", instanceId)
       .single()
 
@@ -39,6 +40,21 @@ export async function POST(req: Request) {
         already_completed: true,
         message: "This work session was already self-confirmed.",
       })
+    }
+
+    // 1b. Guard: Verify that the scheduled session time has actually arrived
+    const startTimeStr =
+      instance.scheduled_work_templates?.start_time?.slice(0, 5) ||
+      (instance.scheduled_start ? new Date(instance.scheduled_start).toISOString().slice(11, 16) : null)
+
+    const timing = checkSessionTiming(instance.work_date, startTimeStr)
+    if (!timing.canComplete) {
+      return NextResponse.json(
+        {
+          error: `Cannot complete session yet: ${timing.label}. Work sessions can only be completed once their scheduled start time arrives.`,
+        },
+        { status: 400 }
+      )
     }
 
     // 2. Guard: Prevent duplicate reward accumulation for overlapping time slots on the same date

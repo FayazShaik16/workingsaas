@@ -28,6 +28,7 @@ import {
   Check,
   AlertCircle,
   FileCheck,
+  Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -47,6 +48,8 @@ export interface MarketplaceTask {
   org_unit_name?: string
   org_unit_id?: string
   applied_by_user?: boolean
+  requiredPeople?: number
+  acceptedCount?: number
 }
 
 interface MarketplaceDiscoveryGridProps {
@@ -243,6 +246,12 @@ export function MarketplaceDiscoveryGrid({
                       <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">
                         {task.verification_mode === "FILE_SUBMISSION" ? "File Proof" : "Report"}
                       </Badge>
+                      {task.requiredPeople && task.requiredPeople > 1 ? (
+                        <Badge variant="outline" className="text-[10px] gap-1 font-mono text-sky-600 dark:text-sky-400 border-sky-500/30 bg-sky-500/10">
+                          <Users className="h-3 w-3" />
+                          {Math.max(0, task.requiredPeople - (task.acceptedCount || 0))} of {task.requiredPeople} Slots Open
+                        </Badge>
+                      ) : null}
                     </div>
                     <Badge variant="secondary" className="font-mono text-xs font-bold shrink-0">
                       +{task.credit_value.toFixed(1)} cr

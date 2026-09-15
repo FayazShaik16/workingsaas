@@ -8,6 +8,13 @@ export interface DepartmentDashboardData {
     name: string
     code?: string
   } | null
+  resources: {
+    allocatedBudget: number
+    spentBudget: number
+    remainingBudget: number
+    budgetCurrency: string
+    utilizationPercentage: number
+  }
   metrics: {
     memberCount: number
     todayScheduledExpected: number
@@ -32,6 +39,9 @@ export interface DepartmentDashboardData {
     targetCredits: number
     progressPercentage: number
     isSalaryEligible: boolean
+    baseSalary: number
+    currency: string
+    isCustomConfigured: boolean
   }>
   scheduledReviewList: Array<{
     instanceId: string
@@ -72,14 +82,50 @@ export interface DepartmentDashboardData {
 
 export async function getDepartmentDashboardData(
   organizationId: string,
-  hodOrgUnitId: string | null
+  hodOrgUnitId: string | null,
+  userId?: string
 ): Promise<DepartmentDashboardData> {
   const admin = createAdminClient()
   const db = admin as any
 
-  if (!hodOrgUnitId) {
+  let targetUnitId = hodOrgUnitId
+
+  // Auto-resolve unit if not directly passed in session
+  if (!targetUnitId && userId) {
+    // 1. Check if user is assigned as lead_user_id on any unit in this organization
+    const { data: leadUnit } = await db
+      .from("org_units")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("lead_user_id", userId)
+      .maybeSingle()
+
+    if (leadUnit?.id) {
+      targetUnitId = leadUnit.id
+    } else {
+      // 2. Fall back to user's assigned org_unit_id in public.users
+      const { data: userRec } = await db
+        .from("users")
+        .select("org_unit_id")
+        .eq("id", userId)
+        .maybeSingle()
+
+      if (userRec?.org_unit_id) {
+        targetUnitId = userRec.org_unit_id
+      }
+    }
+  }
+
+  if (!targetUnitId) {
     return {
       department: null,
+      resources: {
+        allocatedBudget: 0,
+        spentBudget: 0,
+        remainingBudget: 0,
+        budgetCurrency: "WORK",
+        utilizationPercentage: 0,
+      },
       metrics: {
         memberCount: 0,
         todayScheduledExpected: 0,
@@ -97,19 +143,19 @@ export async function getDepartmentDashboardData(
 
   const ctx = await getOrgCycleContext(organizationId)
 
-  // 1. Fetch Department Info
+  // 1. Fetch Department Info (org_units does not have a code column, use unit_type)
   const { data: deptInfo } = await db
     .from("org_units")
-    .select("id, name, code")
-    .eq("id", hodOrgUnitId)
-    .single()
+    .select("id, name, unit_type, lead_user_id, metadata")
+    .eq("id", targetUnitId)
+    .maybeSingle()
 
-  // 2. Fetch Department Faculty Members
+  // 2. Fetch Department Faculty Members with skills and target_credits
   const { data: deptMembers } = await db
     .from("users")
-    .select("id, name, email, designation, status")
+    .select("id, name, email, designation, status, skills, target_credits")
     .eq("organization_id", organizationId)
-    .eq("org_unit_id", hodOrgUnitId)
+    .eq("org_unit_id", targetUnitId)
     .eq("status", "ACTIVE")
     .order("name", { ascending: true })
 
@@ -203,6 +249,13 @@ export async function getDepartmentDashboardData(
   const facultyProgressList: DepartmentDashboardData["facultyProgressList"] = []
   for (const m of members) {
     const p = await getMemberMonthlyProgress(organizationId, m.id, ctx.monthStart)
+    const skillsObj =
+      m.skills && typeof m.skills === "object" && !Array.isArray(m.skills) ? m.skills : {}
+    const comp = skillsObj.salary_component || {}
+    const baseSalary = Number(comp.base_salary || 75000)
+    const currency = comp.currency || "INR"
+    const isCustomConfigured = Boolean(comp.base_salary)
+
     facultyProgressList.push({
       userId: m.id,
       name: m.name,
@@ -212,6 +265,9 @@ export async function getDepartmentDashboardData(
       targetCredits: p.totalTargetCredits,
       progressPercentage: p.displayProgressPercentage || 0,
       isSalaryEligible: p.salaryEligible,
+      baseSalary,
+      currency,
+      isCustomConfigured,
     })
   }
 
@@ -223,11 +279,11 @@ export async function getDepartmentDashboardData(
       .select(`
         id,
         assigned_to_id,
-        title,
         work_date,
-        start_time,
-        end_time,
+        scheduled_start,
+        scheduled_end,
         credit_value,
+        scheduled_work_templates:template_id ( title, start_time, end_time ),
         users!assigned_to_id(name)
       `)
       .eq("organization_id", organizationId)
@@ -241,10 +297,10 @@ export async function getDepartmentDashboardData(
       instanceId: i.id,
       facultyId: i.assigned_to_id,
       facultyName: i.users?.name || "Faculty Member",
-      title: i.title,
+      title: i.scheduled_work_templates?.title || "Scheduled Session",
       workDate: i.work_date,
-      startTime: i.start_time?.slice(0, 5) || "09:00",
-      endTime: i.end_time?.slice(0, 5) || "10:00",
+      startTime: i.scheduled_work_templates?.start_time?.slice(0, 5) || (i.scheduled_start ? new Date(i.scheduled_start).toISOString().slice(11, 16) : "09:00"),
+      endTime: i.scheduled_work_templates?.end_time?.slice(0, 5) || (i.scheduled_end ? new Date(i.scheduled_end).toISOString().slice(11, 16) : "10:00"),
       creditValue: Number(i.credit_value || 1.0),
       isFlagged: false,
     }))
@@ -263,8 +319,30 @@ export async function getDepartmentDashboardData(
     })
   }
 
+  // 9. Department Resource Allocation and Spend
+  const meta = deptInfo?.metadata && typeof deptInfo.metadata === "object" ? deptInfo.metadata : {}
+  const allocatedBudget = Number(meta.allocated_budget || 0)
+  const budgetCurrency = meta.budget_currency || "WORK"
+  // Total rewarded credits to faculty in this department this month
+  const spentBudget = facultyProgressList.reduce((acc, f) => acc + (f.earnedCredits || 0), 0)
+  const remainingBudget = Math.max(0, allocatedBudget - spentBudget)
+  const utilizationPercentage = allocatedBudget > 0 ? Math.min(100, Math.round((spentBudget / allocatedBudget) * 100)) : 0
+
   return {
-    department: deptInfo ? { id: deptInfo.id, name: deptInfo.name, code: deptInfo.code } : null,
+    department: deptInfo
+      ? {
+          id: deptInfo.id,
+          name: deptInfo.name,
+          code: deptInfo.name?.slice(0, 4).toUpperCase() || "DEPT",
+        }
+      : null,
+    resources: {
+      allocatedBudget,
+      spentBudget: Math.round(spentBudget * 10) / 10,
+      remainingBudget: Math.round(remainingBudget * 10) / 10,
+      budgetCurrency,
+      utilizationPercentage,
+    },
     metrics: {
       memberCount: members.length,
       todayScheduledExpected: todayExpected,

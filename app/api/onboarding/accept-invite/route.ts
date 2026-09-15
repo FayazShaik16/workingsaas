@@ -120,7 +120,7 @@ export async function POST(request: Request) {
     const { getSessionUser } = await import("@/lib/auth/session")
     const { getRedirectPath } = await import("@/lib/auth/get-redirect")
     const updatedUser = await getSessionUser()
-    const redirectPath = updatedUser ? getRedirectPath(updatedUser) : `/${invitation.organization_id}/director`
+    const redirectPath = updatedUser ? getRedirectPath(updatedUser) : `/${invitation.organization_id}/config`
 
     return NextResponse.json({
       success: true,
