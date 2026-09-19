@@ -51,6 +51,19 @@ export async function POST(req: Request) {
     const shouldGrant = action === "grant" || (action === "toggle" && !existingRole)
 
     if (shouldGrant) {
+      // Enforce at most 1 Director per organization: revoke from any other user
+      await db
+        .from("user_roles")
+        .delete()
+        .eq("role_id", directorRole.id)
+        .neq("user_id", targetUserId)
+
+      // Ensure Director has org_unit_id = null (Director oversees entire institution, never a single department)
+      await db
+        .from("users")
+        .update({ org_unit_id: null })
+        .eq("id", targetUserId)
+
       await db.from("user_roles").upsert(
         { user_id: targetUserId, role_id: directorRole.id },
         { onConflict: "user_id,role_id" }

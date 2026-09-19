@@ -545,6 +545,11 @@ export default function OrgTreePage() {
     const isCollapsed = collapsedUnits[unit.id]
     const isSelected = selectedNode?.data?.id === unit.id
     const hasChildren = unit.children && unit.children.length > 0
+    const isLeadDirector = unit.lead && (unit.lead.id === director?.id || unit.lead.role?.scope_level === "DIRECTOR")
+    const effectiveLead = isLeadDirector ? null : unit.lead
+    const visibleStaffMembers = (unit.members || []).filter(
+      (m: any) => m.id !== director?.id && m.role?.scope_level !== "DIRECTOR"
+    )
 
     return (
       <div key={unit.id} className="flex flex-col items-center px-3 relative min-w-[240px] max-w-[280px]">
@@ -620,7 +625,7 @@ export default function OrgTreePage() {
 
           <div className="mt-2.5 pt-2 border-t border-border flex items-center justify-between text-[10px]">
             <span className="flex items-center gap-1 font-bold text-muted-foreground">
-              <Users className="h-3 w-3" /> {unit.totalMemberCount} Staff
+              <Users className="h-3 w-3" /> {visibleStaffMembers.length + (effectiveLead ? 1 : 0)} Staff
             </span>
             <div className="flex items-center gap-1">
               {hasChildren && (
@@ -639,17 +644,17 @@ export default function OrgTreePage() {
         {!isCollapsed && (
           <div className="flex flex-col items-center w-full mt-0">
             {/* Vertical stem down from department card */}
-            {(unit.lead || unit.members.length > 0 || hasChildren) && (
+            {(effectiveLead || visibleStaffMembers.length > 0 || hasChildren) && (
               <div className="w-0.5 h-6 bg-primary/70" />
             )}
 
             {/* 1. Department Lead (HOD) Highlighted Card */}
-            {unit.lead ? (
+            {effectiveLead ? (
               <div
-                onClick={() => handleSelectMember(unit.lead, false)}
-                onDoubleClick={() => handleSelectMember(unit.lead, true)}
+                onClick={() => handleSelectMember(effectiveLead, false)}
+                onDoubleClick={() => handleSelectMember(effectiveLead, true)}
                 className={`tree-node-interactive w-full p-3 rounded-xl border-2 transition-all cursor-pointer shadow-xs bg-amber-500/5 dark:bg-amber-500/10 ${
-                  selectedNode?.data?.id === unit.lead.id
+                  selectedNode?.data?.id === effectiveLead.id
                     ? "border-amber-500 ring-2 ring-amber-500/30 shadow-md scale-102"
                     : "border-amber-500/40 hover:border-amber-500 hover:shadow-sm"
                 }`}
@@ -661,17 +666,17 @@ export default function OrgTreePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-black text-foreground truncate block">
-                        {unit.lead.name}
+                        {effectiveLead.name}
                       </span>
                       <Badge className="bg-amber-500 text-amber-950 text-[8px] font-extrabold px-1 py-0 uppercase">
                         HOD
                       </Badge>
                     </div>
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold truncate">
-                      {unit.lead.designation || "Head of Department"}
+                      {effectiveLead.designation || "Head of Department"}
                     </p>
                     <p className="text-[9px] text-muted-foreground font-mono truncate">
-                      {unit.lead.email}
+                      {effectiveLead.email}
                     </p>
                   </div>
                 </div>
@@ -686,9 +691,9 @@ export default function OrgTreePage() {
             )}
 
             {/* 2. Faculty / Staff Members List */}
-            {unit.members.length > 0 && (
+            {visibleStaffMembers.length > 0 && (
               <div className="w-full space-y-2 mt-2">
-                {unit.members.map((member: any) => {
+                {visibleStaffMembers.map((member: any) => {
                   const isMemberSelected = selectedNode?.data?.id === member.id
                   const progress = Number(member.progress_percentage || 0)
 

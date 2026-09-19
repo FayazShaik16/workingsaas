@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       .from("users")
       .update({
         organization_id: orgId,
-        org_unit_id: rootUnitId || null,
+        org_unit_id: null,
       })
       .eq("id", user.id)
 

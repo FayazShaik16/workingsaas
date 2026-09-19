@@ -32,6 +32,43 @@ export async function POST(request: NextRequest) {
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days
 
+    // 0. Institutional Governance: Enforce only 1 Director per organization
+    let isDirectorInvite = false
+    if (roleId) {
+      const { data: targetRole } = await (admin as any)
+        .from("roles")
+        .select("scope_level")
+        .eq("id", roleId)
+        .maybeSingle()
+
+      if (targetRole?.scope_level === "DIRECTOR") {
+        isDirectorInvite = true
+        const { data: existingDirectorRoles } = await (admin as any)
+          .from("user_roles")
+          .select("user_id, roles!inner(scope_level, organization_id)")
+          .eq("roles.organization_id", organizationId)
+          .eq("roles.scope_level", "DIRECTOR")
+
+        if (existingDirectorRoles && existingDirectorRoles.length > 0) {
+          const { data: currentDir } = await (admin as any)
+            .from("users")
+            .select("name, email")
+            .eq("organization_id", organizationId)
+            .in("id", existingDirectorRoles.map((r: any) => r.user_id))
+            .maybeSingle()
+
+          if (currentDir && currentDir.email.toLowerCase() !== trimmedEmail) {
+            return NextResponse.json(
+              { error: `An organization can only have ONE Director. ${currentDir.name} (${currentDir.email}) is already the appointed Director of this institution.` },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    }
+
+    const finalOrgUnitId = isDirectorInvite ? null : (orgUnitId === "none" ? null : orgUnitId || null)
+
     // 1. Create or update PENDING invitation in database
     const { data: invite, error: inviteErr } = await (admin as any)
       .from("invitations")
@@ -39,7 +76,7 @@ export async function POST(request: NextRequest) {
         organization_id: organizationId,
         email: trimmedEmail,
         intended_role_id: roleId || null,
-        org_unit_id: orgUnitId === "none" ? null : orgUnitId || null,
+        org_unit_id: finalOrgUnitId,
         token,
         status: "PENDING",
         invited_by: sessionUser.id,
@@ -86,7 +123,7 @@ export async function POST(request: NextRequest) {
         {
           id: userId,
           organization_id: organizationId,
-          org_unit_id: orgUnitId === "none" ? null : orgUnitId || null,
+          org_unit_id: finalOrgUnitId,
           email: trimmedEmail,
           name: name.trim(),
           employee_id: employeeId || null,

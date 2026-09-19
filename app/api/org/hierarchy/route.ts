@@ -249,9 +249,26 @@ export async function GET(req: Request) {
     })
 
     // 9. Identify Primary Director (Institutional Director only, never System Admin)
-    const director =
-      formattedMembers.find((m: any) => m.role?.scope_level === "DIRECTOR") ||
-      null
+    // Rule: There can only be at most 1 Director for an organization.
+    const allDirectorCandidates = formattedMembers.filter((m: any) => m.role?.scope_level === "DIRECTOR")
+    const director = allDirectorCandidates[0] || null
+
+    // Ensure Director is never associated with a single department
+    if (director) {
+      director.org_unit_id = null
+    }
+
+    // Enforce strictly at most 1 Director: if legacy data contains multiple directors,
+    // demote secondary candidates to MEMBER so the organization only has 1 Director
+    for (let i = 1; i < allDirectorCandidates.length; i++) {
+      const fallbackMemberRole = roles.find((r: any) => r.scope_level === "MEMBER") || {
+        id: "member-role",
+        name: "Faculty Member",
+        scope_level: "MEMBER",
+      }
+      allDirectorCandidates[i].role = fallbackMemberRole
+      allDirectorCandidates[i].roleId = fallbackMemberRole.id
+    }
 
     // 10. Filter out empty default seed unit "Main" if other real departments exist
     const realDepartmentsExist = allUnits.some(
@@ -262,7 +279,7 @@ export async function GET(req: Request) {
     if (realDepartmentsExist) {
       visibleUnits = allUnits.filter((u: any) => {
         if (u.name.toLowerCase() === "main") {
-          const hasStaff = formattedMembers.some((m: any) => m.org_unit_id === u.id)
+          const hasStaff = formattedMembers.some((m: any) => m.org_unit_id === u.id && m.id !== director?.id && m.role?.scope_level !== "DIRECTOR")
           const hasChildren = allUnits.some((child: any) => child.parent_id === u.id)
           return hasStaff || hasChildren
         }
@@ -279,7 +296,10 @@ export async function GET(req: Request) {
     )
 
     function buildUnitNode(unit: any): any {
-      const unitMembers = formattedMembers.filter((m: any) => m.org_unit_id === unit.id)
+      // Exclude Director from department members: Director is the institutional executive, not department staff
+      const unitMembers = formattedMembers.filter(
+        (m: any) => m.org_unit_id === unit.id && m.id !== director?.id && m.role?.scope_level !== "DIRECTOR"
+      )
 
       // Find department lead:
       // Either user matching lead_user_id, or first user with ORG_UNIT_LEAD role
@@ -307,7 +327,7 @@ export async function GET(req: Request) {
 
     const hierarchicalTree = rootUnits.map(buildUnitNode)
 
-    // 12. Unassigned members pool
+    // 12. Unassigned members pool (strictly excludes Director and System Admins)
     const assignedMemberIdSet = new Set(
       formattedMembers
         .filter((m: any) => m.org_unit_id && unitIdSet.has(m.org_unit_id))
@@ -315,7 +335,11 @@ export async function GET(req: Request) {
     )
 
     const unassignedMembers = formattedMembers.filter(
-      (m: any) => !assignedMemberIdSet.has(m.id) && m.id !== director?.id
+      (m: any) =>
+        !assignedMemberIdSet.has(m.id) &&
+        m.id !== director?.id &&
+        m.role?.scope_level !== "DIRECTOR" &&
+        !sysAdminUserIds.has(m.id)
     )
 
     return NextResponse.json({

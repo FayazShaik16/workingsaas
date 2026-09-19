@@ -57,6 +57,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Role ${scopeLevel} not found in organization.` }, { status: 400 })
     }
 
+    // Strict institutional governance rule: An organization can only have ONE Director
+    if (scopeLevel === "DIRECTOR") {
+      const { data: existingDirectorRoles } = await db
+        .from("user_roles")
+        .select("user_id, roles!inner(scope_level, organization_id)")
+        .eq("roles.organization_id", orgId)
+        .eq("roles.scope_level", "DIRECTOR")
+
+      if (existingDirectorRoles && existingDirectorRoles.length > 0) {
+        const { data: currentDir } = await db
+          .from("users")
+          .select("name, email")
+          .eq("organization_id", orgId)
+          .in("id", existingDirectorRoles.map((r: any) => r.user_id))
+          .maybeSingle()
+
+        if (currentDir && currentDir.email.toLowerCase() !== cleanEmail) {
+          return NextResponse.json(
+            { error: `An organization can only have ONE Director. ${currentDir.name} (${currentDir.email}) is already the appointed Director of this institution.` },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     // 2. Check if user already exists in auth.users or public.users
     const tempPassword = password || process.env.BULK_IMPORT_DEFAULT_PASSWORD || "Welcome@WorkLedger2026!"
     let authUserId: string | null = null
@@ -102,9 +127,9 @@ export async function POST(req: Request) {
       await db.from("users").delete().eq("id", existingProfile.id)
     }
 
-    // 3. Upsert user into public.users
-    const finalOrgUnitId = ["SYSTEM_ADMIN", "DIRECTOR", "FINANCE_ADMIN"].includes(scopeLevel)
-      ? (orgUnitId || null)
+    // 3. Upsert user into public.users (Director and System Admin NEVER have department org_unit_id)
+    const finalOrgUnitId = ["SYSTEM_ADMIN", "DIRECTOR"].includes(scopeLevel)
+      ? null
       : orgUnitId
 
     const nowIso = new Date().toISOString()
