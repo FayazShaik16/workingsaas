@@ -88,6 +88,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Could not resolve user auth identifier." }, { status: 500 })
     }
 
+    // Clean up any stale placeholder row for this email that had a different ID
+    const { data: existingProfile } = await db
+      .from("users")
+      .select("id")
+      .eq("email", cleanEmail)
+      .maybeSingle()
+
+    if (existingProfile && existingProfile.id !== authUserId) {
+      await db.from("user_roles").update({ user_id: authUserId }).eq("user_id", existingProfile.id)
+      await db.from("wallets").update({ owner_user_id: authUserId }).eq("owner_user_id", existingProfile.id)
+      await db.from("org_units").update({ lead_user_id: authUserId }).eq("lead_user_id", existingProfile.id)
+      await db.from("users").delete().eq("id", existingProfile.id)
+    }
+
     // 3. Upsert user into public.users
     const finalOrgUnitId = ["SYSTEM_ADMIN", "DIRECTOR", "FINANCE_ADMIN"].includes(scopeLevel)
       ? (orgUnitId || null)

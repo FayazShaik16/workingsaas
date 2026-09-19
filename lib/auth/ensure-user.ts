@@ -42,8 +42,8 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       .limit(1)
       .maybeSingle()
 
-    // 2. Fetch existing public.users record
-    const { data: existingUser } = await db
+    // 2. Fetch existing public.users record (by auth ID first)
+    let { data: existingUser } = await db
       .from("users")
       .select(`
         id,
@@ -63,41 +63,108 @@ export async function ensureUserRecord(authUser: AuthUser): Promise<SessionUser 
       .eq("id", authUser.id)
       .maybeSingle()
 
-    // If there is an active pending invitation for this user, fulfill it
-    if (invite) {
-      const orgId = invite.organization_id
-      const unitId = invite.org_unit_id || null
-      const roleId = invite.intended_role_id || null
-      const scopeLevel = invite.roles?.scope_level || "MEMBER"
+    // If not found by ID, check by email to heal provisioned/invited accounts
+    if (!existingUser && email) {
+      const { data: userByEmail } = await db
+        .from("users")
+        .select(`
+          id,
+          email,
+          name,
+          organization_id,
+          org_unit_id,
+          user_roles(
+            role_id,
+            roles(
+              id,
+              name,
+              scope_level
+            )
+          )
+        `)
+        .ilike("email", email.trim())
+        .maybeSingle()
 
-      // Upsert user into the invited organization
-      await db.from("users").upsert({
-        id: authUser.id,
-        organization_id: orgId,
-        org_unit_id: unitId,
-        email,
-        name,
-        status: "ACTIVE",
-        employment_type: "FULL_TIME",
-      })
-
-      if (roleId) {
-        await db.from("user_roles").upsert(
-          { user_id: authUser.id, role_id: roleId },
-          { onConflict: "user_id,role_id" }
-        )
+      if (userByEmail) {
+        const oldId = userByEmail.id
+        if (oldId !== authUser.id) {
+          // Re-link related records to new authUser.id
+          await db.from("user_roles").update({ user_id: authUser.id }).eq("user_id", oldId)
+          await db.from("wallets").update({ owner_user_id: authUser.id }).eq("owner_user_id", oldId)
+          await db.from("org_units").update({ lead_user_id: authUser.id }).eq("lead_user_id", oldId)
+          await db.from("tasks").update({ assignee_user_id: authUser.id }).eq("assignee_user_id", oldId)
+          await db.from("tasks").update({ creator_user_id: authUser.id }).eq("creator_user_id", oldId)
+          await db.from("users").delete().eq("id", oldId)
+          await db.from("users").upsert({
+            id: authUser.id,
+            organization_id: userByEmail.organization_id,
+            org_unit_id: userByEmail.org_unit_id,
+            email: email.trim().toLowerCase(),
+            name: userByEmail.name || name,
+            status: "ACTIVE",
+            employment_type: "FULL_TIME",
+            updated_at: new Date().toISOString(),
+          })
+        }
+        existingUser = {
+          ...userByEmail,
+          id: authUser.id,
+        }
       }
+    }
 
-      await db.from("invitations").update({ status: "ACCEPTED" }).eq("id", invite.id)
+    // If still no existing user, check if there is ANY historical invitation for this email
+    if (!existingUser && email) {
+      const { data: pastInvite } = await db
+        .from("invitations")
+        .select("*, roles(id, name, scope_level)")
+        .ilike("email", email.trim())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      return {
-        id: authUser.id,
-        email,
-        name,
-        organizationId: orgId,
-        orgUnitId: unitId || undefined,
-        roles: roleId ? [roleId] : [],
-        scopeLevels: [scopeLevel],
+      if (pastInvite && pastInvite.organization_id) {
+        const orgId = pastInvite.organization_id
+        const unitId = pastInvite.org_unit_id || null
+        const roleId = pastInvite.intended_role_id || null
+        const scopeLevel = pastInvite.roles?.scope_level || "MEMBER"
+
+        await db.from("users").upsert({
+          id: authUser.id,
+          organization_id: orgId,
+          org_unit_id: unitId,
+          email: email.trim().toLowerCase(),
+          name,
+          status: "ACTIVE",
+          employment_type: "FULL_TIME",
+        })
+
+        if (roleId) {
+          await db.from("user_roles").upsert(
+            { user_id: authUser.id, role_id: roleId },
+            { onConflict: "user_id,role_id" }
+          )
+        }
+
+        await db.from("wallets").upsert(
+          {
+            organization_id: orgId,
+            owner_user_id: authUser.id,
+            purpose: "PERSONAL",
+            balance: 0,
+          },
+          { onConflict: "owner_user_id,purpose" }
+        )
+
+        return {
+          id: authUser.id,
+          email,
+          name,
+          organizationId: orgId,
+          orgUnitId: unitId || undefined,
+          roles: roleId ? [roleId] : [],
+          scopeLevels: [scopeLevel],
+        }
       }
     }
 

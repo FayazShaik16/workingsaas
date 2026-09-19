@@ -63,7 +63,21 @@ export async function POST(request: NextRequest) {
       .eq("email", trimmedEmail)
       .maybeSingle()
 
-    const userId = existingUser?.id || crypto.randomUUID()
+    let userId = existingUser?.id
+    if (!userId) {
+      try {
+        const { data: userList } = await admin.auth.admin.listUsers()
+        const foundAuth = userList?.users?.find((u) => u.email?.toLowerCase() === trimmedEmail)
+        if (foundAuth) {
+          userId = foundAuth.id
+        }
+      } catch (e) {
+        console.warn("[Invite API] Error querying auth users:", e)
+      }
+    }
+    if (!userId) {
+      userId = crypto.randomUUID()
+    }
 
     // 3. Create or update placeholder member in public.users so they appear on the tree
     const { error: userErr } = await (admin as any)
